@@ -36,7 +36,7 @@ public class Budget extends Base {
     @Column(nullable = false)
     private Integer year;
 
-    @Column(nullable = false, precision = 18, scale = 2)
+    @Column(nullable = false)
     private Double limitAmount;
 
     private Double warningPercent;

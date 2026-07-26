@@ -25,7 +25,7 @@ public class Wallet extends Base {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, precision = 18, scale = 2)
+    @Column(nullable = false)
     private Double balance;
 
     private String icon;

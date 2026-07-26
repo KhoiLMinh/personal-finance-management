@@ -29,10 +29,10 @@ public class SavingGoal extends Base {
 
     @NotNull
     @Positive
-    @Column(nullable = false, precision = 18, scale = 2)
+    @Column(nullable = false)
     private Double targetAmount;
 
-    @Column(nullable = false, precision = 18, scale = 2)
+    @Column(nullable = false)
     private Double currentAmount;
 
     @NotNull

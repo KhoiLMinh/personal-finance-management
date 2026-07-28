@@ -1,5 +1,6 @@
 package com.personal.finance.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,10 +38,12 @@ public class Category extends Base {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
+    @JsonIgnore
     private Category parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -49,9 +52,11 @@ public class Category extends Base {
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CategoryRule> rules = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "category")
     private List<Transaction> transactions = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "category")
     private List<Budget> budgets = new ArrayList<>();
 

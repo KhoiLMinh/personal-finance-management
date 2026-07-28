@@ -1,5 +1,6 @@
 package com.personal.finance.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -30,8 +31,10 @@ public class Family extends Base {
 
     @OneToOne
     @JoinColumn(name = "owner_id", nullable = false, unique = true)
+    @JsonIgnore
     private User owner;
 
     @OneToMany(mappedBy = "family", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<FamilyMember> members = new ArrayList<>();
 }

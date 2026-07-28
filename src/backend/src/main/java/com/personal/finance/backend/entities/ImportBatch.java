@@ -1,5 +1,6 @@
 package com.personal.finance.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -33,5 +34,6 @@ public class ImportBatch extends Base {
     private Wallet wallet;
 
     @OneToMany(mappedBy = "importBatch")
+    @JsonIgnore
     private List<Transaction> transactions = new ArrayList<>();
 }

@@ -1,5 +1,6 @@
 package com.personal.finance.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -37,6 +38,7 @@ public class Budget extends Base {
     private Integer year;
 
     @Column(nullable = false)
+    @Positive
     private Double limitAmount;
 
     private Double warningPercent;
@@ -51,6 +53,7 @@ public class Budget extends Base {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id", nullable = false)
+    @JsonIgnore
     private Category category;
 
     public enum BudgetStatus {

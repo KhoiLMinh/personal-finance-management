@@ -1,5 +1,6 @@
 package com.personal.finance.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -8,13 +9,12 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -24,8 +24,9 @@ import java.time.LocalDate;
 public class Transaction extends Base {
 
     @NotNull
-    @Column(nullable = false, precision = 18, scale = 2)
-    private BigDecimal amount;
+    @Positive
+    @Column(nullable = false)
+    private Double amount;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 20)
@@ -40,14 +41,17 @@ public class Transaction extends Base {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "wallet_id", nullable = false)
+    @JsonIgnore
     private Wallet wallet;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id", nullable = false)
+    @JsonIgnore
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "import_batch_id")
+    @JsonIgnore
     private ImportBatch importBatch;
 
     public enum TransactionType {

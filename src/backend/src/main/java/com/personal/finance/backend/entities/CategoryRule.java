@@ -1,5 +1,6 @@
 package com.personal.finance.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -26,5 +27,6 @@ public class CategoryRule extends Base {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id", nullable = false)
+    @JsonIgnore
     private Category category;
 }

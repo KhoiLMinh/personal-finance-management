@@ -1,5 +1,6 @@
 package com.personal.finance.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +12,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -33,6 +35,7 @@ public class SavingGoal extends Base {
     private Double targetAmount;
 
     @Column(nullable = false)
+    @PositiveOrZero
     private Double currentAmount;
 
     @NotNull
@@ -45,6 +48,7 @@ public class SavingGoal extends Base {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
     public enum GoalStatus {

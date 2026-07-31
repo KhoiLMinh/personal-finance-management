@@ -32,6 +32,6 @@ public class FamilyMember extends Base {
     private MemberRole role = MemberRole.MEMBER;
 
     public enum MemberRole {
-        OWNER, MEMBER
+        MANAGER, MEMBER
     }
 }

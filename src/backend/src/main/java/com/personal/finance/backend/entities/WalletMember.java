@@ -1,5 +1,6 @@
 package com.personal.finance.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,17 +25,14 @@ public class WalletMember extends Base {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "wallet_id", nullable = false)
+    @JsonIgnore
     private Wallet wallet;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "permissions", nullable = false, length = 20)
     private Permission permissions = Permission.VIEW;
 
     public enum Permission {
-        OWNER, EDIT, VIEW
+        EDIT, VIEW
     }
 }

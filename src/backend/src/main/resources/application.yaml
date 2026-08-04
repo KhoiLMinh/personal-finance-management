@@ -1,4 +1,7 @@
 spring:
+  application:
+    name: financial-backend
+
   datasource:
     url: jdbc:mysql://localhost:3306/financial_db
     username: root
@@ -11,6 +14,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+server:
+  port: 8080
 
 #  # --- ---
 #  servlet:

@@ -17,6 +17,11 @@ spring:
 server:
   port: 8080
 
+security:
+  user:
+    name: admin
+    password: 123456
+    roles: ADMIN
 #  # --- ---
 #  servlet:
 #    multipart:

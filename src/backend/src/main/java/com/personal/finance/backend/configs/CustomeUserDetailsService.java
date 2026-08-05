@@ -24,6 +24,6 @@ public class CustomeUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("Không tìm thấy user");
 
         return new User(myUser.getEmail(), myUser.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + myUser.getRole())));
     }
 }

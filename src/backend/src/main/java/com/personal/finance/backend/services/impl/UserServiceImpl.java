@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,11 +19,6 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-
-    private User getUserEntity(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
-    }
 
     @Override
     public List<UserDTO> getAllUsers() {
@@ -33,14 +29,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDTO getUserById(Long id) {
-        return userMapper.toDTO(getUserEntity(id));
-    }
-
-    @Override
     @Transactional
     public UserDTO updateUser(Long id, UpdateProfileRequest request) {
-        User user = getUserEntity(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+
         user.setFullName(request.getFullName());
         user.setAvatar(request.getAvatar());
         return userMapper.toDTO(userRepository.save(user));
@@ -54,4 +47,19 @@ public class UserServiceImpl implements UserService {
         }
         userRepository.deleteById(id);
     }
+
+    @Override
+    public User findUserByUserName(String username){
+        Optional<User> userOpt = this.userRepository.findByUsername(username);
+        return userOpt.orElse(null);
+    }
+
+    @Override
+    public UserDTO getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+
+        return userMapper.toDTO(user);
+    }
+
 }

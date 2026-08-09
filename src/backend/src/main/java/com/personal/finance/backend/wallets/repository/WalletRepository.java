@@ -1,4 +1,4 @@
-package com.personal.finance.backend.repositories;
+package com.personal.finance.backend.wallets.repository;
 
 import com.personal.finance.backend.wallets.entity.Wallet;
 import org.springframework.data.jpa.repository.JpaRepository;

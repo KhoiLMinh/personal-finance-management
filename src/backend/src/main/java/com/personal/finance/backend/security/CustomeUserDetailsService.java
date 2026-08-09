@@ -1,4 +1,4 @@
-package com.personal.finance.backend.configs;
+package com.personal.finance.backend.security;
 
 import org.springframework.security.core.userdetails.User;
 import com.personal.finance.backend.users.service.UserService;

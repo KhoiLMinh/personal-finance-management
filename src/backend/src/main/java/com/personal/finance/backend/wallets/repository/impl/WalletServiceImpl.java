@@ -1,14 +1,14 @@
-package com.personal.finance.backend.services.impl;
+package com.personal.finance.backend.wallets.repository.impl;
 
 import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
 import com.personal.finance.backend.users.dto.request.UpdateWalletRequest;
 import com.personal.finance.backend.wallets.dto.response.WalletDTO;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.wallets.entity.Wallet;
-import com.personal.finance.backend.mappers.WalletMapper;
-import com.personal.finance.backend.repositories.UserRepository;
-import com.personal.finance.backend.repositories.WalletRepository;
-import com.personal.finance.backend.services.WalletService;
+import com.personal.finance.backend.wallets.mapper.WalletMapper;
+import com.personal.finance.backend.users.repository.UserRepository;
+import com.personal.finance.backend.wallets.repository.WalletRepository;
+import com.personal.finance.backend.wallets.service.WalletService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;

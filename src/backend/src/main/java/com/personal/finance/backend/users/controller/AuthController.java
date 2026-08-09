@@ -1,10 +1,10 @@
-package com.personal.finance.backend.controllers;
+package com.personal.finance.backend.users.controller;
 
-import com.personal.finance.backend.dtos.request.*;
-import com.personal.finance.backend.dtos.response.*;
-import com.personal.finance.backend.entities.User;
-import com.personal.finance.backend.services.AuthService;
-import com.personal.finance.backend.services.UserService;
+import com.personal.finance.backend.users.service.AuthService;
+import com.personal.finance.backend.users.dto.request.ChangePasswordRequest;
+import com.personal.finance.backend.users.dto.request.LoginRequest;
+import com.personal.finance.backend.users.dto.request.RegisterRequest;
+import com.personal.finance.backend.users.dto.response.AuthResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package com.personal.finance.backend.dtos.response;
+package com.personal.finance.backend.wallets.dto.response;
 
 import lombok.Getter;
 import lombok.Setter;

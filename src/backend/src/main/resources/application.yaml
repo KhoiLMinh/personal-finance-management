@@ -1,24 +1,9 @@
 spring:
-  application:
-    name: financial-backend
-
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD}
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-
-server:
-  port: ${PORT}
+    url: jdbc:mysql://localhost:3306/financial_db
+    username: root
+    password: 123456
 
 app:
   jwt:
-    secret: ${JWT_SECRET}
-    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+    secret: 4e339de6-3876-4ff6-a2af-8982ec2f82a1

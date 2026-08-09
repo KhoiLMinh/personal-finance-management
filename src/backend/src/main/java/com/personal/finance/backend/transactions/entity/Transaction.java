@@ -1,8 +1,10 @@
-package com.personal.finance.backend.entities;
+package com.personal.finance.backend.transactions.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.common.entities.Base;
+import com.personal.finance.backend.importBatch.entity.ImportBatch;
+import com.personal.finance.backend.wallets.entity.Wallet;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

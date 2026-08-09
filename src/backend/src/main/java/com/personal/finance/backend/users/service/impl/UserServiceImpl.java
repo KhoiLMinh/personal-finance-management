@@ -1,11 +1,11 @@
-package com.personal.finance.backend.services.impl;
+package com.personal.finance.backend.users.service.impl;
 
 import com.personal.finance.backend.users.dto.request.UpdateProfileRequest;
 import com.personal.finance.backend.users.dto.response.UserDTO;
 import com.personal.finance.backend.users.entity.User;
-import com.personal.finance.backend.mappers.UserMapper;
-import com.personal.finance.backend.repositories.UserRepository;
-import com.personal.finance.backend.services.UserService;
+import com.personal.finance.backend.users.mapper.UserMapper;
+import com.personal.finance.backend.users.repository.UserRepository;
+import com.personal.finance.backend.users.service.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

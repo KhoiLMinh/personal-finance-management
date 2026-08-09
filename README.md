@@ -82,28 +82,25 @@ Controller  →  Service  →  Repository  →  Entity (JPA)
 
 ```
 personal-finance-management/
-├── backend/                   # Spring Boot project
-│   ├── src/main/java/...
-│   │   ├── controller/        # REST controllers
-│   │   ├── service/           # Business logic (import, phân loại, ngân sách...)
-│   │   ├── repository/        # Spring Data JPA repositories
-│   │   ├── entity/            # JPA entities
-│   │   ├── dto/                # Request/response DTO
-│   │   ├── security/          # Cấu hình JWT, Spring Security
-│   │   └── config/
-│   ├── src/main/resources/
-│   │   └── application.yml
-│   └── pom.xml
-├── frontend/                  # ReactJS project
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── services/          # gọi API backend
-│   │   └── App.jsx
-│   └── package.json
-├── docs/                      # Tài liệu đồ án (BRD, SRS, ERD...)
+├── src/
+│   ├── backend/
+│   │   └── src/
+│   └── frontend/
+│       └── src/
+├── database/
+├── docs/
+│   ├── assets/
+│   ├── baocao/
+│   ├── phan-tich/
+│   ├── thiet-ke/
+│   ├── kiem-thu/
+│   └── weekly/
 ├── docker-compose.yml
+├── .env.example
+├── .gitignore
+├── LICENSE
 └── README.md
+
 ```
 
 ## Yêu cầu môi trường
@@ -140,7 +137,7 @@ Mặc định:
 **Backend**
 
 ```bash
-cd backend
+cd src/backend
 # Tạo database MySQL trước, ví dụ: personal_finance_db
 cp src/main/resources/application-example.yml src/main/resources/application.yml
 # Cập nhật thông tin kết nối DB trong application.yml
@@ -157,7 +154,7 @@ npm start
 
 ## Biến môi trường
 
-Backend (`application.yml` hoặc biến môi trường):
+Backend (`application.yml`):
 
 ```yaml
 spring:
@@ -179,25 +176,14 @@ REACT_APP_API_BASE_URL=http://localhost:8080/api
 
 ## API Documentation
 
-Các API được kiểm thử bằng **Postman**. Collection Postman được đính kèm tại `docs/postman/`.
+Các API được kiểm thử bằng **Postman**. Collection Postman được đính kèm tại `docs/kiem-thu/postman`.
 
 Một số nhóm endpoint chính (tham khảo, chi tiết xem trong collection):
-
-| Method   | Endpoint                 | Mô tả                                    |
-| -------- | ------------------------ | ---------------------------------------- |
-| POST     | `/api/auth/login`        | Đăng nhập, trả về JWT                    |
-| GET      | `/api/accounts`          | Danh sách tài khoản của người dùng       |
-| GET/POST | `/api/transactions`      | Tra cứu / tạo giao dịch                  |
-| POST     | `/api/imports`           | Upload và import sao kê CSV/Excel        |
-| GET/POST | `/api/budgets`           | Quản lý ngân sách theo danh mục          |
-| GET/POST | `/api/savings-goals`     | Quản lý mục tiêu tiết kiệm               |
-| GET      | `/api/reports/trend`     | Dữ liệu biểu đồ xu hướng thu/chi         |
-| GET      | `/api/reports/breakdown` | Dữ liệu biểu đồ cơ cấu chi theo danh mục |
 
 ## Kiểm thử
 
 - **Unit test**: JUnit + Mockito cho tầng Service.
-- **API test**: Postman collection (`docs/postman/`).
+- **API test**: Postman collection (`docs/kiem-thu/postman`).
 - **E2E test**: Selenium
 
 ```bash

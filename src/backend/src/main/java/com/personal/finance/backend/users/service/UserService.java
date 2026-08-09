@@ -1,4 +1,4 @@
-package com.personal.finance.backend.services;
+package com.personal.finance.backend.users.service;
 
 import com.personal.finance.backend.users.dto.request.UpdateProfileRequest;
 import com.personal.finance.backend.users.dto.response.UserDTO;

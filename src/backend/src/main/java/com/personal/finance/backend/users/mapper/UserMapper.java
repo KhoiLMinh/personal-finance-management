@@ -1,4 +1,4 @@
-package com.personal.finance.backend.mappers;
+package com.personal.finance.backend.users.mapper;
 
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.dto.response.UserDTO;

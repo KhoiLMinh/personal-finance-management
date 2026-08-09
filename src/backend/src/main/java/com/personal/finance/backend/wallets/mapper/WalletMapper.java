@@ -1,4 +1,4 @@
-package com.personal.finance.backend.mappers;
+package com.personal.finance.backend.wallets.mapper;
 
 import com.personal.finance.backend.wallets.dto.response.WalletDTO;
 import com.personal.finance.backend.wallets.entity.Wallet;

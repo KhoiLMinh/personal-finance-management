@@ -1,6 +1,5 @@
-package com.personal.finance.backend.configs;
+package com.personal.finance.backend.security;
 
-import com.personal.finance.backend.security.JwtAuthenticationFilter;
 import com.personal.finance.backend.users.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

@@ -1,4 +1,4 @@
-package com.personal.finance.backend.entities;
+package com.personal.finance.backend.importBatch.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.personal.finance.backend.common.entities.Base;

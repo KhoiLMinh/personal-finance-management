@@ -1,4 +1,4 @@
-package com.personal.finance.backend.services;
+package com.personal.finance.backend.wallets.service;
 
 import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
 import com.personal.finance.backend.users.dto.request.UpdateWalletRequest;

@@ -1,6 +1,7 @@
-package com.personal.finance.backend.entities;
+package com.personal.finance.backend.families.entity;
 
 import com.personal.finance.backend.common.entities.Base;
+import com.personal.finance.backend.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

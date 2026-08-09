@@ -1,9 +1,8 @@
-package com.personal.finance.backend.controllers;
+package com.personal.finance.backend.users.controller;
 
-import com.personal.finance.backend.dtos.request.UpdateProfileRequest;
-import com.personal.finance.backend.dtos.response.UserDTO;
-import com.personal.finance.backend.entities.User;
-import com.personal.finance.backend.services.UserService;
+import com.personal.finance.backend.users.dto.request.UpdateProfileRequest;
+import com.personal.finance.backend.users.dto.response.UserDTO;
+import com.personal.finance.backend.users.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

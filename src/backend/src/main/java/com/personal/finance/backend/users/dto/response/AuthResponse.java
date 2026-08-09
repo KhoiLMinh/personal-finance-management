@@ -1,4 +1,4 @@
-package com.personal.finance.backend.dtos.response;
+package com.personal.finance.backend.users.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

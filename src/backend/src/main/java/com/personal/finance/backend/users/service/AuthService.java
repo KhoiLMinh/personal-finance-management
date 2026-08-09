@@ -1,4 +1,4 @@
-package com.personal.finance.backend.services;
+package com.personal.finance.backend.users.service;
 import com.personal.finance.backend.users.dto.request.ChangePasswordRequest;
 import com.personal.finance.backend.users.dto.request.GoogleAuthRequest;
 import com.personal.finance.backend.users.dto.request.LoginRequest;

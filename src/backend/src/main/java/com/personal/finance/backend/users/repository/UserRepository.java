@@ -1,4 +1,4 @@
-package com.personal.finance.backend.repositories;
+package com.personal.finance.backend.users.repository;
 
 import com.personal.finance.backend.users.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,4 +1,4 @@
-package com.personal.finance.backend.configs.security;
+package com.personal.finance.backend.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

@@ -1,4 +1,4 @@
-package com.personal.finance.backend.configs;
+package com.personal.finance.backend.common.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

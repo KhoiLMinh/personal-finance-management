@@ -1,4 +1,4 @@
-package com.personal.finance.backend.dtos.request;
+package com.personal.finance.backend.wallets.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;

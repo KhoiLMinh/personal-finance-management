@@ -1,8 +1,8 @@
-package com.personal.finance.backend.services.impl;
+package com.personal.finance.backend.users.service.impl;
 
 import com.personal.finance.backend.users.entity.User;
-import com.personal.finance.backend.repositories.UserRepository;
-import com.personal.finance.backend.services.AuthService;
+import com.personal.finance.backend.users.repository.UserRepository;
+import com.personal.finance.backend.users.service.AuthService;
 import com.personal.finance.backend.users.dto.request.ChangePasswordRequest;
 import com.personal.finance.backend.users.dto.request.GoogleAuthRequest;
 import com.personal.finance.backend.users.dto.request.LoginRequest;
@@ -12,8 +12,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import com.personal.finance.backend.mappers.UserMapper;
-import com.personal.finance.backend.configs.security.JwtUtil;
+import com.personal.finance.backend.users.mapper.UserMapper;
+import com.personal.finance.backend.security.JwtUtil;
 
 @Service
 @RequiredArgsConstructor

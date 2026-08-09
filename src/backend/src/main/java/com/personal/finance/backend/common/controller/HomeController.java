@@ -1,4 +1,4 @@
-package com.personal.finance.backend.controllers;
+package com.personal.finance.backend.common.controller;
 
 import org.springframework.web.bind.annotation.RestController;
 

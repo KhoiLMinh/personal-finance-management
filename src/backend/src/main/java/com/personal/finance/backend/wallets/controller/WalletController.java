@@ -1,9 +1,9 @@
-package com.personal.finance.backend.controllers;
+package com.personal.finance.backend.wallets.controller;
 
-import com.personal.finance.backend.dtos.request.CreateWalletRequest;
-import com.personal.finance.backend.dtos.request.UpdateWalletRequest;
-import com.personal.finance.backend.dtos.response.WalletDTO;
-import com.personal.finance.backend.services.WalletService;
+import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
+import com.personal.finance.backend.users.dto.request.UpdateWalletRequest;
+import com.personal.finance.backend.wallets.dto.response.WalletDTO;
+import com.personal.finance.backend.wallets.service.WalletService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

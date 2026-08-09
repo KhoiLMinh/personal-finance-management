@@ -1,4 +1,4 @@
-package com.personal.finance.backend.entities;
+package com.personal.finance.backend.common.entities;
 
 import jakarta.persistence.*;
 import lombok.Getter;

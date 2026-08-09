@@ -1,10 +1,13 @@
-package com.personal.finance.backend.entities;
+package com.personal.finance.backend.users.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.personal.finance.backend.budgets.entity.Budget;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.common.entities.Base;
+import com.personal.finance.backend.savingGoals.entity.SavingGoal;
 import com.personal.finance.backend.families.entity.Family;
+import com.personal.finance.backend.notifications.entity.Notification;
+import com.personal.finance.backend.wallets.entity.Wallet;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -19,7 +19,7 @@ spring:
         format_sql: true
 
 server:
-  port: ${PORT}
+  port: ${PORT:8080}
 
 app:
   jwt:

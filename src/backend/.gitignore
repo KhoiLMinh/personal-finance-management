@@ -35,5 +35,6 @@ build/
 # Maven
 **/target/
 
+
 # Spring local config
-**/application.yaml
+**/application-local.yaml

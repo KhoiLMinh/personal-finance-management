@@ -1,5 +1,6 @@
 package com.personal.finance.backend.users.controller;
 
+import com.personal.finance.backend.users.dto.request.GoogleAuthRequest;
 import com.personal.finance.backend.users.service.AuthService;
 import com.personal.finance.backend.users.dto.request.ChangePasswordRequest;
 import com.personal.finance.backend.users.dto.request.LoginRequest;
@@ -29,11 +30,10 @@ public class AuthController {
         return ResponseEntity.ok(this.authService.login(request));
     }
 
-//    @PostMapping("/google")
-//    public ResponseEntity<AuthResponse> googleLogin(@Valid @RequestBody GoogleAuthRequest request) {
-//        return ResponseEntity.ok(this.authService.googleLogin(request));
-//    }
-
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(@Valid @RequestBody GoogleAuthRequest request) {
+        return ResponseEntity.ok(this.authService.googleLogin(request));
+    }
 
     @PutMapping("/change-password")
     public ResponseEntity<String> changePassword(

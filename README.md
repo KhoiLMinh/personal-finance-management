@@ -95,7 +95,6 @@ personal-finance-management/
 │   ├── thiet-ke/
 │   ├── kiem-thu/
 │   └── weekly/
-├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
 ├── LICENSE
@@ -122,14 +121,14 @@ cd personal-finance-management
 
 ### 2. Chạy bằng Docker (khuyến nghị)
 
-```bash
-docker-compose up --build
+```
+updating...
 ```
 
 Mặc định:
 
 - Backend: `http://localhost:8080`
-- Frontend: `http://localhost:3000`
+- Frontend: updating
 - MySQL: cổng `3306`
 
 ### 3. Chạy thủ công (không dùng Docker)
@@ -139,17 +138,15 @@ Mặc định:
 ```bash
 cd src/backend
 # Tạo database MySQL trước, ví dụ: personal_finance_db
-cp src/main/resources/application-example.yml src/main/resources/application.yml
+cp src/main/resources/application.yml
 # Cập nhật thông tin kết nối DB trong application.yml
 mvn spring-boot:run
 ```
 
 **Frontend**
 
-```bash
-cd frontend
-npm install
-npm start
+```
+updating
 ```
 
 ## Biến môi trường
@@ -165,14 +162,10 @@ spring:
 
 jwt:
   secret: your-secret-key
-  expiration: 86400000 # 24h
+  expiration: your-time-setting
 ```
 
 Frontend (`.env`):
-
-```
-REACT_APP_API_BASE_URL=http://localhost:8080/api
-```
 
 ## API Documentation
 
@@ -182,9 +175,9 @@ Một số nhóm endpoint chính (tham khảo, chi tiết xem trong collection):
 
 ## Kiểm thử
 
-- **Unit test**: JUnit + Mockito cho tầng Service.
+- **Unit test**: JUnit + Mockito cho tầng Service và Controller.
 - **API test**: Postman collection (`docs/kiem-thu/postman`).
-- **E2E test**: Selenium
+- **E2E test**: updating
 
 ```bash
 # Chạy unit test backend

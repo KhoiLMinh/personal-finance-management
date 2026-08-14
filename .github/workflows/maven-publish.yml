@@ -13,6 +13,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: financial_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,4 +40,8 @@ jobs:
 
       - name: Run tests
         working-directory: src/backend
+        env:
+          DB_URL: jdbc:mysql://localhost:3306/financial_db
+          DB_USERNAME: root
+          DB_PASSWORD: root
         run: ./mvnw test

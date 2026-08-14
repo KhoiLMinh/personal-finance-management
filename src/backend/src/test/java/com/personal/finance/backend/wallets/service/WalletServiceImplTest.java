@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-// TE-13: Dùng Mockito để cô lập Service, không dùng database thật
 @ExtendWith(MockitoExtension.class)
 class WalletServiceImplTest {
 
@@ -112,7 +111,6 @@ class WalletServiceImplTest {
         assertEquals(10L, result.getId());
     }
 
-    // TC-12 & SE-06: Test Case bảo mật IDOR (Chặn xem ví người khác)
     @Test
     void getWalletById_NoAccess_ThrowsAccessDeniedException() {
 
@@ -151,7 +149,7 @@ class WalletServiceImplTest {
 
         assertNotNull(result);
         assertEquals("Ví Mới", result.getName());
-        assertEquals("Ví Mới", mockWallet.getName()); // Kiểm tra entity đã đổi tên
+        assertEquals("Ví Mới", mockWallet.getName());
         verify(walletRepository, times(1)).save(mockWallet);
     }
 
@@ -167,6 +165,6 @@ class WalletServiceImplTest {
         });
 
         assertEquals("Bạn không có quyền thao tác trên ví này!", exception.getMessage());
-        verify(walletRepository, never()).save(any()); // Đảm bảo giao dịch không được lưu
+        verify(walletRepository, never()).save(any());
     }
 }

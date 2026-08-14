@@ -45,4 +45,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    boolean existsByWalletIdAndDateAndAmountAndDescription(Long walletId, java.time.LocalDate date, Double amount, String description);
 }

@@ -1,0 +1,160 @@
+package com.personal.finance.backend.importBatch.service.impl;
+
+import com.personal.finance.backend.categories.entity.Category;
+import com.personal.finance.backend.categories.entity.CategoryRule;
+import com.personal.finance.backend.categories.repository.CategoryRepository;
+import com.personal.finance.backend.categories.repository.CategoryRuleRepository;
+import com.personal.finance.backend.importBatch.dto.response.ImportBatchDTO;
+import com.personal.finance.backend.importBatch.entity.ImportBatch;
+import com.personal.finance.backend.importBatch.mapper.ImportBatchMapper; // <-- Import Mapper
+import com.personal.finance.backend.importBatch.repository.ImportBatchRepository;
+import com.personal.finance.backend.importBatch.service.ImportBatchService;
+import com.personal.finance.backend.transactions.entity.Transaction;
+import com.personal.finance.backend.transactions.repository.TransactionRepository;
+import com.personal.finance.backend.users.entity.User;
+import com.personal.finance.backend.users.repository.UserRepository;
+import com.personal.finance.backend.wallets.entity.Wallet;
+import com.personal.finance.backend.wallets.repository.WalletRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ImportBatchServiceImpl implements ImportBatchService {
+
+    private final ImportBatchRepository importBatchRepository;
+    private final TransactionRepository transactionRepository;
+    private final WalletRepository walletRepository;
+    private final CategoryRepository categoryRepository;
+    private final CategoryRuleRepository categoryRuleRepository;
+    private final UserRepository userRepository;
+
+    private final ImportBatchMapper importBatchMapper;
+
+    private static final String CSV_SPLIT_REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
+
+    @Override
+    @Transactional
+    public ImportBatchDTO importCsv(Long userId, Long walletId, MultipartFile file) {
+        if (!walletRepository.hasEditPermission(walletId, userId)) {
+            throw new AccessDeniedException("Bạn không có quyền import dữ liệu vào ví này!");
+        }
+
+        Wallet wallet = walletRepository.findById(walletId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ví!"));
+
+        ImportBatch batch = new ImportBatch();
+        batch.setWallet(wallet);
+        batch.setFileName(file.getOriginalFilename());
+        batch = importBatchRepository.save(batch);
+
+        Category uncategorized = getOrCreateUncategorizedCategory(userId);
+        List<CategoryRule> userRules = categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(userId);
+
+        List<Transaction> transactionsToSave = new ArrayList<>();
+        double netBalanceChange = 0.0;
+        int totalRows = 0;
+        int successRows = 0;
+        int duplicateRows = 0;
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            boolean isHeader = true;
+
+            while ((line = br.readLine()) != null) {
+                if (isHeader) {
+                    isHeader = false;
+                    continue;
+                }
+                totalRows++;
+
+                String[] fields = line.split(CSV_SPLIT_REGEX, -1);
+                if (fields.length < 3) continue;
+
+                LocalDate date = LocalDate.parse(fields[0].replace("\"", "").trim(), dateFormatter);
+                Double amount = Double.parseDouble(fields[1].replace("\"", "").replace(",", "").trim());
+                String description = fields[2].replace("\"", "").trim();
+
+                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId, date, amount, description)) {
+                    duplicateRows++;
+                    continue;
+                }
+
+                Category matchedCategory = categorizeTransaction(description, userRules, uncategorized);
+
+                Transaction transaction = new Transaction();
+                transaction.setWallet(wallet);
+                transaction.setCategory(matchedCategory);
+                transaction.setImportBatch(batch);
+                transaction.setAmount(Math.abs(amount));
+                transaction.setType(amount >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
+                transaction.setDate(date);
+                transaction.setDescription(description);
+                transaction.setStatus("COMPLETED");
+
+                transactionsToSave.add(transaction);
+                netBalanceChange += amount;
+                successRows++;
+            }
+
+            if (!transactionsToSave.isEmpty()) {
+                transactionRepository.saveAll(transactionsToSave);
+                walletRepository.updateBalance(walletId, netBalanceChange);
+            }
+
+            batch.setTotalRows(totalRows);
+            batch.setSuccessRows(successRows);
+            batch.setDuplicatedRows(duplicateRows);
+            batch.setStatus(true);
+            importBatchRepository.save(batch);
+
+            log.info("Import thành công file {} cho ví {}. Tổng: {}, Mới: {}, Trùng: {}",
+                    file.getOriginalFilename(), walletId, totalRows, successRows, duplicateRows);
+
+        } catch (Exception e) {
+            log.error("Lỗi khi parse file CSV: ", e);
+            throw new RuntimeException("Định dạng file CSV không hợp lệ hoặc chứa dữ liệu sai. Rollback toàn bộ!");
+        }
+
+        // SỬ DỤNG MAPPER Ở ĐÂY THAY VÌ HÀM PRIVATE
+        return importBatchMapper.toDTO(batch);
+    }
+
+    private Category categorizeTransaction(String description, List<CategoryRule> rules, Category fallback) {
+        String lowerDesc = description.toLowerCase();
+        for (CategoryRule rule : rules) {
+            if (lowerDesc.contains(rule.getKeyword().toLowerCase())) {
+                return rule.getCategory();
+            }
+        }
+        return fallback;
+    }
+
+    private Category getOrCreateUncategorizedCategory(Long userId) {
+        return categoryRepository.findByNameAndUserId("Chưa phân loại", userId)
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId).orElseThrow();
+                    Category cat = new Category();
+                    cat.setName("Chưa phân loại");
+                    cat.setType(Category.CategoryType.EXPENSE);
+                    cat.setUser(user);
+                    cat.setColor("#808080");
+                    return categoryRepository.save(cat);
+                });
+    }
+}

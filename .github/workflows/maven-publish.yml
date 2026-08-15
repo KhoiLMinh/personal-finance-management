@@ -44,5 +44,5 @@ jobs:
           DB_URL: jdbc:mysql://localhost:3306/financial_db
           DB_USERNAME: root
           DB_PASSWORD: root
-          JWT_SECRET: test-secret-for-ci-only
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: ./mvnw test

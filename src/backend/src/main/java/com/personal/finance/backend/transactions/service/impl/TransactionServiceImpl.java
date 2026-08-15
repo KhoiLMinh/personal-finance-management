@@ -1,5 +1,6 @@
 package com.personal.finance.backend.transactions.service.impl;
 
+import com.personal.finance.backend.budgets.service.BudgetService;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.transactions.dto.request.CreateTransactionRequest;
@@ -30,7 +31,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final WalletRepository walletRepository;
     private final CategoryRepository categoryRepository;
     private final TransactionMapper transactionMapper;
-
+    private final BudgetService budgetService;
 
     @Override
     @Transactional
@@ -62,6 +63,15 @@ public class TransactionServiceImpl implements TransactionService {
                 ? request.getAmount()
                 : -request.getAmount();
         walletRepository.updateBalance(wallet.getId(), deltaAmount);
+
+        if (request.getType() == Transaction.TransactionType.EXPENSE) {
+            budgetService.checkAndAlertBudget(
+                    userId,
+                    request.getCategoryId(),
+                    request.getDate().getMonthValue(),
+                    request.getDate().getYear()
+            );
+        }
 
         log.info("Tạo giao dịch thành công ID: {} cho ví ID: {}", savedTransaction.getId(), wallet.getId());
         return transactionMapper.toDTO(savedTransaction);
@@ -104,7 +114,6 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionDTO updateTransaction(Long id, Long userId, UpdateTransactionRequest request) {
-        // SE-06: Lấy giao dịch hiện tại, đảm bảo người dùng có quyền truy cập giao dịch này
         Transaction transaction = transactionRepository.findByIdAndAccessibleByUser(id, userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch hoặc truy cập trái phép!"));
 
@@ -135,6 +144,15 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setType(request.getType());
         transaction.setDate(request.getDate());
         transaction.setDescription(request.getDescription());
+
+        if (request.getType() == Transaction.TransactionType.EXPENSE) {
+            budgetService.checkAndAlertBudget(
+                    userId,
+                    request.getCategoryId(),
+                    request.getDate().getMonthValue(),
+                    request.getDate().getYear()
+            );
+        }
 
         Transaction updatedTransaction = transactionRepository.save(transaction);
         log.info("Cập nhật thành công giao dịch ID: {} bởi UserId: {}", id, userId);

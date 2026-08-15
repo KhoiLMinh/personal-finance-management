@@ -17,6 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import com.personal.finance.backend.common.service.EmailService;
+import com.personal.finance.backend.notifications.service.NotificationService;
+import com.personal.finance.backend.transactions.repository.TransactionRepository;
 
 @Slf4j
 @Service
@@ -27,6 +30,9 @@ public class BudgetServiceImpl implements BudgetService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final BudgetMapper budgetMapper;
+    private final TransactionRepository transactionRepository;
+    private final NotificationService notificationService;
+    private final EmailService emailService;
 
 
     private Budget getOwnedBudget(Long id, Long userId) {
@@ -105,5 +111,44 @@ public class BudgetServiceImpl implements BudgetService {
         Budget budget = getOwnedBudget(id, userId);
         budgetRepository.delete(budget);
         log.info("Xóa thành công ngân sách ID: {} bởi UserId: {}", id, userId);
+    }
+
+    @Override
+    @Transactional
+    public void checkAndAlertBudget(Long userId, Long categoryId, int month, int year) {
+        budgetRepository.findAllByUserId(userId, Pageable.unpaged()).stream()
+                .filter(b -> b.getCategory().getId().equals(categoryId) && b.getMonth() == month && b.getYear() == year)
+                .findFirst()
+                .ifPresent(budget -> {
+                    // Tính tổng tiền ĐÃ CHI
+                    Double totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(categoryId, userId, month, year);
+                    User user = budget.getUser();
+
+                    // Tính ngưỡng cảnh báo
+                    double warningLimit = budget.getLimitAmount() * (budget.getWarningPercent() / 100.0);
+
+                    // TH1: Vượt quá 100% hạn mức
+                    if (totalSpent >= budget.getLimitAmount() && budget.getStatus() != Budget.BudgetStatus.EXCEED) {
+                        budget.setStatus(Budget.BudgetStatus.EXCEED);
+                        budgetRepository.save(budget);
+
+                        String msg = String.format("Bạn đã chi tiêu %s, VƯỢT QUÁ ngân sách %s cho danh mục '%s' trong tháng %d/%d.",
+                                totalSpent, budget.getLimitAmount(), budget.getCategory().getName(), month, year);
+
+                        notificationService.createSystemNotification(userId, "🚨 Vượt ngân sách chi tiêu!", msg);
+                        emailService.sendEmail(user.getEmail(), "Cảnh báo vượt ngân sách - Personal Finance", msg);
+                    }
+                    // TH2: Vượt ngưỡng cảnh báo (ví dụ 80%) nhưng chưa đến 100%
+                    else if (totalSpent >= warningLimit && totalSpent < budget.getLimitAmount() && !budget.isWarningSent()) {
+                        budget.setWarningSent(true);
+                        budgetRepository.save(budget);
+
+                        String msg = String.format("Bạn đã chi tiêu %s, đạt mức cảnh báo %.0f%% ngân sách (%s) cho danh mục '%s' trong tháng %d/%d. Hãy chú ý chi tiêu nhé!",
+                                totalSpent, budget.getWarningPercent(), budget.getLimitAmount(), budget.getCategory().getName(), month, year);
+
+                        notificationService.createSystemNotification(userId, "⚠️ Sắp vượt ngân sách!", msg);
+                        emailService.sendEmail(user.getEmail(), "Cảnh báo ngân sách - Personal Finance", msg);
+                    }
+                });
     }
 }

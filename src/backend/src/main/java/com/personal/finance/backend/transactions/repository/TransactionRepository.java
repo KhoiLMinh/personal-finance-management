@@ -47,4 +47,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     );
 
     boolean existsByWalletIdAndDateAndAmountAndDescription(Long walletId, java.time.LocalDate date, Double amount, String description);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0.0) FROM Transaction t " +
+            "WHERE t.category.id = :categoryId AND t.wallet.owner.id = :userId " +
+            "AND t.type = 'EXPENSE' AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
+    Double sumExpenseByCategoryAndMonth(
+            @Param("categoryId") Long categoryId,
+            @Param("userId") Long userId,
+            @Param("month") Integer month,
+            @Param("year") Integer year);
 }

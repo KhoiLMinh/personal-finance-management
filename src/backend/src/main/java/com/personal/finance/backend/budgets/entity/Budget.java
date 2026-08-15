@@ -43,6 +43,9 @@ public class Budget extends Base {
 
     private Double warningPercent;
 
+    @Column(name = "is_warning_sent", nullable = false)
+    private boolean warningSent = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private BudgetStatus status = BudgetStatus.ACTIVE;

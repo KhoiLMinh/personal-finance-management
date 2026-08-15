@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: financial-backend
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: test-secret-key-must-be-at-least-32-characters-long-for-hs256
+    expiration-ms: 3600000

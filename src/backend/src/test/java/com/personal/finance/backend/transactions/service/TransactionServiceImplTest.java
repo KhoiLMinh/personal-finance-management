@@ -3,6 +3,7 @@ package com.personal.finance.backend.transactions.service;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.transactions.dto.request.CreateTransactionRequest;
+import com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest;
 import com.personal.finance.backend.transactions.dto.response.TransactionDTO;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.transactions.mapper.TransactionMapper;
@@ -140,6 +141,89 @@ class TransactionServiceImplTest {
 
         assertEquals("Không tìm thấy giao dịch hoặc truy cập trái phép!", exception.getMessage());
         verify(transactionRepository, never()).delete(any());
+        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+    }
+
+
+    @Test
+    void updateTransaction_HasEditPermission_UpdateAmountExpense_Success() {
+        Long userId = 10L;
+        Long transactionId = 100L;
+
+        com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest updateReq =
+                new com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest();
+        updateReq.setCategoryId(2L);
+        updateReq.setAmount(70000.0);
+        updateReq.setType(Transaction.TransactionType.EXPENSE);
+        updateReq.setDate(LocalDate.now());
+        updateReq.setDescription("Ăn trưa xịn hơn");
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
+
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
+        when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
+
+
+        TransactionDTO result = transactionService.updateTransaction(transactionId, userId, updateReq);
+
+
+        assertNotNull(result);
+        verify(transactionRepository, times(1)).save(mockTransaction);
+
+
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(-20000.0));
+    }
+
+    @Test
+    void updateTransaction_HasEditPermission_ChangeToIncome_Success() {
+
+        Long userId = 10L;
+        Long transactionId = 100L;
+
+        com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest updateReq =
+                new com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest();
+        updateReq.setCategoryId(2L);
+        updateReq.setAmount(100000.0);
+        updateReq.setType(Transaction.TransactionType.INCOME); // Sửa thành thu nhập 100k
+        updateReq.setDate(LocalDate.now());
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
+
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
+        when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
+
+        transactionService.updateTransaction(transactionId, userId, updateReq);
+
+
+        verify(transactionRepository, times(1)).save(mockTransaction);
+
+
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(150000.0));
+    }
+
+    @Test
+    void updateTransaction_ViewPermissionOnly_ThrowsException() {
+        // Arrange
+        Long userId = 11L;
+        Long transactionId = 100L;
+        UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(false);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
+            transactionService.updateTransaction(transactionId, userId, updateReq);
+        });
+
+        assertEquals("Bạn không có quyền sửa giao dịch trong ví này!", exception.getMessage());
+
+        verify(transactionRepository, never()).save(any());
         verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
     }
 }

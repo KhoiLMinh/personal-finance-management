@@ -3,6 +3,7 @@ package com.personal.finance.backend.transactions.service.impl;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.transactions.dto.request.CreateTransactionRequest;
+import com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest;
 import com.personal.finance.backend.transactions.dto.response.TransactionDTO;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.transactions.mapper.TransactionMapper;
@@ -97,5 +98,47 @@ public class TransactionServiceImpl implements TransactionService {
 
         transactionRepository.delete(transaction);
         log.info("Đã xóa giao dịch ID: {} và khôi phục số dư ví ID: {}", id, transaction.getWallet().getId());
+    }
+
+
+    @Override
+    @Transactional
+    public TransactionDTO updateTransaction(Long id, Long userId, UpdateTransactionRequest request) {
+        // SE-06: Lấy giao dịch hiện tại, đảm bảo người dùng có quyền truy cập giao dịch này
+        Transaction transaction = transactionRepository.findByIdAndAccessibleByUser(id, userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch hoặc truy cập trái phép!"));
+
+        boolean canEditWallet = walletRepository.hasEditPermission(transaction.getWallet().getId(), userId);
+        if (!canEditWallet) {
+            throw new AccessDeniedException("Bạn không có quyền sửa giao dịch trong ví này!");
+        }
+
+        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
+
+        Double oldImpact = transaction.getType() == Transaction.TransactionType.INCOME
+                ? transaction.getAmount()
+                : -transaction.getAmount();
+
+        Double newImpact = request.getType() == Transaction.TransactionType.INCOME
+                ? request.getAmount()
+                : -request.getAmount();
+
+        Double netChange = newImpact - oldImpact;
+
+        if (netChange != 0.0) {
+            walletRepository.updateBalance(transaction.getWallet().getId(), netChange);
+        }
+
+        transaction.setCategory(category);
+        transaction.setAmount(request.getAmount());
+        transaction.setType(request.getType());
+        transaction.setDate(request.getDate());
+        transaction.setDescription(request.getDescription());
+
+        Transaction updatedTransaction = transactionRepository.save(transaction);
+        log.info("Cập nhật thành công giao dịch ID: {} bởi UserId: {}", id, userId);
+
+        return transactionMapper.toDTO(updatedTransaction);
     }
 }

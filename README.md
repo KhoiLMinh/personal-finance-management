@@ -108,7 +108,6 @@ personal-finance-management/
 - Node.js 18+ và npm/yarn
 - MySQL 8+
 - Maven 3.8+
-- Docker & Docker Compose (nếu chạy bằng container)
 
 ## Cài đặt & chạy dự án
 
@@ -119,71 +118,62 @@ git clone https://github.com/<your-username>/personal-finance-management.git
 cd personal-finance-management
 ```
 
-### 2. Chạy bằng Docker (khuyến nghị)
+### Bước 2: Khởi tạo Database
 
+1. Mở MySQL Workbench (hoặc công cụ quản lý MySQL của bạn).
+2. Tạo một database trống với tên `financial_db`:
+
+```sql
+CREATE DATABASE financial_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
-updating...
-```
 
-Mặc định:
+### Bước 3: Chạy Backend (Spring Boot)
 
-- Backend: `http://localhost:8080`
-- Frontend: updating
-- MySQL: cổng `3306`
-
-### 3. Chạy thủ công (không dùng Docker)
-
-**Backend**
+1. Mở terminal mới và di chuyển vào thư mục backend:
 
 ```bash
 cd src/backend
-# Tạo database MySQL trước, ví dụ: personal_finance_db
-cp src/main/resources/application.yml
-# Cập nhật thông tin kết nối DB trong application.yml
-mvn spring-boot:run
 ```
 
-**Frontend**
+2. Đảm bảo thông tin kết nối DB (username/password) trong file `src/main/resources/application-local.yaml` khớp với MySQL trên máy bạn.
 
-```
-updating
-```
-
-## Biến môi trường
-
-Backend (`application.yml`):
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/personal_finance_db
-    username: root
-    password: yourpassword
-
-jwt:
-  secret: your-secret-key
-  expiration: your-time-setting
-```
-
-Frontend (`.env`):
-
-## API Documentation
-
-Các API được kiểm thử bằng **Postman**. Collection Postman được đính kèm tại `docs/kiem-thu/postman`.
-
-Một số nhóm endpoint chính (tham khảo, chi tiết xem trong collection):
-
-## Kiểm thử
-
-- **Unit test**: JUnit + Mockito cho tầng Service và Controller.
-- **API test**: Postman collection (`docs/kiem-thu/postman`).
-- **E2E test**: updating
+3. Chạy lệnh sau để khởi động Backend với cấu hình local:
 
 ```bash
-# Chạy unit test backend
-cd backend
-mvn test
+$env:SPRING_PROFILES_ACTIVE="local"
+.\mvnw.cmd spring-boot:run
 ```
+
+> **Lưu ý:** Ở lần chạy đầu tiên, Hibernate sẽ tự động tạo các bảng và DataSeeder sẽ tự động nạp các tài khoản demo vào database.
+
+**API Server sẽ chạy tại:** `http://localhost:8080` và có thể vào `http://localhost:8080/swagger-ui/index.html` để xem chi tiết các api đã được cài đặt
+
+### Bước 4: Chạy Frontend (ReactJS) (updating)
+
+## Updating: chưa hoàn thành frontend
+
+## Danh sách tài khoản Demo (Seed Data)
+
+Hệ thống đã tích hợp `backend/config/DataSeeder` tự động tạo sẵn các tài khoản dưới đây ở lần khởi động đầu tiên để phục vụ cho việc kiểm thử và chấm điểm:
+
+| **Vai trò (Role)** | **Tên đăng nhập (Username)** | **Mật khẩu (Password)** | **Chức năng kiểm thử**                        |
+| ------------------ | ---------------------------- | ----------------------- | --------------------------------------------- |
+| **ADMIN**          | `admin`                      | `Demo@123`              | Quản trị hệ thống, quản lý danh mục mẫu chung |
+| **USER**           | `user_demo`                  | `Demo@123`              | Quản lý ví, giao dịch, ngân sách, nhập CSV    |
+
+> Mật khẩu của các tài khoản này đã được mã hóa an toàn bằng BCrypt trong cơ sở dữ liệu.
+
+## Kiểm thử (Testing)
+
+Dự án tuân thủ quy trình kiểm thử tự động với JUnit 5 và Mockito. Để chạy toàn bộ Unit Test của Backend:
+
+```bash
+cd src/backend
+.\mvnw.cmd test
+```
+
+_Kết quả kiểm thử chi tiết và Postman Collection được lưu trữ tại thư mục `docs/kiem-thu/`._
+(updating...)
 
 ## Giấy phép
 

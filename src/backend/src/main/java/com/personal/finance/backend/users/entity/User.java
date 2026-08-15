@@ -8,13 +8,7 @@ import com.personal.finance.backend.savingGoals.entity.SavingGoal;
 import com.personal.finance.backend.families.entity.Family;
 import com.personal.finance.backend.notifications.entity.Notification;
 import com.personal.finance.backend.wallets.entity.Wallet;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
@@ -28,6 +22,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @Entity
+@Table(name = "users")
 public class User extends Base {
 
     @NotBlank

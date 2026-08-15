@@ -45,4 +45,5 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: root
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GOOGLE_CLIENT_ID: test-google-client-id
         run: ./mvnw test

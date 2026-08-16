@@ -1,5 +1,6 @@
 package com.personal.finance.backend.transactions.service;
 
+import com.personal.finance.backend.budgets.service.BudgetService;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.transactions.dto.request.CreateTransactionRequest;
@@ -41,6 +42,9 @@ class TransactionServiceImplTest {
 
     @Mock
     private TransactionMapper transactionMapper;
+
+    @Mock
+    private BudgetService budgetService;
 
     @InjectMocks
     private TransactionServiceImpl transactionService;
@@ -208,7 +212,6 @@ class TransactionServiceImplTest {
 
     @Test
     void updateTransaction_ViewPermissionOnly_ThrowsException() {
-        // Arrange
         Long userId = 11L;
         Long transactionId = 100L;
         UpdateTransactionRequest updateReq = new UpdateTransactionRequest();

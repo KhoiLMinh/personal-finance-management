@@ -35,10 +35,6 @@ build/
 # Maven
 **/target/
 
-# Environment
-.env
-.env.*
-!.env.example
 
 # Spring local config
 **/application-local.yaml

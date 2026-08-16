@@ -1,0 +1,56 @@
+# Bảng Kiểm Thử Chức Năng (Test Cases)
+
+Tài liệu này chứa các kịch bản kiểm thử (Test Cases) cho các module chính của hệ thống. Mỗi Test Case được thiết kế với 9 trường thông tin cơ bản nhằm đảm bảo tính tái lập và truy vết dễ dàng.
+
+---
+
+## 1. Module Xác thực và Người dùng (User & Auth)
+
+| Mã TC           | Chức năng / UC     | Mục tiêu                                          | Tiền điều kiện                              | Dữ liệu đầu vào                                                        | Các bước                                                                        | Kết quả mong đợi                                                             | Kết quả thực tế           | Trạng thái |
+| :-------------- | :----------------- | :------------------------------------------------ | :------------------------------------------ | :--------------------------------------------------------------------- | :------------------------------------------------------------------------------ | :--------------------------------------------------------------------------- | :------------------------ | :--------- |
+| **TC-AUTH-001** | Đăng ký tài khoản  | Kiểm tra luồng đăng ký hợp lệ (Happy Path)        | Không có                                    | `username`: "newuser", `email`: "new@email.com", `password`: "123456"  | 1. Gọi API POST `/api/v1/auth/register`<br>2. Gửi body chứa dữ liệu hợp lệ      | HTTP 201 Created;<br>Thông báo "Đăng ký thành công!";<br>Bản ghi lưu vào DB. | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-AUTH-002** | Đăng ký tài khoản  | Hệ thống chặn tên đăng nhập đã tồn tại (TC-11)    | Đã có user `testuser` trong DB              | `username`: "testuser", `email`: "new@email.com", `password`: "123456" | 1. Gọi API POST `/api/v1/auth/register`<br>2. Gửi body trùng username           | HTTP 400 Bad Request;<br>Lỗi "Tên đăng nhập đã tồn tại!".                    | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-AUTH-003** | Đăng nhập hệ thống | Kiểm tra đăng nhập với mật khẩu đúng (Happy Path) | User `testuser` (pass: `123456`) đã tồn tại | `username`: "testuser", `password`: "123456"                           | 1. Gọi API POST `/api/v1/auth/login`<br>2. Gửi body chứa username/password đúng | HTTP 200 OK;<br>Trả về Token JWT và thông tin User.                          | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-AUTH-004** | Đăng nhập hệ thống | Đăng nhập thất bại do sai mật khẩu                | User `testuser` (pass: `123456`) đã tồn tại | `username`: "testuser", `password`: "wrongpass"                        | 1. Gọi API POST `/api/v1/auth/login`<br>2. Gửi body chứa sai mật khẩu           | HTTP 400 Bad Request;<br>Lỗi "Sai tên đăng nhập hoặc mật khẩu!".             | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-USER-001** | Xem hồ sơ cá nhân  | Trả về đúng thông tin profile của user            | Đã đăng nhập (có Token hợp lệ, userId=1)    | Không có                                                               | 1. Gọi API GET `/api/v1/users/profile`<br>2. Gắn Token vào Header               | HTTP 200 OK;<br>Trả về UserDTO khớp với userId=1.                            | Khớp với kết quả mong đợi | **Pass**   |
+
+---
+
+## 2. Module Quản lý Danh mục (Category)
+
+| Mã TC           | Chức năng / UC   | Mục tiêu                                              | Tiền điều kiện                                 | Dữ liệu đầu vào                                                     | Các bước                                                              | Kết quả mong đợi                                                              | Kết quả thực tế           | Trạng thái |
+| :-------------- | :--------------- | :---------------------------------------------------- | :--------------------------------------------- | :------------------------------------------------------------------ | :-------------------------------------------------------------------- | :---------------------------------------------------------------------------- | :------------------------ | :--------- |
+| **TC-CATE-001** | Tạo danh mục     | Kiểm tra luồng tạo danh mục hợp lệ                    | Đã đăng nhập                                   | `name`: "Lương", `type`: "INCOME"                                   | 1. Gọi API POST `/categories`<br>2. Gửi body hợp lệ                   | HTTP 201 Created;<br>Danh mục mới được lưu DB.                                | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-CATE-002** | Tạo danh mục con | Chặn việc tạo danh mục con khác loại với danh mục cha | Đã có DM cha "Ăn uống" (`type` = EXPENSE)      | `name`: "Lương phụ", `type`: "INCOME", `parentId`: ID của "Ăn uống" | 1. Gọi API POST `/categories`<br>2. Gửi body chứa `parentId` sai type | HTTP 400 Bad Request;<br>Lỗi "Danh mục con phải cùng loại với danh mục cha!". | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-CATE-003** | Xóa danh mục     | Chặn xóa cứng khi danh mục đã có giao dịch (BR-07)    | Đã có DM "Ăn uống" và 1 Giao dịch thuộc DM này | ID danh mục "Ăn uống"                                               | 1. Gọi API DELETE `/categories/{id}`                                  | HTTP 400 Bad Request;<br>Lỗi "Danh mục đã có giao dịch...".                   | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-CATE-004** | Xem danh mục     | Không cho phép xem danh mục của user khác (TC-12)     | Hacker đăng nhập; DM X thuộc về Nạn nhân       | ID của danh mục X                                                   | 1. Hacker gọi API GET `/categories/{id}`                              | HTTP 400/403;<br>Lỗi "Không tìm thấy danh mục!".                              | Khớp với kết quả mong đợi | **Pass**   |
+
+---
+
+## 3. Module Quản lý Ví (Wallet)
+
+| Mã TC           | Chức năng / UC  | Mục tiêu                                             | Tiền điều kiện                           | Dữ liệu đầu vào                             | Các bước                                         | Kết quả mong đợi                                                       | Kết quả thực tế           | Trạng thái |
+| :-------------- | :-------------- | :--------------------------------------------------- | :--------------------------------------- | :------------------------------------------ | :----------------------------------------------- | :--------------------------------------------------------------------- | :------------------------ | :--------- |
+| **TC-WALL-001** | Tạo ví mới      | Luồng tạo ví thành công                              | Đã đăng nhập                             | `name`: "Ví Tiết Kiệm", `balance`: 100000.0 | 1. Gọi API POST `/wallets`<br>2. Gửi body hợp lệ | HTTP 201 Created;<br>Ví tạo thành công.                                | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-WALL-002** | Lấy chi tiết ví | Chặn việc xem ví nếu không có quyền truy cập (TC-12) | Hacker đăng nhập; Ví X thuộc về Nạn nhân | ID của Ví X                                 | 1. Hacker gọi API GET `/wallets/{id}`            | HTTP 403 Forbidden;<br>Lỗi "Bạn không có quyền truy cập ví này!".      | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-WALL-003** | Cập nhật ví     | Chặn đổi tên ví nếu không phải Chủ sở hữu            | User B đăng nhập; Ví X thuộc về User A   | ID Ví X; `name`: "Ví Mới"                   | 1. User B gọi API PUT `/wallets/{id}`            | HTTP 403 Forbidden;<br>Lỗi "Bạn không có quyền thao tác trên ví này!". | Khớp với kết quả mong đợi | **Pass**   |
+
+---
+
+## 4. Module Quản lý Giao dịch (Transaction)
+
+| Mã TC           | Chức năng / UC | Mục tiêu                                         | Tiền điều kiện                                  | Dữ liệu đầu vào                                      | Các bước                                              | Kết quả mong đợi                                                            | Kết quả thực tế           | Trạng thái |
+| :-------------- | :------------- | :----------------------------------------------- | :---------------------------------------------- | :--------------------------------------------------- | :---------------------------------------------------- | :-------------------------------------------------------------------------- | :------------------------ | :--------- |
+| **TC-TRAN-001** | Tạo giao dịch  | Tạo thành công và cập nhật đúng số dư (DB-14)    | User có quyền EDIT trên Ví X                    | `amount`: 50000, `type`: "EXPENSE", `walletId`: Ví X | 1. Gọi API POST `/transactions`<br>2. Gửi body hợp lệ | HTTP 201 Created;<br>Số dư Ví X giảm đi 50,000.                             | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-TRAN-002** | Tạo giao dịch  | Chặn tạo giao dịch nếu chỉ có quyền VIEW (BR-10) | User chỉ có quyền VIEW trên Ví X                | `amount`: 50000, `type`: "EXPENSE", `walletId`: Ví X | 1. Gọi API POST `/transactions`                       | HTTP 403 Forbidden;<br>Lỗi "Bạn không có quyền thêm giao dịch vào ví này!". | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-TRAN-003** | Xóa giao dịch  | Khôi phục số dư ví khi xóa giao dịch thành công  | Giao dịch Y (EXPENSE 50,000) tồn tại trong Ví X | ID của giao dịch Y                                   | 1. Chủ ví gọi API DELETE `/transactions/{id}`         | HTTP 204 No Content;<br>Số dư Ví X được cộng lại 50,000.                    | Khớp với kết quả mong đợi | **Pass**   |
+
+---
+
+## 5. Module Quản lý Ngân sách (Budget)
+
+| Mã TC           | Chức năng / UC | Mục tiêu                                                      | Tiền điều kiện                                | Dữ liệu đầu vào                                                            | Các bước                              | Kết quả mong đợi                                              | Kết quả thực tế           | Trạng thái |
+| :-------------- | :------------- | :------------------------------------------------------------ | :-------------------------------------------- | :------------------------------------------------------------------------- | :------------------------------------ | :------------------------------------------------------------ | :------------------------ | :--------- |
+| **TC-BUDG-001** | Tạo ngân sách  | Tạo ngân sách thành công                                      | Đã có Danh mục "Ăn uống"                      | `categoryId`: ID Ăn uống, `month`: 8, `year`: 2026, `limitAmount`: 5000000 | 1. Gọi API POST `/budgets`            | HTTP 201 Created;<br>Ngân sách chuyển trạng thái ACTIVE.      | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-BUDG-002** | Tạo ngân sách  | Chặn việc tạo trùng ngân sách cho cùng danh mục và kỳ (BR-04) | Đã tạo thành công ngân sách như TC-BUDG-001   | Thông tin y hệt TC-BUDG-001                                                | 1. Gọi tiếp API POST `/budgets` lần 2 | HTTP 400 Bad Request;<br>Lỗi "Bạn đã thiết lập ngân sách...". | Khớp với kết quả mong đợi | **Pass**   |
+| **TC-BUDG-003** | Lấy chi tiết   | Chặn truy cập ngân sách người khác (TC-12)                    | Hacker đăng nhập; Ngân sách thuộc về Nạn nhân | ID của Ngân sách                                                           | 1. Hacker gọi API GET `/budgets/{id}` | HTTP 400/403;<br>Lỗi "Không tìm thấy ngân sách...".           | Khớp với kết quả mong đợi | **Pass**   |

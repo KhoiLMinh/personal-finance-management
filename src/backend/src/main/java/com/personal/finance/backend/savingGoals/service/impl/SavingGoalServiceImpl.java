@@ -8,14 +8,20 @@ import com.personal.finance.backend.savingGoals.entity.SavingGoal;
 import com.personal.finance.backend.savingGoals.mapper.SavingGoalMapper;
 import com.personal.finance.backend.savingGoals.repository.SavingGoalRepository;
 import com.personal.finance.backend.savingGoals.service.SavingGoalService;
+import com.personal.finance.backend.transactions.entity.Transaction;
+import com.personal.finance.backend.transactions.repository.TransactionRepository;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
+import com.personal.finance.backend.wallets.entity.Wallet;
+import com.personal.finance.backend.wallets.repository.WalletRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 
 @Slf4j
 @Service
@@ -25,6 +31,8 @@ public class SavingGoalServiceImpl implements SavingGoalService {
     private final SavingGoalRepository savingGoalRepository;
     private final UserRepository userRepository;
     private final SavingGoalMapper savingGoalMapper;
+    private final WalletRepository walletRepository;
+    private final TransactionRepository transactionRepository;
 
     private SavingGoal getOwnedSavingGoal(Long id, Long userId) {
         return savingGoalRepository.findByIdAndUserId(id, userId)
@@ -88,22 +96,45 @@ public class SavingGoalServiceImpl implements SavingGoalService {
     @Override
     @Transactional
     public SavingGoalDTO addFunds(Long id, Long userId, AddFundRequest request) {
-        int updatedRows = savingGoalRepository.addFundsToGoal(id, userId, request.getAmount());
+        boolean canEditWallet = walletRepository.hasEditPermission(request.getWalletId(), userId);
+        if (!canEditWallet) {
+            throw new RuntimeException("Bạn không có quyền trích tiền từ ví này!");
+        }
 
-        if (updatedRows == 0) {
-            throw new RuntimeException("Không tìm thấy mục tiêu hoặc cập nhật thất bại!");
+        Wallet wallet = walletRepository.findById(request.getWalletId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ví!"));
+
+        if (wallet.getBalance() < request.getAmount()) {
+            throw new RuntimeException("Số dư trong ví không đủ để trích vào mục tiêu tiết kiệm!");
         }
 
         SavingGoal goal = getOwnedSavingGoal(id, userId);
+        if (goal.getStatus() == SavingGoal.GoalStatus.COMPLETE) {
+            throw new RuntimeException("Mục tiêu này đã hoàn thành, không thể nộp thêm tiền!");
+        }
 
-        if (goal.getStatus() != SavingGoal.GoalStatus.COMPLETE &&
-                goal.getCurrentAmount() >= goal.getTargetAmount()) {
+        walletRepository.updateBalance(wallet.getId(), -request.getAmount());
+
+        Transaction transaction = new Transaction();
+        transaction.setWallet(wallet);
+        transaction.setAmount(request.getAmount());
+        transaction.setType(Transaction.TransactionType.EXPENSE); // Coi như một khoản chi
+        transaction.setDate(LocalDate.now());
+        transaction.setDescription("Trích tiền tiết kiệm cho mục tiêu: " + goal.getTitle());
+        transaction.setStatus("COMPLETED");
+        transactionRepository.save(transaction);
+
+        savingGoalRepository.addFundsToGoal(id, userId, request.getAmount());
+
+        goal.setCurrentAmount(goal.getCurrentAmount() + request.getAmount());
+
+        if (goal.getCurrentAmount() >= goal.getTargetAmount()) {
             goal.setStatus(SavingGoal.GoalStatus.COMPLETE);
             savingGoalRepository.save(goal);
             log.info("Mục tiêu tiết kiệm ID: {} đã hoàn thành!", id);
         }
 
-        log.info("Đã thêm {} vào mục tiêu ID: {} bởi UserId: {}", request.getAmount(), id, userId);
+        log.info("Đã trích {} từ ví {} vào mục tiêu ID: {} bởi UserId: {}", request.getAmount(), wallet.getName(), id, userId);
         return savingGoalMapper.toDTO(goal);
     }
 

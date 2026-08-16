@@ -9,6 +9,7 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.personal.finance.backend.reports.dto.response.CategoryExpenseDTO;
 import com.personal.finance.backend.reports.dto.response.DashboardOverviewDTO;
+import com.personal.finance.backend.reports.dto.response.TrendDataDTO;
 import com.personal.finance.backend.reports.service.ReportService;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
@@ -26,8 +27,12 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
 import java.util.List;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-@Slf4j 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
@@ -38,6 +43,7 @@ public class ReportServiceImpl implements ReportService {
     public DashboardOverviewDTO getDashboardOverview(Long userId, LocalDate startDate, LocalDate endDate) {
         DashboardOverviewDTO overview = new DashboardOverviewDTO();
 
+        // 1. TÍNH TOÁN DỮ LIỆU KỲ HIỆN TẠI
         Double totalBalance = walletRepository.getTotalBalanceAccessibleByUser(userId);
         overview.setTotalBalance(totalBalance);
 
@@ -48,10 +54,53 @@ public class ReportServiceImpl implements ReportService {
         overview.setTotalExpense(totalExpense);
         overview.setNetSavings(totalIncome - totalExpense);
 
+        // 2. SO SÁNH VỚI KỲ TRƯỚC (So sánh chi tiêu giữa các kỳ khác nhau)
+        long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
+        LocalDate prevEndDate = startDate.minusDays(1);
+        LocalDate prevStartDate = prevEndDate.minusDays(daysBetween);
+
+        Double prevIncome = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, prevStartDate, prevEndDate);
+        Double prevExpense = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, prevStartDate, prevEndDate);
+
+        overview.setIncomeChangePercent(calculatePercentageChange(prevIncome, totalIncome));
+        overview.setExpenseChangePercent(calculatePercentageChange(prevExpense, totalExpense));
+
         List<CategoryExpenseDTO> expenseByCategory = transactionRepository.getExpenseByCategory(userId, startDate, endDate);
         overview.setExpenseByCategory(expenseByCategory);
 
+        List<Object[]> rawTrendData = transactionRepository.getTrendData(userId, startDate, endDate);
+        overview.setTrendData(formatTrendData(rawTrendData));
+
         return overview;
+    }
+
+    private Double calculatePercentageChange(Double previous, Double current) {
+        if (previous == null || previous == 0.0) {
+            return (current != null && current > 0.0) ? 100.0 : 0.0;
+        }
+        if (current == null) current = 0.0;
+        return ((current - previous) / previous) * 100.0;
+    }
+
+    // Hàm phụ trợ: Format dữ liệu thô từ DB thành danh sách vẽ biểu đồ
+    private List<TrendDataDTO> formatTrendData(List<Object[]> rawData) {
+        Map<String, TrendDataDTO> trendMap = new LinkedHashMap<>();
+
+        for (Object[] row : rawData) {
+            String dateStr = row[0].toString();
+            Transaction.TransactionType type = (Transaction.TransactionType) row[1];
+            Double amount = (Double) row[2];
+
+            trendMap.putIfAbsent(dateStr, new TrendDataDTO(dateStr, 0.0, 0.0));
+            TrendDataDTO dto = trendMap.get(dateStr);
+
+            if (type == Transaction.TransactionType.INCOME) {
+                dto.setIncome(amount);
+            } else {
+                dto.setExpense(amount);
+            }
+        }
+        return new ArrayList<>(trendMap.values());
     }
 
     private List<Transaction> getTransactionData(Long userId, Long walletId, LocalDate startDate, LocalDate endDate) {

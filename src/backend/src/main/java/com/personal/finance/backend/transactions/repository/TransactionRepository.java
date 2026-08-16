@@ -96,4 +96,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    @Query("""
+        SELECT t.date, t.type, SUM(t.amount) 
+        FROM Transaction t 
+        LEFT JOIN t.wallet w 
+        LEFT JOIN w.members wm 
+        WHERE (w.owner.id = :userId OR wm.user.id = :userId) 
+        AND t.date >= :startDate AND t.date <= :endDate 
+        GROUP BY t.date, t.type 
+        ORDER BY t.date ASC
+    """)
+    List<Object[]> getTrendData(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }

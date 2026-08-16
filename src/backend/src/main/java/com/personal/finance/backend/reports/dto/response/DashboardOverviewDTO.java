@@ -13,5 +13,10 @@ public class DashboardOverviewDTO {
     private Double totalExpense;
     private Double netSavings;
 
+    private Double incomeChangePercent;
+    private Double expenseChangePercent;
+
     private List<CategoryExpenseDTO> expenseByCategory;
+
+    private List<TrendDataDTO> trendData;
 }

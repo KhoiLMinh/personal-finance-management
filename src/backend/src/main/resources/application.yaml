@@ -28,3 +28,10 @@ app:
 
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
+
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+
+  mail:
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}

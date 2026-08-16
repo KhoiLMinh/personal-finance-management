@@ -1,5 +1,6 @@
 package com.personal.finance.backend.transactions.repository;
 
+import com.personal.finance.backend.reports.dto.response.CategoryExpenseDTO;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -56,4 +58,42 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("userId") Long userId,
             @Param("month") Integer month,
             @Param("year") Integer year);
+
+
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0.0) 
+        FROM Transaction t 
+        LEFT JOIN t.wallet w 
+        LEFT JOIN w.members wm 
+        WHERE (w.owner.id = :userId OR wm.user.id = :userId) 
+        AND t.type = :type 
+        AND (:startDate IS NULL OR t.date >= :startDate) 
+        AND (:endDate IS NULL OR t.date <= :endDate)
+        """)
+    Double getTotalAmountByType(
+            @Param("userId") Long userId,
+            @Param("type") Transaction.TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
+
+
+    @Query("""
+        SELECT new com.personal.finance.backend.reports.dto.response.CategoryExpenseDTO(
+            c.id, c.name, c.color, SUM(t.amount)
+        )
+        FROM Transaction t 
+        JOIN t.category c 
+        LEFT JOIN t.wallet w 
+        LEFT JOIN w.members wm 
+        WHERE (w.owner.id = :userId OR wm.user.id = :userId) 
+        AND t.type = 'EXPENSE' 
+        AND (:startDate IS NULL OR t.date >= :startDate) 
+        AND (:endDate IS NULL OR t.date <= :endDate)
+        GROUP BY c.id, c.name, c.color
+        ORDER BY SUM(t.amount) DESC
+        """)
+    List<CategoryExpenseDTO> getExpenseByCategory(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }

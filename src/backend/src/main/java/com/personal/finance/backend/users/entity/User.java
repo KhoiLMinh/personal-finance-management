@@ -44,6 +44,9 @@ public class User extends Base {
 
     private String avatar;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role = Role.USER;

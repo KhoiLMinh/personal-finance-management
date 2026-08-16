@@ -8,7 +8,7 @@ import com.personal.finance.backend.wallets.dto.response.WalletDTO;
 import com.personal.finance.backend.wallets.entity.Wallet;
 import com.personal.finance.backend.wallets.mapper.WalletMapper;
 import com.personal.finance.backend.wallets.repository.WalletRepository;
-import com.personal.finance.backend.wallets.repository.impl.WalletServiceImpl;
+import com.personal.finance.backend.wallets.service.impl.WalletServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -4,6 +4,7 @@ import com.personal.finance.backend.notifications.dto.response.NotificationDTO;
 import com.personal.finance.backend.notifications.entity.Notification;
 import com.personal.finance.backend.notifications.mapper.NotificationMapper;
 import com.personal.finance.backend.notifications.repository.NotificationRepository;
+import com.personal.finance.backend.notifications.service.impl.NotificationServiceImpl;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +38,7 @@ class NotificationServiceImplTest {
     private NotificationMapper notificationMapper;
 
     @InjectMocks
-    private NotificationService notificationService;
+    private NotificationServiceImpl notificationService;
 
     private User mockUser;
     private Notification mockNotification;

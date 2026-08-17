@@ -229,4 +229,50 @@ class TransactionServiceImplTest {
         verify(transactionRepository, never()).save(any());
         verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
     }
+
+    @Test
+    void deleteTransaction_ViewPermissionOnly_ThrowsException() {
+        Long userId = 11L;
+        Long transactionId = 100L;
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(false); // Chỉ có quyền VIEW
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
+            transactionService.deleteTransaction(transactionId, userId);
+        });
+
+        assertEquals("Bạn không có quyền xóa giao dịch trong ví này!", exception.getMessage());
+        verify(transactionRepository, never()).delete(any());
+    }
+
+    @Test
+    void createTransaction_ExpenseType_TriggersBudgetCheck() {
+        Long userId = 10L;
+        request.setType(Transaction.TransactionType.EXPENSE); // Giao dịch chi tiêu
+
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(walletRepository.findById(1L)).thenReturn(Optional.of(mockWallet));
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
+        when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
+
+        transactionService.createTransaction(userId, request);
+
+        verify(budgetService, times(1)).checkAndAlertBudget(eq(userId), eq(2L), anyInt(), anyInt());
+    }
+
+    @Test
+    void getTransactionById_Success() {
+        Long userId = 10L;
+        Long transactionId = 100L;
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+        when(transactionMapper.toDTO(mockTransaction)).thenReturn(new TransactionDTO());
+
+        TransactionDTO result = transactionService.getTransactionById(transactionId, userId);
+
+        assertNotNull(result);
+        verify(transactionRepository, times(1)).findByIdAndAccessibleByUser(transactionId, userId);
+    }
 }

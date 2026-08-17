@@ -1,5 +1,6 @@
 package com.personal.finance.backend.importBatch.service.impl;
 
+import com.personal.finance.backend.ai_assistant.service.AiAssistantService;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.entity.CategoryRule;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
@@ -29,6 +30,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -41,7 +43,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
     private final CategoryRepository categoryRepository;
     private final CategoryRuleRepository categoryRuleRepository;
     private final UserRepository userRepository;
-
+    private final AiAssistantService aiAssistantService;
     private final ImportBatchMapper importBatchMapper;
 
     private static final String CSV_SPLIT_REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
@@ -63,8 +65,11 @@ public class ImportBatchServiceImpl implements ImportBatchService {
 
         Category uncategorized = getOrCreateUncategorizedCategory(userId);
         List<CategoryRule> userRules = categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(userId);
+        List<Category> allCategories = categoryRepository.findAllByUserIdOrderByCreateAtDesc(userId);
 
         List<Transaction> transactionsToSave = new ArrayList<>();
+        List<Transaction> needAiCategorization = new ArrayList<>();
+        List<String> descriptionsForAi = new ArrayList<>();
         double netBalanceChange = 0.0;
         int totalRows = 0;
         int successRows = 0;
@@ -77,10 +82,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
             boolean isHeader = true;
 
             while ((line = br.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
-                }
+                if (isHeader) { isHeader = false; continue; }
                 totalRows++;
 
                 String[] fields = line.split(CSV_SPLIT_REGEX, -1);
@@ -95,11 +97,11 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                     continue;
                 }
 
-                Category matchedCategory = categorizeTransaction(description, userRules, uncategorized);
+                // BƯỚC 1: DÙNG RULE TỰ ĐỘNG
+                Category matchedCategory = categorizeTransaction(description, userRules, null);
 
                 Transaction transaction = new Transaction();
                 transaction.setWallet(wallet);
-                transaction.setCategory(matchedCategory);
                 transaction.setImportBatch(batch);
                 transaction.setAmount(Math.abs(amount));
                 transaction.setType(amount >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
@@ -107,11 +109,38 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 transaction.setDescription(description);
                 transaction.setStatus("COMPLETED");
 
+                if (matchedCategory != null) {
+                    transaction.setCategory(matchedCategory); // Rule khớp -> Quất luôn
+                } else {
+                    transaction.setCategory(uncategorized); // Tạm gắn "Chưa phân loại"
+                    needAiCategorization.add(transaction); // Đưa vào mảng chờ AI
+                    descriptionsForAi.add(description);
+                }
+
                 transactionsToSave.add(transaction);
                 netBalanceChange += amount;
                 successRows++;
             }
 
+            // BƯỚC 2: GỌI AI CHO NHỮNG GIAO DỊCH CHƯA PHÂN LOẠI (Nếu có)
+            if (!descriptionsForAi.isEmpty()) {
+                log.info("Gọi AI để phân loại {} giao dịch...", descriptionsForAi.size());
+                Map<String, Long> aiResults = aiAssistantService.categorizeTransactionsBatch(descriptionsForAi, allCategories);
+
+                // Map kết quả AI về lại các Transaction
+                for (Transaction t : needAiCategorization) {
+                    Long predictedCategoryId = aiResults.get(t.getDescription());
+                    if (predictedCategoryId != null) {
+                        // Tìm Category tương ứng với ID AI dự đoán
+                        allCategories.stream()
+                                .filter(c -> c.getId().equals(predictedCategoryId))
+                                .findFirst()
+                                .ifPresent(t::setCategory);
+                    }
+                }
+            }
+
+            // BƯỚC 3: LƯU TẤT CẢ VÀO DATABASE
             if (!transactionsToSave.isEmpty()) {
                 transactionRepository.saveAll(transactionsToSave);
                 walletRepository.updateBalance(walletId, netBalanceChange);

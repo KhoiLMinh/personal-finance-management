@@ -2,12 +2,14 @@ package com.personal.finance.backend.ai_assistant.controller;
 
 import com.personal.finance.backend.ai_assistant.dto.request.ChatRequest;
 import com.personal.finance.backend.ai_assistant.dto.response.AiResponseDTO;
+import com.personal.finance.backend.ai_assistant.dto.response.ReceiptScanResponseDTO;
 import com.personal.finance.backend.ai_assistant.service.AiAssistantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
@@ -41,5 +43,18 @@ public class AiAssistantController {
 
         String reply = aiAssistantService.chatWithAi(userId, request.getMessage());
         return ResponseEntity.ok(new AiResponseDTO(reply));
+    }
+
+    @PostMapping(value = "/scan-receipt", consumes = "multipart/form-data")
+    public ResponseEntity<ReceiptScanResponseDTO> scanReceipt(
+            @RequestAttribute("userId") Long userId,
+            @RequestParam("file") MultipartFile file) {
+
+        if (file.isEmpty() || !file.getContentType().startsWith("image/")) {
+            throw new RuntimeException("Vui lòng tải lên một tệp hình ảnh hợp lệ (JPG, PNG)!");
+        }
+
+        ReceiptScanResponseDTO result = aiAssistantService.scanReceipt(userId, file);
+        return ResponseEntity.ok(result);
     }
 }

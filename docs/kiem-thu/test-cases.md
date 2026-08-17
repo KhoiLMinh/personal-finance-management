@@ -97,3 +97,15 @@ Tài liệu này chứa các kịch bản kiểm thử (Test Cases) cho các mod
 | **TC-SAVE-007** | Nạp tiền (Add Funds) | Chặn nạp tiền vào Mục tiêu đã hoàn thành (COMPLETE)                 | Mục tiêu đã có status = `COMPLETE`.                          | `amount`: 1tr, `walletId`: ID Ví                               | 1. Gọi API PATCH `/saving-goals/{id}/add-funds` | HTTP 400 Bad Request;<br>Lỗi "Mục tiêu này đã hoàn thành...".                                   | Khớp với kết quả mong đợi | **Pass**   |
 
 ---
+
+## 8. Module Quản lý Nhập dữ liệu (Import Batch)
+
+| Mã TC | Chức năng / UC | Mục tiêu | Tiền điều kiện | Dữ liệu đầu vào | Các bước | Kết quả mong đợi | Kết quả thực tế | Trạng thái |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **TC-IMP-001** | Nhập file CSV | Nhập thành công và phân loại 100% bằng Rule (Không gọi AI) | User có quyền EDIT ví, đã cài Rule "Highlands" -> "Ăn uống" | File CSV chứa 1 dòng: `15/08/2026, -50000, Highlands` | 1. Gọi API POST `/import-batches/csv` kèm file. | HTTP 201 Created;<br>Tạo 1 giao dịch thuộc DM "Ăn uống". Trừ ví 50k. Không gọi AI. | Khớp với kết quả mong đợi | **Pass** |
+| **TC-IMP-002** | Nhập file CSV | Tự động gọi AI phân loại khi không khớp Rule (Hybrid) | User có quyền EDIT ví. Không có Rule nào khớp với "Netflix". | File CSV chứa 1 dòng: `16/08/2026, -150000, Netflix` | 1. Gọi API POST `/import-batches/csv` kèm file. | HTTP 201 Created;<br>Hệ thống gọi AI. Giao dịch được lưu với Danh mục AI dự đoán. Trừ ví 150k. | Khớp với kết quả mong đợi | **Pass** |
+| **TC-IMP-003** | Nhập file CSV | Tự động bỏ qua các giao dịch bị trùng lặp (Duplicate) | File CSV chứa 1 dòng giao dịch y hệt giao dịch đã có trong DB. | File CSV chứa dòng giao dịch cũ. | 1. Gọi API POST `/import-batches/csv` kèm file. | HTTP 201 Created;<br>`successRows`: 0, `duplicatedRows`: 1. Số dư ví không đổi. | Khớp với kết quả mong đợi | **Pass** |
+| **TC-IMP-004** | Nhập file CSV | Chặn thao tác khi user chỉ có quyền VIEW trên ví | User chỉ được cấp quyền VIEW trên Ví | File CSV hợp lệ, ID Ví | 1. Gọi API POST `/import-batches/csv` | HTTP 403 Forbidden;<br>Lỗi "Bạn không có quyền import dữ liệu vào ví này!". | Khớp với kết quả mong đợi | **Pass** |
+| **TC-IMP-005** | Nhập file CSV | Rollback và báo lỗi khi file CSV sai định dạng | User có quyền EDIT. | File CSV bị lỗi cột ngày tháng: `ABC, -500, Lỗi` | 1. Gọi API POST `/import-batches/csv` | HTTP 400 Bad Request;<br>Lỗi "Định dạng file CSV không hợp lệ...". Database Rollback. | Khớp với kết quả mong đợi | **Pass** |
+
+---

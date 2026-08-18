@@ -1,14 +1,14 @@
 import api from './api';
 
 const reportService = {
-  getOverview: async (startDate, endDate) => {
+  getOverview: async (startDate: string, endDate: string) => {
     const response = await api.get('/report/overview', {
       params: { startDate, endDate }
     });
     return response.data;
   },
 
-  downloadExcel: async (startDate, endDate, walletId = null) => {
+  downloadExcel: async (startDate: string, endDate: string, walletId: number | null = null) => {
     const response = await api.get('/report/excel', {
       params: { startDate, endDate, walletId },
       responseType: 'blob', 
@@ -23,7 +23,7 @@ const reportService = {
     link.remove();
   },
 
-  downloadPdf: async (startDate, endDate, walletId = null) => {
+  downloadPdf: async (startDate: string, endDate: string, walletId: number | null = null) => {
     const response = await api.get('/report/pdf', {
       params: { startDate, endDate, walletId },
       responseType: 'blob',

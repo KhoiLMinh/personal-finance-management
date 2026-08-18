@@ -1,13 +1,11 @@
-package com.personal.finance.backend.categories.service;
+package com.personal.finance.backend.categories.service.impl;
 
-import com.personal.finance.backend.budgets.entity.Budget;
 import com.personal.finance.backend.categories.dto.request.CreateCategoryRequest;
 import com.personal.finance.backend.categories.dto.response.CategoryDTO;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.mapper.CategoryMapper;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.categories.repository.CategoryRuleRepository;
-import com.personal.finance.backend.categories.service.impl.CategoryServiceImpl;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;

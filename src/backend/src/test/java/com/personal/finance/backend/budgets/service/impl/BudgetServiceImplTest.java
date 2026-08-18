@@ -1,4 +1,4 @@
-package com.personal.finance.backend.budgets.service;
+package com.personal.finance.backend.budgets.service.impl;
 
 import com.personal.finance.backend.budgets.dto.request.CreateBudgetRequest;
 import com.personal.finance.backend.budgets.dto.request.UpdateBudgetRequest;
@@ -6,7 +6,6 @@ import com.personal.finance.backend.budgets.dto.response.BudgetDTO;
 import com.personal.finance.backend.budgets.entity.Budget;
 import com.personal.finance.backend.budgets.mapper.BudgetMapper;
 import com.personal.finance.backend.budgets.repository.BudgetRepository;
-import com.personal.finance.backend.budgets.service.impl.BudgetServiceImpl;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.common.service.EmailService;
@@ -42,8 +41,7 @@ class BudgetServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private BudgetMapper budgetMapper;
-    
-    // Bổ sung Mock cho 3 thư viện phụ thuộc của hàm checkAndAlertBudget
+
     @Mock
     private TransactionRepository transactionRepository;
     @Mock

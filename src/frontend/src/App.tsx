@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import MainLayout from './components/MainLayout';
 import TransactionsPage from './pages/TransactionsPage';
 import SavingGoalsPage from './pages/SavingGoalsPage';
+import BudgetsPage from './pages/BudgetsPage';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -34,6 +35,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/saving-goals" element={<SavingGoalsPage />} />
+        <Route path="/budgets" element={<BudgetsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

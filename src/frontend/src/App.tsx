@@ -11,6 +11,7 @@ import SavingGoalsPage from './pages/SavingGoalsPage';
 import BudgetsPage from './pages/BudgetsPage';
 import WalletsPage from './pages/WalletsPage';
 import ImportPage from './pages/ImportPage';
+import AiAssistantPage from './pages/AiAssistantPage';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="/budgets" element={<BudgetsPage />} />
         <Route path="/wallets" element={<WalletsPage />} />
         <Route path="/import" element={<ImportPage />} />
+        <Route path="/ai-assistant" element={<AiAssistantPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

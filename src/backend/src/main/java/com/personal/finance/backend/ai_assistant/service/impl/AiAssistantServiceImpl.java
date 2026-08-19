@@ -37,15 +37,16 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     private final ReportService reportService;
     private final WalletRepository walletRepository;
     private final CategoryRepository categoryRepository;
-
     private final CategoryRuleRepository categoryRuleRepository;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${app.openai.api-key}")
-    private String openAiApiKey;
+    @Value("${app.gemini.api-key}")
+    private String geminiApiKey;
 
+    private static final String GEMINI_API_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=";
     @Override
     public String analyzeReport(Long userId, LocalDate startDate, LocalDate endDate) {
         DashboardOverviewDTO overview = reportService.getDashboardOverview(userId, startDate, endDate);
@@ -62,7 +63,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         }
 
         String systemInstruction = "Bạn là chuyên gia tài chính. Hãy nhận xét ngắn gọn (dưới 150 chữ) về báo cáo thu chi này và cho 2 lời khuyên cụ thể.";
-        return callOpenAiTextApi(systemInstruction, prompt.toString(), "gpt-3.5-turbo");
+        return callGeminiTextApi(systemInstruction, prompt.toString());
     }
 
     @Override
@@ -73,7 +74,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
                         "Hãy trả lời câu hỏi của họ một cách ngắn gọn, thân thiện và có tính chuyên môn tài chính.",
                 currentBalance
         );
-        return callOpenAiTextApi(systemInstruction, userMessage, "gpt-3.5-turbo");
+        return callGeminiTextApi(systemInstruction, userMessage);
     }
 
     @Override
@@ -93,7 +94,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
         try {
             String userPrompt = objectMapper.writeValueAsString(descriptions);
-            String responseStr = callOpenAiTextApi(systemInstruction, userPrompt, "gpt-3.5-turbo");
+            String responseStr = callGeminiTextApi(systemInstruction, userPrompt);
 
             responseStr = responseStr.replace("```json", "").replace("```", "").trim();
             return objectMapper.readValue(responseStr, new TypeReference<Map<String, Long>>(){});
@@ -102,7 +103,6 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             return new HashMap<>();
         }
     }
-
 
     @Override
     public ReceiptScanResponseDTO scanReceipt(Long userId, MultipartFile file) {
@@ -115,43 +115,45 @@ public class AiAssistantServiceImpl implements AiAssistantService {
                 catStr.append(String.format("- ID: %d, Tên: %s\n", c.getId(), c.getName()));
             }
 
+            String mimeType = file.getContentType();
             String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
-            String dataUrl = "data:" + file.getContentType() + ";base64," + base64Image;
+
+            String url = GEMINI_API_URL + geminiApiKey;
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(openAiApiKey);
 
             String promptText = "Bạn là máy quét hóa đơn. Trích xuất: Tổng tiền (amount - số), Ngày (date - dd/MM/yyyy), Nội dung ngắn gọn nhất có thể (description). " +
                     "Dựa vào nội dung và danh sách danh mục sau, dự đoán ID danh mục (categoryId). Nếu không có, để null. " +
                     "Trả JSON thuần (KHÔNG markdown). VD: {\"amount\":15000, \"date\":\"25/10/2026\", \"description\":\"Cà phê\", \"categoryId\":12}\n" +
                     "Danh mục:\n" + catStr.toString();
 
-            Map<String, Object> textContent = Map.of("type", "text", "text", promptText);
-            Map<String, Object> imageContent = Map.of("type", "image_url", "image_url", Map.of("url", dataUrl));
-            Map<String, Object> message = Map.of("role", "user", "content", List.of(textContent, imageContent));
-
-            Map<String, Object> requestBody = Map.of(
-                    "model", "gpt-4o",
-                    "messages", List.of(message),
-                    "max_tokens", 300
+            Map<String, Object> textPart = Map.of("text", promptText);
+            Map<String, Object> inlineData = Map.of(
+                    "mime_type", mimeType,
+                    "data", base64Image
             );
+            Map<String, Object> imagePart = Map.of("inline_data", inlineData);
+            Map<String, Object> contentMap = Map.of("parts", List.of(textPart, imagePart));
+
+            Map<String, Object> requestBody = Map.of("contents", List.of(contentMap));
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity("https://api.openai.com/v1/chat/completions", entity, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
-            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
-            String content = (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
+            Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+            List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+            String contentStr = (String) parts.get(0).get("text");
 
-            content = content.replace("```json", "").replace("```", "").trim();
-            ReceiptScanResponseDTO dto = objectMapper.readValue(content, ReceiptScanResponseDTO.class);
+            contentStr = contentStr.replace("```json", "").replace("```", "").trim();
+            ReceiptScanResponseDTO dto = objectMapper.readValue(contentStr, ReceiptScanResponseDTO.class);
 
             if (dto.getDescription() != null) {
                 String lowerDesc = dto.getDescription().toLowerCase();
                 for (CategoryRule rule : rules) {
                     if (lowerDesc.contains(rule.getKeyword().toLowerCase())) {
-                        dto.setCategoryId(rule.getCategory().getId()); // GHI ĐÈ KẾT QUẢ AI BẰNG RULE
-                        log.info("Phát hiện Rule từ khóa '{}'. Đã ghi đè CategoryId thành: {}", rule.getKeyword(), rule.getCategory().getId());
+                        dto.setCategoryId(rule.getCategory().getId());
                         break;
                     }
                 }
@@ -160,34 +162,43 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             return dto;
 
         } catch (Exception e) {
-            log.error("Lỗi quét hóa đơn: ", e);
+            log.error("Lỗi quét hóa đơn bằng Gemini: ", e);
             throw new RuntimeException("Không thể đọc được hóa đơn này. Vui lòng đảm bảo ảnh chụp rõ nét!");
         }
     }
 
-    private String callOpenAiTextApi(String systemInstruction, String userPrompt, String model) {
+    private String callGeminiTextApi(String systemInstruction, String userPrompt) {
+        String url = GEMINI_API_URL + geminiApiKey;
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(openAiApiKey);
 
-        Map<String, Object> systemMessage = Map.of("role", "system", "content", systemInstruction);
-        Map<String, Object> userMessage = Map.of("role", "user", "content", userPrompt);
+        Map<String, Object> systemPart = Map.of("text", systemInstruction);
+        Map<String, Object> systemInstructionMap = Map.of("parts", List.of(systemPart));
+
+        Map<String, Object> userPart = Map.of("text", userPrompt);
+        Map<String, Object> contentMap = Map.of("parts", List.of(userPart));
 
         Map<String, Object> requestBody = Map.of(
-                "model", model,
-                "messages", List.of(systemMessage, userMessage),
-                "temperature", 0.7
+                "system_instruction", systemInstructionMap,
+                "contents", List.of(contentMap)
         );
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity("https://api.openai.com/v1/chat/completions", entity, Map.class);
-            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
-            return (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
+            Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+            List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+
+            return (String) parts.get(0).get("text");
         } catch (Exception e) {
-            log.error("Lỗi khi gọi OpenAI: ", e);
-            return "Trợ lý AI đang quá tải, vui lòng thử lại sau ít phút!";
+            log.error("Lỗi khi gọi Gemini API: ", e);
+
+            throw new RuntimeException(
+                    "Gemini API error: " + e.getMessage()
+            );
         }
     }
 }

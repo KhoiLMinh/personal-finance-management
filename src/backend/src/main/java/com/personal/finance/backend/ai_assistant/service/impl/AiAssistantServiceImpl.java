@@ -138,7 +138,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             );
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity("[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)", entity, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity("https://api.openai.com/v1/chat/completions", entity, Map.class);
 
             List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
             String content = (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
@@ -182,7 +182,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity("[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)", entity, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity("https://api.openai.com/v1/chat/completions", entity, Map.class);
             List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
             return (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
         } catch (Exception e) {

@@ -1,5 +1,7 @@
 package com.personal.finance.backend.savingGoals.service.impl;
 
+import com.personal.finance.backend.categories.entity.Category;
+import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.savingGoals.dto.request.AddFundRequest;
 import com.personal.finance.backend.savingGoals.dto.request.CreateSavingGoalRequest;
 import com.personal.finance.backend.savingGoals.dto.request.UpdateSavingGoalRequest;
@@ -34,11 +36,28 @@ public class SavingGoalServiceImpl implements SavingGoalService {
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
 
+
+    private final CategoryRepository categoryRepository;
+
     private SavingGoal getOwnedSavingGoal(Long id, Long userId) {
         return savingGoalRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> {
                     log.warn("Truy cập trái phép hoặc không tìm thấy mục tiêu. UserId: {}, GoalId: {}", userId, id);
                     return new RuntimeException("Không tìm thấy mục tiêu tiết kiệm hoặc bạn không có quyền truy cập!");
+                });
+    }
+
+    private Category getOrCreateSavingCategory(Long userId) {
+        return categoryRepository.findByNameAndUserId("Chuyển tiền tiết kiệm", userId)
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId).orElseThrow();
+                    Category cat = new Category();
+                    cat.setName("Chuyển tiền tiết kiệm");
+                    cat.setType(Category.CategoryType.EXPENSE);
+                    cat.setUser(user);
+                    cat.setColor("#3b82f6"); // Màu xanh dương
+                    cat.setIcon("PiggyBank");
+                    return categoryRepository.save(cat);
                 });
     }
 
@@ -113,19 +132,25 @@ public class SavingGoalServiceImpl implements SavingGoalService {
             throw new RuntimeException("Mục tiêu này đã hoàn thành, không thể nộp thêm tiền!");
         }
 
+
         walletRepository.updateBalance(wallet.getId(), -request.getAmount());
+
+
+        Category savingCategory = getOrCreateSavingCategory(userId);
+
 
         Transaction transaction = new Transaction();
         transaction.setWallet(wallet);
+        transaction.setCategory(savingCategory);
         transaction.setAmount(request.getAmount());
-        transaction.setType(Transaction.TransactionType.EXPENSE); // Coi như một khoản chi
+        transaction.setType(Transaction.TransactionType.EXPENSE);
         transaction.setDate(LocalDate.now());
         transaction.setDescription("Trích tiền tiết kiệm cho mục tiêu: " + goal.getTitle());
         transaction.setStatus("COMPLETED");
         transactionRepository.save(transaction);
 
-        savingGoalRepository.addFundsToGoal(id, userId, request.getAmount());
 
+        savingGoalRepository.addFundsToGoal(id, userId, request.getAmount());
         goal.setCurrentAmount(goal.getCurrentAmount() + request.getAmount());
 
         if (goal.getCurrentAmount() >= goal.getTargetAmount()) {

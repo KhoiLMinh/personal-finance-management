@@ -45,7 +45,9 @@ export default function Sidebar() {
 
         <hr className="my-3 mx-4 text-muted" />
         <NavLink to="/ai-assistant" className={navLinkClass} style={navLinkStyle}><Bot size={20} className="me-3" /> Hỏi trợ lý AI</NavLink>
-        <NavLink to="/settings" className={navLinkClass} style={navLinkStyle}><Settings size={20} className="me-3" /> Cài đặt</NavLink>
+        <NavLink to="/profile" className={navLinkClass} style={navLinkStyle}>
+          <Settings size={20} className="me-3" /> Cài đặt tài khoản
+        </NavLink>
       </div>
 
       <div className="p-3 border-top d-flex align-items-center justify-content-between flex-shrink-0">
@@ -60,7 +62,7 @@ export default function Sidebar() {
           </div>
           <div className="ms-3 lh-sm text-truncate">
             <div className="fw-bold text-dark text-truncate">{user?.fullName || user?.username}</div>
-            <small className="text-muted">{user?.role === 'ADMIN' ? 'Quản trị viên' : 'Tài khoản Premium'}</small>
+            <small className="text-muted">{user?.role === 'ADMIN' ? 'Quản trị viên' : 'Tài khoản người dùng'}</small>
           </div>
         </div>
         <Dropdown drop="up">

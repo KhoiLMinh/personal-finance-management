@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-// Khai báo kiểu dữ liệu map với DTO của Backend
 export interface User {
   id: number;
   username: string;
@@ -25,22 +24,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
 
-  const login = (userData: User, newToken: string) => {
+  const login = useCallback((userData: User, newToken: string) => {
     setUser(userData);
     setToken(newToken);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('access_token', newToken);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('access_token');
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>

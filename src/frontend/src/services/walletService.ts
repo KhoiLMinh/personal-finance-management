@@ -19,6 +19,16 @@ const walletService = {
   deleteWallet: async (id: number) => {
     const response = await api.delete(`/wallets/${id}`);
     return response.data;
+  },
+
+  getWalletMembers: async (walletId: number) => {
+    const response = await api.get(`/wallets/${walletId}/members`);
+    return response.data;
+  },
+
+  shareWallet: async (walletId: number, data: { email: string; permission: string }) => {
+    const response = await api.post(`/wallets/${walletId}/members/share`, data);
+    return response.data;
   }
 };
 

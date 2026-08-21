@@ -1,16 +1,17 @@
 import React from 'react';
 import { Card, Dropdown } from 'react-bootstrap';
-import { Settings, Landmark, Wallet, CreditCard } from 'lucide-react';
+import { Settings, Landmark, Wallet, CreditCard, Share2  } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
 
 interface Props {
   wallet: any;
   onEdit: (wallet: any) => void;
   onDelete: (id: number) => void;
+  onShare: (wallet: any) => void;
 }
 
-export default function WalletCard({ wallet, onEdit, onDelete }: Props) {
-  // Chọn Icon dựa theo chuỗi lưu trong DB
+export default function WalletCard({ wallet, onEdit, onDelete, onShare }: Props) {
+
   const renderIcon = () => {
     switch (wallet.icon) {
       case 'Bank': return <Landmark size={28} className="text-secondary" />;
@@ -24,7 +25,7 @@ export default function WalletCard({ wallet, onEdit, onDelete }: Props) {
       <Card.Body className="p-4 d-flex flex-column justify-content-between">
         <div className="d-flex justify-content-between align-items-start mb-4">
           <div className="d-flex gap-3 align-items-center">
-            {/* Box Icon có viền màu của ví */}
+
             <div 
               className="bg-light rounded-3 d-flex align-items-center justify-content-center" 
               style={{ width: 60, height: 60, borderLeft: `4px solid ${wallet.color || '#3b82f6'}` }}
@@ -43,6 +44,9 @@ export default function WalletCard({ wallet, onEdit, onDelete }: Props) {
             </Dropdown.Toggle>
             <Dropdown.Menu className="shadow border-0 rounded-3">
               <Dropdown.Item onClick={() => onEdit(wallet)}>Sửa thông tin</Dropdown.Item>
+              <Dropdown.Item onClick={() => onShare(wallet)}>
+                <Share2 size={16} className="me-2"/> Chia sẻ ví
+              </Dropdown.Item>
               <Dropdown.Divider />
               <Dropdown.Item onClick={() => onDelete(wallet.id)} className="text-danger">Xóa ví</Dropdown.Item>
             </Dropdown.Menu>

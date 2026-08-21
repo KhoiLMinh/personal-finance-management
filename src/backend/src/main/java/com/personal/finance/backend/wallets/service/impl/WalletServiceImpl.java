@@ -1,6 +1,7 @@
 package com.personal.finance.backend.wallets.service.impl;
 
 import com.personal.finance.backend.common.service.EmailService;
+import com.personal.finance.backend.notifications.service.NotificationService;
 import com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest;
 import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
 import com.personal.finance.backend.users.dto.request.UpdateWalletRequest;
@@ -30,6 +31,7 @@ public class WalletServiceImpl implements WalletService {
     private final WalletMapper walletMapper;
     private final WalletMemberRepository walletMemberRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     private Wallet getWalletEntity(Long walletId) {
         return walletRepository.findById(walletId)
@@ -142,6 +144,9 @@ public class WalletServiceImpl implements WalletService {
         );
 
         emailService.sendEmail(targetUser.getEmail(), "Bạn được mời tham gia Ví gia đình!", emailBody);
+        String notifContent = String.format("Bạn vừa được %s mời tham gia quản lý ví '%s' với quyền %s.",
+                wallet.getOwner().getFullName(), wallet.getName(), roleName);
+        notificationService.createSystemNotification(targetUser.getId(), "🤝 Lời mời tham gia ví", notifContent);
 
         return walletMapper.toMemberDTO(savedMember);
     }

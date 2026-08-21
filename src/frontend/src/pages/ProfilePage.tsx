@@ -6,17 +6,17 @@ import userService from '../services/userService';
 import authService from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 import MySpinner from '../components/MySpinner';
+import { Link } from 'react-router-dom';
 
 export default function ProfilePage() {
-  const { user, login, token } = useAuth(); // Dùng Context để update UI ngay lập tức
+  const { user, login, token } = useAuth(); 
   const [loading, setLoading] = useState(true);
 
-  // States cho Profile
+
   const [profileData, setProfileData] = useState({ username: '', email: '', fullName: '', role: '' });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState({ type: '', text: '' });
 
-  // States cho Password
   const [passData, setPassData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [passSaving, setPassSaving] = useState(false);
   const [passMsg, setPassMsg] = useState({ type: '', text: '' });
@@ -41,7 +41,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Xử lý Cập nhật Tên hiển thị
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileSaving(true);
@@ -49,7 +48,6 @@ export default function ProfilePage() {
     try {
       await userService.updateProfile({ fullName: profileData.fullName });
       
-      // Lấy lại data mới và update AuthContext (để Sidebar tự đổi tên)
       if (token) {
         const newData = await userService.getProfile();
         login(newData, token);
@@ -63,7 +61,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Xử lý Đổi Mật Khẩu
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPassMsg({ type: '', text: '' });
@@ -96,10 +93,8 @@ export default function ProfilePage() {
 
       <Row className="g-4">
         
-        {/* ================= CỘT TRÁI: PROFILE FORM ================= */}
         <Col lg={5} xl={4}>
           <Card className="border-0 shadow-sm rounded-4 overflow-hidden h-100">
-            {/* Header màu nền chứa Avatar */}
             <div className="pt-5 pb-4 px-4 text-center" style={{ backgroundColor: 'var(--color-primary)' }}>
               <div 
                 className="mx-auto rounded-circle d-flex align-items-center justify-content-center bg-white shadow mb-3"
@@ -111,7 +106,7 @@ export default function ProfilePage() {
               </div>
               <h5 className="fw-bold text-white mb-1">{profileData.fullName || profileData.username}</h5>
               <Badge bg="light" text="primary" className="fw-medium px-3 py-1 rounded-pill">
-                {profileData.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên Premium'}
+                {profileData.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên tài khoản'}
               </Badge>
             </div>
 
@@ -154,10 +149,8 @@ export default function ProfilePage() {
         </Col>
 
 
-        {/* ================= CỘT PHẢI: BẢO MẬT & THÔNG TIN ================= */}
         <Col lg={7} xl={8}>
           
-          {/* Card 1: Thông tin hệ thống (Chỉ đọc) */}
           <Card className="border-0 shadow-sm rounded-4 mb-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-center mb-4">
@@ -192,69 +185,23 @@ export default function ProfilePage() {
             </Card.Body>
           </Card>
 
-          {/* Card 2: Đổi Mật Khẩu */}
-          <Card className="border-0 shadow-sm rounded-4">
-            <Card.Body className="p-4">
-              <div className="d-flex align-items-center mb-4">
+
+            <Card className="border-0 shadow-sm rounded-4">
+            <Card.Body className="p-4 d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center">
                 <div className="p-2 rounded-circle me-3" style={{ backgroundColor: '#fee2e2' }}>
-                  <KeyRound size={24} className="text-danger" />
+                    <KeyRound size={24} className="text-danger" />
                 </div>
-                <h5 className="fw-bold mb-0 text-dark">Đổi mật khẩu</h5>
-              </div>
-
-              {passMsg.text && (
-                <Alert variant={passMsg.type} className="py-2 small rounded-3 fw-medium">
-                  {passMsg.text}
-                </Alert>
-              )}
-
-              <Form onSubmit={handleChangePassword}>
-                <Form.Group className="mb-3">
-                  <Form.Label className="text-muted small fw-medium mb-1">Mật khẩu hiện tại</Form.Label>
-                  <Form.Control 
-                    size="lg" type="password" required className="bg-light border-0" 
-                    value={passData.oldPassword} 
-                    onChange={(e) => setPassData({...passData, oldPassword: e.target.value})} 
-                  />
-                </Form.Group>
-
-                <Row className="g-3 mb-4">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="text-muted small fw-medium mb-1">Mật khẩu mới</Form.Label>
-                      <Form.Control 
-                        size="lg" type="password" required className="bg-light border-0" 
-                        value={passData.newPassword} 
-                        onChange={(e) => setPassData({...passData, newPassword: e.target.value})} 
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="text-muted small fw-medium mb-1">Xác nhận mật khẩu mới</Form.Label>
-                      <Form.Control 
-                        size="lg" type="password" required className="bg-light border-0" 
-                        value={passData.confirmPassword} 
-                        onChange={(e) => setPassData({...passData, confirmPassword: e.target.value})} 
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <div className="d-flex justify-content-end">
-                  <Button 
-                    type="submit" 
-                    variant="danger" 
-                    className="fw-bold rounded-pill px-4 py-2 d-flex align-items-center border-0" 
-                    disabled={passSaving}
-                  >
-                    {passSaving ? <Spinner size="sm" className="me-2"/> : <KeyRound size={18} className="me-2"/>}
-                    Cập nhật mật khẩu
-                  </Button>
+                <div>
+                    <h5 className="fw-bold mb-0 text-dark">Mật khẩu và bảo mật</h5>
+                    <small className="text-muted">Cập nhật mật khẩu để bảo vệ tài khoản</small>
                 </div>
-              </Form>
+                </div>
+                <Link to="/change-password" className="btn btn-danger fw-bold rounded-pill px-4">
+                Đổi mật khẩu
+                </Link>
             </Card.Body>
-          </Card>
+            </Card>
 
         </Col>
       </Row>

@@ -37,16 +37,9 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-
       const response: AuthResponse = await authService.login({ username, password });
-      
       login(response.user, response.token);
-      
-      if (response.user.role === 'ADMIN') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard'); 
-      }
+      navigate('/dashboard');
     } catch (err: any) {
       console.error(err);
 
@@ -70,7 +63,7 @@ export default function LoginPage() {
               FinManager
             </div>
             <Image 
-              src="https://res.cloudinary.com/desvczltb/image/upload/v1700000000/finance-illustration_abc123.svg" 
+              src="" 
               alt="Finance Illustration"
               fluid 
               style={{ maxHeight: '300px' }} 

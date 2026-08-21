@@ -21,7 +21,6 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
     description: ''
   });
 
-  // Reset form khi mở modal
   useEffect(() => {
     if (show) {
       setFormData(prev => ({
@@ -61,7 +60,6 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
       <Modal.Body className="px-4 pb-4 pt-3">
         <Form onSubmit={handleSubmit}>
           
-          {/* Nút Toggle Loại Giao Dịch */}
           <div className="mb-4">
             <Form.Label className="text-muted fw-medium small mb-2">Loại giao dịch</Form.Label>
             <div className="d-flex gap-3">
@@ -90,7 +88,7 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
             <Form.Label className="text-muted fw-medium small">Danh mục</Form.Label>
             <Form.Select size="lg" className="bg-light border-0" required
               value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: e.target.value})}>
-              {categories.filter(c => c.type === formData.type).map(c => (
+              {categories.filter(c => c.type === formData.type && !c.hidden).map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </Form.Select>

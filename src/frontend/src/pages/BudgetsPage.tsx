@@ -5,7 +5,6 @@ import { Plus } from 'lucide-react';
 import budgetService from '../services/budgetService';
 import categoryService from '../services/categoryService';
 import reportService from '../services/reportService';
-import { formatCurrency } from '../utils/format';
 
 import MySpinner from '../components/MySpinner';
 import BudgetCard from '../components/budgets/BudgetCard';
@@ -14,7 +13,7 @@ import BudgetModal from '../components/budgets/BudgetModal';
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [expenseData, setExpenseData] = useState<any[]>([]); // Lưu dữ liệu chi tiêu để map
+  const [expenseData, setExpenseData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showModal, setShowModal] = useState(false);
@@ -27,7 +26,6 @@ export default function BudgetsPage() {
       const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
       const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
 
-      // GỌI SONG SONG 3 API ĐỂ TỐI ƯU TỐC ĐỘ HIỂN THỊ
       const [budgetsRes, catRes, reportRes] = await Promise.all([
         budgetService.getBudgets({ page: 0, size: 50 }),
         categoryService.getMyCategories(),
@@ -52,7 +50,7 @@ export default function BudgetsPage() {
     if (window.confirm('Bạn có chắc chắn muốn xóa ngân sách này?')) {
       try {
         await budgetService.deleteBudget(id);
-        fetchData(); // reload danh sách
+        fetchData();
       } catch (error: any) {
         alert(error.response?.data?.error?.message || "Lỗi xóa!");
       }
@@ -69,13 +67,11 @@ export default function BudgetsPage() {
     setShowModal(true);
   };
 
-  // HÀM HELPER: Map (Lấy) tổng chi tiêu từ reportService áp dụng cho ngân sách này
   const getSpentAmount = (categoryId: number) => {
     const expense = expenseData.find((e: any) => e.categoryId === categoryId);
     return expense ? expense.totalAmount : 0;
   };
 
-  // Chỉ hiển thị ngân sách của Tháng hiện tại
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
   const currentBudgets = budgets.filter(b => b.month === currentMonth && b.year === currentYear);
@@ -83,18 +79,17 @@ export default function BudgetsPage() {
   if (loading) return <MySpinner />;
 
   return (
-    <div className="p-4 flex-grow-1" style={{ backgroundColor: '#e2e8f0' }}>
+    <div className="p-4 flex-grow-1" style={{ backgroundColor: 'var(--color-bg)' }}>
       
-      {/* Banner Header Ngân sách (Khớp hình 4) */}
-      <Card className="border-0 rounded-4 mb-4 shadow-sm" style={{ backgroundColor: '#b0bec5' }}>
+      <Card className="border-0 rounded-4 mb-4 shadow-soft">
         <Card.Body className="p-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
           <div>
-            <h3 className="fw-bold text-dark mb-1">Hạn mức Ngân sách Chi tiêu</h3>
-            <p className="text-dark mb-0 opacity-75">Giúp bạn kiểm soát không tiêu vượt quá dự định</p>
+            <h3 className="fw-bold mb-1" style={{ color: 'var(--color-primary-darker)' }}>Hạn mức Ngân sách Chi tiêu</h3>
+            <p className="text-muted mb-0">Giúp bạn kiểm soát không tiêu vượt quá dự định</p>
           </div>
           <Button 
             className="fw-bold px-4 py-2 rounded-pill border-0 shadow-sm d-flex align-items-center text-white"
-            style={{ backgroundColor: '#29b6f6' }}
+            style={{ backgroundColor: 'var(--color-primary)' }}
             onClick={handleOpenCreate}
           >
             <Plus size={20} className="me-1" /> Tạo thêm ngân sách

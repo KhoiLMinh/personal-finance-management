@@ -32,7 +32,7 @@ export default function BudgetModal({ show, onHide, onSuccess, editData, categor
         });
       } else {
         setFormData({
-          categoryId: categories.find((c: any) => c.type === 'EXPENSE')?.id?.toString() || '',
+          categoryId: categories.find((c: any) => c.type === 'EXPENSE' && !c.hidden)?.id?.toString() || '',
           month: new Date().getMonth() + 1,
           year: new Date().getFullYear(),
           limitAmount: '',
@@ -55,7 +55,6 @@ export default function BudgetModal({ show, onHide, onSuccess, editData, categor
       };
 
       if (editData) {
-        // Backend yêu cầu UpdateBudgetRequest chỉ nhận limitAmount và warningPercent
         await budgetService.updateBudget(editData.id, {
           limitAmount: payload.limitAmount,
           warningPercent: payload.warningPercent
@@ -84,10 +83,10 @@ export default function BudgetModal({ show, onHide, onSuccess, editData, categor
             <Form.Label className="text-muted fw-medium small">Danh mục chi tiêu</Form.Label>
             <Form.Select size="lg" required className="bg-light border-0" 
               value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: e.target.value})}
-              disabled={!!editData} // Không cho đổi danh mục nếu đang ở chế độ Sửa
+              disabled={!!editData}
             >
               <option value="">-- Chọn danh mục --</option>
-              {categories.filter(c => c.type === 'EXPENSE').map(c => (
+              {categories.filter(c => c.type === 'EXPENSE' && !c.hidden).map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </Form.Select>

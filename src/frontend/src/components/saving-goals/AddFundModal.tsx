@@ -9,7 +9,7 @@ interface Props {
   goalId: number | null;
   wallets: any[];
 }
-
+//FR-10
 export default function AddFundModal({ show, onHide, onSuccess, goalId, wallets }: Props) {
   const [loading, setLoading] = useState(false);
   const [amount, setAmount] = useState('');

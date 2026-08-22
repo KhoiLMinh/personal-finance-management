@@ -9,7 +9,7 @@ interface Props {
   wallets: any[];
   categories: any[];
 }
-
+//FR-02
 export default function TransactionModal({ show, onHide, onSuccess, wallets, categories }: Props) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({

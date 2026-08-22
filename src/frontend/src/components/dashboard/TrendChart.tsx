@@ -8,7 +8,7 @@ import { formatCurrency } from '../../utils/format';
 interface Props {
   data: TrendData[];
 }
-
+//FR-12
 export default function TrendChart({ data }: Props) {
   if (!data || data.length === 0) {
     return (

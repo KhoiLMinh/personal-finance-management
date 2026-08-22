@@ -21,6 +21,7 @@ interface AuthResponse {
   user: User;
 }
 
+//FR1
 export default function LoginPage() {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');

@@ -4,7 +4,7 @@ import { Container, Row, Col, Card, Form, Button, Alert, Image, Spinner } from '
 import { Eye, EyeOff, Wallet, UserPlus } from 'lucide-react'; 
 
 import authService from '../services/authService';
-
+//FR1
 export default function RegisterPage() {
   const navigate = useNavigate();
 

@@ -12,7 +12,7 @@ interface ImportResult {
   successRows: number;
   duplicatedRows: number;
 }
-
+//FR-06
 export default function ImportPage() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [loadingWallets, setLoadingWallets] = useState(true);

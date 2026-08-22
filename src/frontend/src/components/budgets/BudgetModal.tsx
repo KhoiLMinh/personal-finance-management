@@ -9,7 +9,7 @@ interface Props {
   editData?: any;
   categories: any[];
 }
-
+//FR-09
 export default function BudgetModal({ show, onHide, onSuccess, editData, categories }: Props) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({

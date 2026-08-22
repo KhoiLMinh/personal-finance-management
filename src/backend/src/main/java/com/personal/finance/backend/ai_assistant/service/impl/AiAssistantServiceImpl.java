@@ -76,7 +76,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         );
         return callGeminiTextApi(systemInstruction, userMessage);
     }
-
+    //FR-06, FR-08
     @Override
     public Map<String, Long> categorizeTransactionsBatch(List<String> descriptions, List<Category> userCategories) {
         if (descriptions.isEmpty()) return new HashMap<>();
@@ -103,15 +103,16 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             return new HashMap<>();
         }
     }
-
+    //FR-06, FR-08
     @Override
     public ReceiptScanResponseDTO scanReceipt(Long userId, MultipartFile file) {
         try {
-            List<Category> categories = categoryRepository.findAllByUserIdOrderByCreateAtDesc(userId);
+            List<Category> categories = categoryRepository.findAvailableCategories(userId);
             List<CategoryRule> rules = categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(userId);
 
             StringBuilder catStr = new StringBuilder();
             for (Category c : categories) {
+                catStr.append(String.format("- ID: %d, Tên: %s\n", c.getId(), c.getName()));
                 catStr.append(String.format("- ID: %d, Tên: %s\n", c.getId(), c.getName()));
             }
 

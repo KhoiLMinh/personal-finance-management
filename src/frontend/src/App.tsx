@@ -14,6 +14,8 @@ import ImportPage from './pages/ImportPage';
 import AiAssistantPage from './pages/AiAssistantPage';
 import ProfilePage from './pages/ProfilePage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -46,9 +48,12 @@ function AppRoutes() {
         <Route path="/ai-assistant" element={<AiAssistantPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/categories" element={<AdminCategoriesPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
     </Routes>
   );
 }

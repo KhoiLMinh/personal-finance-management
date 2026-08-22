@@ -23,7 +23,7 @@ function renderWithBold(text: string | null) {
       : <React.Fragment key={i}>{part}</React.Fragment>
   );
 }
-
+//FR-03
 export default function AiAdviceCard({ aiAdvice, aiLoading, aiError, onRetryAi, overview, onExport }: Props) {
   return (
     <Card

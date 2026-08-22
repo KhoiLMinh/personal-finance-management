@@ -39,11 +39,12 @@ public class ReportServiceImpl implements ReportService {
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
 
+    //FR-03, FR-12
     @Override
     public DashboardOverviewDTO getDashboardOverview(Long userId, LocalDate startDate, LocalDate endDate) {
         DashboardOverviewDTO overview = new DashboardOverviewDTO();
 
-        // 1. TÍNH TOÁN DỮ LIỆU KỲ HIỆN TẠI
+
         Double totalBalance = walletRepository.getTotalBalanceAccessibleByUser(userId);
         overview.setTotalBalance(totalBalance);
 
@@ -54,7 +55,6 @@ public class ReportServiceImpl implements ReportService {
         overview.setTotalExpense(totalExpense);
         overview.setNetSavings(totalIncome - totalExpense);
 
-        // 2. SO SÁNH VỚI KỲ TRƯỚC (So sánh chi tiêu giữa các kỳ khác nhau)
         long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
         LocalDate prevEndDate = startDate.minusDays(1);
         LocalDate prevStartDate = prevEndDate.minusDays(daysBetween);
@@ -82,7 +82,6 @@ public class ReportServiceImpl implements ReportService {
         return ((current - previous) / previous) * 100.0;
     }
 
-    // Hàm phụ trợ: Format dữ liệu thô từ DB thành danh sách vẽ biểu đồ
     private List<TrendDataDTO> formatTrendData(List<Object[]> rawData) {
         Map<String, TrendDataDTO> trendMap = new LinkedHashMap<>();
 
@@ -109,6 +108,7 @@ public class ReportServiceImpl implements ReportService {
         ).getContent();
     }
 
+    //FR-16
     @Override
     public byte[] exportTransactionsToExcel(Long userId, Long walletId, LocalDate startDate, LocalDate endDate) {
         List<Transaction> transactions = getTransactionData(userId, walletId, startDate, endDate);
@@ -139,7 +139,7 @@ public class ReportServiceImpl implements ReportService {
             throw new RuntimeException("Không thể tạo file Excel!");
         }
     }
-
+    //FR-16
     @Override
     public byte[] exportTransactionsToPdf(Long userId, Long walletId, LocalDate startDate, LocalDate endDate) {
         List<Transaction> transactions = getTransactionData(userId, walletId, startDate, endDate);

@@ -33,6 +33,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionMapper transactionMapper;
     private final BudgetService budgetService;
 
+    //FR-02
     @Override
     @Transactional
     public TransactionDTO createTransaction(Long userId, CreateTransactionRequest request) {
@@ -45,8 +46,8 @@ public class TransactionServiceImpl implements TransactionService {
         Wallet wallet = walletRepository.findById(request.getWalletId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ví!"));
 
-        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
+        Category category = categoryRepository.findByIdAndAccessibleByUser(request.getCategoryId(), userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục hoặc không có quyền sử dụng!"));
 
         Transaction transaction = new Transaction();
         transaction.setWallet(wallet);
@@ -77,6 +78,7 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionMapper.toDTO(savedTransaction);
     }
 
+    //FR-04
     @Override
     public Page<TransactionDTO> filterTransactions(Long userId, Long walletId, Long categoryId, LocalDate startDate, LocalDate endDate, String keyword, Pageable pageable) {
         return transactionRepository.filterTransactions(userId, walletId, categoryId, startDate, endDate, keyword, pageable)
@@ -110,7 +112,7 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("Đã xóa giao dịch ID: {} và khôi phục số dư ví ID: {}", id, transaction.getWallet().getId());
     }
 
-
+    //FR-02
     @Override
     @Transactional
     public TransactionDTO updateTransaction(Long id, Long userId, UpdateTransactionRequest request) {
@@ -122,8 +124,8 @@ public class TransactionServiceImpl implements TransactionService {
             throw new AccessDeniedException("Bạn không có quyền sửa giao dịch trong ví này!");
         }
 
-        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
+        Category category = categoryRepository.findByIdAndAccessibleByUser(request.getCategoryId(), userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục hoặc không có quyền sử dụng!"));
 
         Double oldImpact = transaction.getType() == Transaction.TransactionType.INCOME
                 ? transaction.getAmount()

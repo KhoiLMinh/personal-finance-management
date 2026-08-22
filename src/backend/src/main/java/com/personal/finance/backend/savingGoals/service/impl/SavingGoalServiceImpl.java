@@ -60,7 +60,7 @@ public class SavingGoalServiceImpl implements SavingGoalService {
                     return categoryRepository.save(cat);
                 });
     }
-
+    //FR-10
     @Override
     @Transactional
     public SavingGoalDTO createSavingGoal(Long userId, CreateSavingGoalRequest request) {
@@ -111,7 +111,7 @@ public class SavingGoalServiceImpl implements SavingGoalService {
         return savingGoalMapper.toDTO(updatedGoal);
     }
 
-
+    //FR-10
     @Override
     @Transactional
     public SavingGoalDTO addFunds(Long id, Long userId, AddFundRequest request) {

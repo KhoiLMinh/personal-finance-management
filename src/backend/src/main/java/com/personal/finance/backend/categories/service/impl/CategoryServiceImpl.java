@@ -33,7 +33,7 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryRepository.findByIdAndUserId(categoryId, userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
     }
-
+    //FR-05, FR-15
     @Override
     @Transactional
     public CategoryDTO createCategory(Long userId, CreateCategoryRequest request) {
@@ -60,7 +60,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryDTO> getCategoriesForUser(Long userId) {
-        return this.categoryRepository.findAllByUserIdOrderByCreateAtDesc(userId)
+        return this.categoryRepository.findAvailableCategories(userId)
                 .stream()
                 .map(categoryMapper::toDTO)
                 .toList();

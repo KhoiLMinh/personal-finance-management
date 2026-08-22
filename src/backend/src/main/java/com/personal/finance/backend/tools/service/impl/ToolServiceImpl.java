@@ -16,7 +16,7 @@ import java.util.Map;
 public class ToolServiceImpl implements ToolService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-
+    //FR-17
     @Override
     public Map<String, Object> calculateLoanInterest(InterestRequest request) {
         double principal = request.getPrincipal();
@@ -77,7 +77,7 @@ public class ToolServiceImpl implements ToolService {
         return result;
     }
 
-
+    //FR-17
     @Override
     public Map<String, Object> convertCurrency(String from, String to, Double amount) {
         from = from.toUpperCase();

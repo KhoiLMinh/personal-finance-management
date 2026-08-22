@@ -17,7 +17,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
-
+    //FR-15
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserDTO>> getAllUsers() {
@@ -36,7 +36,7 @@ public class UserController {
         this.userService.updateUser(userId, request);
         return ResponseEntity.ok("Cập nhật thông tin thành công!");
     }
-
+    //FR-15
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {

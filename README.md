@@ -158,8 +158,8 @@ Hệ thống đã tích hợp `backend/config/DataSeeder` tự động tạo s�
 
 | **Vai trò (Role)** | **Tên đăng nhập (Username)** | **Mật khẩu (Password)** | **Chức năng kiểm thử**                        |
 | ------------------ | ---------------------------- | ----------------------- | --------------------------------------------- |
-| **ADMIN**          | `admin`                      | `Demo@123`              | Quản trị hệ thống, quản lý danh mục mẫu chung |
-| **USER**           | `user_demo`                  | `Demo@123`              | Quản lý ví, giao dịch, ngân sách, nhập CSV    |
+| **ADMIN**          | `admin`                      | `123`                   | Quản trị hệ thống, quản lý danh mục mẫu chung |
+| **USER**           | `user_demo`                  | `123`                   | Quản lý ví, giao dịch, ngân sách, nhập CSV    |
 
 > Mật khẩu của các tài khoản này đã được mã hóa an toàn bằng BCrypt trong cơ sở dữ liệu.
 

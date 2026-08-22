@@ -110,7 +110,7 @@ public class WalletServiceImpl implements WalletService {
                 .map(walletMapper::toMemberDTO)
                 .toList();
     }
-
+    //FR-13
     @Override
     @Transactional
     public WalletMemberDTO shareWallet(Long walletId, Long requesterId, AddWalletMemberRequest request) {

@@ -8,7 +8,7 @@ interface Props {
   onHide: () => void;
   wallet: any;
 }
-
+//FR-13
 export default function ShareWalletModal({ show, onHide, wallet }: Props) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');

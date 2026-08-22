@@ -41,7 +41,7 @@ export default function TransactionsPage() {
   useEffect(() => {
     fetchData();
   }, []);
-
+  //FR-04
   const filteredTransactions = transactions.filter((tx: any) => {
     const matchType = filterType === 'ALL' || tx.type === filterType;
     const matchSearch = tx.description?.toLowerCase().includes(search.toLowerCase()) 

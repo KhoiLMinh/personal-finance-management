@@ -1,15 +1,21 @@
-# Ma trận truy vết
+# Requirements Traceability Matrix (RTM) - FinManage
 
-| FR          | Chức năng                           | Trạng thái                     |
-| ----------- | ----------------------------------- | ------------------------------ |
-| FR-01       | Đăng nhập nội bộ + Google           | Xong                           |
-| FR-02       | Tạo/xóa giao dịch                   | Tạm ổn (chưa có sửa)           |
-| FR-04       | Tra cứu/lọc giao dịch               | Xong                           |
-| FR-05       | Tùy biến danh mục                   | Xong                           |
-| FR-06/07/08 | Import CSV, khử trùng, tự phân loại | Tạm ổn (chỉ CSV)               |
-| FR-09       | Ngân sách + cảnh báo                | Tạm ổn (chưa cảnh báo tự động) |
-| FR-10       | Mục tiêu tiết kiệm                  | Xong                           |
-| FR-13       | Chia sẻ ví                          | Chưa ổn                        |
-| FR-14/15    | Phân quyền ADMIN                    | Chưa ổn                        |
-| FR-03/12    | Thống kê + AI                       | Chưa làm                       |
-| FR-16       | Xuất báo cáo                        | Chưa làm                       |
+| Req. ID   | Req. Description                                  | Testable (Y / N) | Module         | Sub-module             | Scenario IDs           | Test case IDs                      | Defect IDs | Status      | Remarks                             |
+| :-------- | :------------------------------------------------ | :--------------: | :------------- | :--------------------- | :--------------------- | :--------------------------------- | :--------- | :---------- | :---------------------------------- |
+| **FR-01** | Đăng ký, đăng nhập, Google OAuth, JWT             |        Y         | Authentication | Login/Register         | SC_AUTH_01, SC_AUTH_02 | TC_AUTH_01, TC_AUTH_02, TC_AUTH_03 | None       | Implemented | Đã cấu hình Spring Security         |
+| **FR-02** | Quản lý phiên giao dịch (CRUD)                    |        Y         | Transaction    | Transaction Management | SC_TX_01, SC_TX_02     | TC_TX_01, TC_TX_02, TC_TX_03       | None       | Implemented | Kiểm tra lại logic xóa có hoàn tiền |
+| **FR-03** | Thống kê thu chi (Biểu đồ, AI advice)             |        Y         | Dashboard      | Report & Chart         | SC_DB_01, SC_DB_02     | TC_DB_01, TC_DB_02                 | None       | Implemented | Đã tích hợp Gemini AI               |
+| **FR-04** | Tra cứu, lọc lịch sử giao dịch                    |        Y         | Transaction    | Filter & Search        | SC_TX_03               | TC_TX_04, TC_TX_05                 | None       | Implemented | Lọc real-time ở Frontend            |
+| **FR-05** | Tùy biến danh mục (Màu sắc, Icon)                 |        Y         | Category       | Category Management    | SC_CAT_01              | TC_CAT_01, TC_CAT_02               | None       | Implemented |                                     |
+| **FR-06** | Nhập sao kê CSV, tự phân loại qua AI              |        Y         | Import         | CSV & Receipt Scan     | SC_IMP_01, SC_IMP_02   | TC_IMP_01, TC_IMP_02               | None       | Implemented | Cần test với file CSV format lạ     |
+| **FR-07** | Chuẩn hóa, check trùng lặp khi import             |        Y         | Import         | Data Validation        | SC_IMP_03              | TC_IMP_03                          | None       | Implemented | So khớp ngày, tiền, mô tả, ví       |
+| **FR-08** | Phân loại bằng Rule hoặc đưa vào "Chưa phân loại" |        Y         | Import         | AI Categorization      | SC_IMP_04              | TC_IMP_04                          | None       | Implemented | Đã map với CategoryRule             |
+| **FR-09** | Quản lý ngân sách (Cảnh báo vượt mức)             |        Y         | Budget         | Budget Tracking        | SC_BDG_01              | TC_BDG_01, TC_BDG_02               | None       | Implemented | Gửi cảnh báo in-app và email        |
+| **FR-10** | Đặt mục tiêu tiết kiệm, nộp tiền                  |        Y         | Saving Goal    | Goal Tracking          | SC_SVG_01              | TC_SVG_01, TC_SVG_02               | None       | Implemented | Trừ tiền trực tiếp từ Wallet        |
+| **FR-11** | Cảnh báo vượt ngân sách, nhắc nhở                 |        Y         | Notification   | Alerts                 | SC_NOT_01              | TC_NOT_01                          | None       | Implemented | Tích hợp chuông báo Header          |
+| **FR-12** | Biểu đồ xu hướng, cơ cấu chi tiêu                 |        Y         | Dashboard      | Visualizations         | SC_DB_03               | TC_DB_03                           | None       | Implemented | Dùng Recharts                       |
+| **FR-13** | Chia sẻ ví gia đình (View/Edit)                   |        Y         | Wallet         | Family Sharing         | SC_WAL_01              | TC_WAL_01, TC_WAL_02               | None       | Implemented | Xử lý bằng WalletMember             |
+| **FR-14** | Phân quyền RBAC (Admin, User)                     |        Y         | Security       | Authorization          | SC_SEC_01              | TC_SEC_01                          | None       | Implemented | Lọc tại JwtAuthenticationFilter     |
+| **FR-15** | Admin Panel (Quản lý User, Category)              |        Y         | Admin          | System Config          | SC_ADM_01              | TC_ADM_01, TC_ADM_02               | None       | Implemented | Chuyển hướng theo role              |
+| **FR-16** | Xuất báo cáo Excel, PDF                           |        Y         | Report         | Export                 | SC_REP_01              | TC_REP_01, TC_REP_02               | None       | Implemented | Sử dụng Apache POI và OpenPDF       |
+| **FR-17** | Công cụ: Lãi suất, Đổi ngoại tệ                   |        Y         | Tools          | Utilities              | SC_TOL_01              | TC_TOL_01                          | None       | Implemented | Đã có API Backend                   |

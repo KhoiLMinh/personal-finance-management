@@ -17,6 +17,8 @@ export default function TransactionsPage() {
   
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
+
   const [filterType, setFilterType] = useState('ALL');
   const [search, setSearch] = useState('');
 
@@ -41,7 +43,31 @@ export default function TransactionsPage() {
   useEffect(() => {
     fetchData();
   }, []);
-  //FR-04
+
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa giao dịch này? Hệ thống sẽ tự động hoàn lại tiền vào ví.')) {
+      try {
+        await transactionService.deleteTransaction(id);
+        window.dispatchEvent(new Event('reload-notifications')); 
+        fetchData();
+      } catch (error: any) {
+        alert(error.response?.data?.error?.message || "Lỗi xóa giao dịch!");
+      }
+    }
+  };
+
+  const handleEdit = (tx: any) => {
+    setEditData(tx);
+    setShowModal(true);
+  };
+
+  const handleOpenCreate = () => {
+    setEditData(null);
+    setShowModal(true);
+  };
+
+//FR04
   const filteredTransactions = transactions.filter((tx: any) => {
     const matchType = filterType === 'ALL' || tx.type === filterType;
     const matchSearch = tx.description?.toLowerCase().includes(search.toLowerCase()) 
@@ -63,7 +89,7 @@ export default function TransactionsPage() {
           <Button 
             className="fw-bold px-4 py-2 rounded-pill border-0 shadow-sm d-flex align-items-center"
             style={{ backgroundColor: 'var(--color-primary)' }}
-            onClick={() => setShowModal(true)}
+            onClick={handleOpenCreate}
           >
             <Plus size={20} className="me-1" /> Thêm giao dịch mới
           </Button>
@@ -76,7 +102,11 @@ export default function TransactionsPage() {
             filterType={filterType} setFilterType={setFilterType} 
             search={search} setSearch={setSearch} 
           />
-          <TransactionList transactions={filteredTransactions} />
+          <TransactionList 
+            transactions={filteredTransactions} 
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         </Card.Body>
       </Card>
 
@@ -86,6 +116,7 @@ export default function TransactionsPage() {
         onSuccess={fetchData}
         wallets={wallets}
         categories={categories}
+        editData={editData}
       />
       
     </div>

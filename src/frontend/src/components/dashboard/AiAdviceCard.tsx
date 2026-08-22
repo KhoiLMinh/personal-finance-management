@@ -1,9 +1,8 @@
 import React from 'react';
-import { Card, Row, Col, Button, Spinner, Placeholder } from 'react-bootstrap';
-import { Bot, Download, BellRing, Info, Sparkles, RefreshCw } from 'lucide-react';
+import { Card, Button, Spinner, Placeholder, Dropdown } from 'react-bootstrap';
+import { Bot, Download, Sparkles, RefreshCw, FileText, FileSpreadsheet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // 🌟 Import useNavigate
 import type { DashboardOverview } from '../../types/dashboard';
-import { formatCurrency } from '../../utils/format';
-import InsightBadge from './InsightBadge';
 
 interface Props {
   aiAdvice: string | null;
@@ -11,7 +10,8 @@ interface Props {
   aiError: boolean;
   onRetryAi: () => void;
   overview: DashboardOverview;
-  onExport: () => void;
+  onExportExcel: () => void;
+  onExportPdf: () => void;
 }
 
 function renderWithBold(text: string | null) {
@@ -23,8 +23,18 @@ function renderWithBold(text: string | null) {
       : <React.Fragment key={i}>{part}</React.Fragment>
   );
 }
-//FR-03
-export default function AiAdviceCard({ aiAdvice, aiLoading, aiError, onRetryAi, overview, onExport }: Props) {
+//FR03
+export default function AiAdviceCard({ aiAdvice, aiLoading, aiError, onRetryAi, onExportExcel, onExportPdf }: Props) {
+  const navigate = useNavigate();
+
+  const handleAskAIPlan = () => {
+    if (aiAdvice) {
+      navigate('/ai-assistant', { state: { adviceContext: aiAdvice } });
+    } else {
+      navigate('/ai-assistant');
+    }
+  };
+
   return (
     <Card
       className="border-0 rounded-4 mb-4"
@@ -39,7 +49,6 @@ export default function AiAdviceCard({ aiAdvice, aiLoading, aiError, onRetryAi, 
             Trợ lý AI
           </span>
         </div>
-
 
         {aiLoading ? (
           <div className="mb-4">
@@ -76,34 +85,33 @@ export default function AiAdviceCard({ aiAdvice, aiLoading, aiError, onRetryAi, 
           </div>
         )}
 
-        <Row className="g-3 mb-4">
-          <Col md={6}>
-            <InsightBadge icon={Info}>
-              Dự báo: Tháng này bạn có thể tiết kiệm thêm{' '}
-              {formatCurrency(overview.netSavings > 0 ? overview.netSavings : 0)} nếu duy trì nhịp độ này.
-            </InsightBadge>
-          </Col>
-          <Col md={6}>
-            <InsightBadge icon={BellRing}>
-              Cảnh báo: Kiểm tra lại các khoản chi vượt ngân sách (nếu có).
-            </InsightBadge>
-          </Col>
-        </Row>
-
-        <div className="d-flex gap-3 flex-wrap">
+        <div className="d-flex gap-3 flex-wrap align-items-center mt-2">
           <Button
             className="fw-bold px-4 rounded-pill d-flex align-items-center border-0"
             style={{ backgroundColor: '#ffffff', color: '#1d4ed8' }}
+            onClick={handleAskAIPlan}
           >
             <Bot size={20} className="me-2" /> Hỏi AI về kế hoạch
           </Button>
-          <Button
-            onClick={onExport}
-            variant="outline-light"
-            className="fw-bold px-4 rounded-pill d-flex align-items-center"
-          >
-            <Download size={20} className="me-2" /> Xuất báo cáo Excel
-          </Button>
+
+          <Dropdown>
+            <Dropdown.Toggle 
+              variant="outline-light" 
+              className="fw-bold px-4 rounded-pill d-flex align-items-center hide-caret border"
+            >
+              <Download size={20} className="me-2" /> Xuất báo cáo
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu className="shadow border-0 rounded-3 mt-2">
+              <Dropdown.Item onClick={onExportExcel} className="d-flex align-items-center py-2 fw-medium">
+                <FileSpreadsheet size={18} className="me-2 text-success" /> Định dạng Excel (.xlsx)
+              </Dropdown.Item>
+              <Dropdown.Divider className="my-1" />
+              <Dropdown.Item onClick={onExportPdf} className="d-flex align-items-center py-2 fw-medium">
+                <FileText size={18} className="me-2 text-danger" /> Định dạng PDF (.pdf)
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
         </div>
       </Card.Body>
     </Card>

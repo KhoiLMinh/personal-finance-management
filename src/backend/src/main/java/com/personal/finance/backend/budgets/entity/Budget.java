@@ -25,16 +25,16 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "category_id", "month", "year"})
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "category_id", "budget_month", "budget_year"})
 )
 public class Budget extends Base {
 
     @Min(1)
     @Max(12)
-    @Column(nullable = false)
+    @Column(name = "budget_month", nullable = false)
     private Integer month;
 
-    @Column(nullable = false)
+    @Column(name = "budget_year", nullable = false)
     private Integer year;
 
     @Column(nullable = false)

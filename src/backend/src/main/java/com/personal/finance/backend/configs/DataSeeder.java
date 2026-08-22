@@ -38,15 +38,14 @@ public class DataSeeder implements CommandLineRunner {
     private final SavingGoalRepository savingGoalRepository;
 
     @Override
-    @Transactional // Bắt buộc có Transactional để thao tác ghi nhiều bảng liên tục
+    @Transactional
     public void run(String... args) throws Exception {
 
-        // ================= 1. TẠO USERS =================
         if (!userRepository.existsByUsername("admin")) {
             User admin = new User();
             admin.setUsername("admin");
             admin.setEmail("admin@example.com");
-            admin.setPassword(passwordEncoder.encode("Demo@123"));
+            admin.setPassword(passwordEncoder.encode("123"));
             admin.setFullName("Quản Trị Viên");
             admin.setRole(User.Role.ADMIN);
             userRepository.save(admin);
@@ -57,8 +56,8 @@ public class DataSeeder implements CommandLineRunner {
             User user = new User();
             user.setUsername("user_demo");
             user.setEmail("user_demo@example.com");
-            user.setPassword(passwordEncoder.encode("Demo@123"));
-            user.setFullName("Minh Khôi"); // Khớp với thiết kế của bạn
+            user.setPassword(passwordEncoder.encode("123"));
+            user.setFullName("Minh Khôi");
             user.setRole(User.Role.USER);
             demoUser = userRepository.save(user);
             log.info("Đã tạo tài khoản USER: user_demo / Demo@123");
@@ -66,7 +65,6 @@ public class DataSeeder implements CommandLineRunner {
             demoUser = userRepository.findByUsername("user_demo").get();
         }
 
-        // ================= KIỂM TRA ĐÃ SEED CHƯA =================
         if (walletRepository.findAllWalletAccessByUser(demoUser.getId()).size() > 0) {
             log.info("Dữ liệu mẫu cho user_demo đã tồn tại, bỏ qua quá trình Seed Data.");
             return;
@@ -74,7 +72,6 @@ public class DataSeeder implements CommandLineRunner {
 
         log.info("Bắt đầu khởi tạo dữ liệu mẫu (Seed Data) cho user_demo...");
 
-        // ================= 2. TẠO VÍ (WALLETS) =================
         Wallet walletCash = new Wallet();
         walletCash.setOwner(demoUser);
         walletCash.setName("Tiền mặt");
@@ -88,10 +85,9 @@ public class DataSeeder implements CommandLineRunner {
         walletBank.setName("Vietcombank");
         walletBank.setIcon("CreditCard");
         walletBank.setColor("#3b82f6");
-        walletBank.setBalance(44500000.0); // Khớp với hình 5.png
+        walletBank.setBalance(44500000.0);
         walletRepository.save(walletBank);
 
-        // ================= 3. TẠO DANH MỤC (CATEGORIES) =================
         String[][] expenses = {
                 {"Ăn uống", "#ef4444", "Utensils"},
                 {"Di chuyển", "#f59e0b", "Car"},
@@ -127,12 +123,11 @@ public class DataSeeder implements CommandLineRunner {
         bonusCat.setIcon("TrendingUp");
         bonusCat = categoryRepository.save(bonusCat);
 
-        // ================= 4. TẠO MỤC TIÊU TIẾT KIỆM (SAVING GOALS) =================
         SavingGoal goal1 = new SavingGoal();
         goal1.setUser(demoUser);
         goal1.setTitle("Đổi xe SH");
         goal1.setTargetAmount(80000000.0);
-        goal1.setCurrentAmount(18000000.0); // Khớp hình 3.png
+        goal1.setCurrentAmount(18000000.0);
         goal1.setDeadline(LocalDate.now().plusMonths(6));
         goal1.setStatus(SavingGoal.GoalStatus.IN_PROGRESS);
         savingGoalRepository.save(goal1);
@@ -146,61 +141,51 @@ public class DataSeeder implements CommandLineRunner {
         goal2.setStatus(SavingGoal.GoalStatus.COMPLETE);
         savingGoalRepository.save(goal2);
 
-        // ================= 5. TẠO NGÂN SÁCH (BUDGETS) THÁNG NÀY =================
         LocalDate today = LocalDate.now();
         int currentMonth = today.getMonthValue();
         int currentYear = today.getYear();
 
         Budget budget1 = new Budget();
         budget1.setUser(demoUser);
-        budget1.setCategory(expenseCategories.get(0)); // Ăn uống
+        budget1.setCategory(expenseCategories.get(0));
         budget1.setMonth(currentMonth);
         budget1.setYear(currentYear);
-        budget1.setLimitAmount(6000000.0); // Khớp hình 4.png
+        budget1.setLimitAmount(6000000.0);
         budget1.setWarningPercent(80.0);
         budget1.setStatus(Budget.BudgetStatus.ACTIVE);
         budgetRepository.save(budget1);
 
         Budget budget2 = new Budget();
         budget2.setUser(demoUser);
-        budget2.setCategory(expenseCategories.get(2)); // Mua sắm
+        budget2.setCategory(expenseCategories.get(2));
         budget2.setMonth(currentMonth);
         budget2.setYear(currentYear);
         budget2.setLimitAmount(2000000.0);
         budget2.setWarningPercent(90.0);
-        budget2.setStatus(Budget.BudgetStatus.EXCEED); // Giả lập đã vượt ngân sách
+        budget2.setStatus(Budget.BudgetStatus.EXCEED);
         budgetRepository.save(budget2);
 
-        // ================= 6. TẠO GIAO DỊCH (TRANSACTIONS) =================
-        // Chèn lương tháng trước và tháng này
+
         createTx(walletBank, salaryCat, 25000000.0, Transaction.TransactionType.INCOME, today.minusMonths(1).withDayOfMonth(5), "Lương tháng trước");
         createTx(walletBank, salaryCat, 28000000.0, Transaction.TransactionType.INCOME, today.withDayOfMonth(5), "Lương tháng này");
         createTx(walletBank, bonusCat, 5000000.0, Transaction.TransactionType.INCOME, today.withDayOfMonth(15), "Tiền làm dự án ngoài");
 
-        // Rải rác các giao dịch chi tiêu trong 45 ngày qua (Để vẽ biểu đồ)
         Random random = new Random();
         for (int i = 0; i < 35; i++) {
-            // Random ngày trong khoảng 45 ngày trở lại
             LocalDate randomDate = today.minusDays(random.nextInt(45));
-            // Random danh mục chi tiêu
             Category randomCategory = expenseCategories.get(random.nextInt(expenseCategories.size()));
-            // Random số tiền (từ 50.000 đến 1.500.000)
             Double randomAmount = 50000.0 + (random.nextInt(30) * 50000.0);
-
-            // Random chọn ví trả tiền
             Wallet selectedWallet = random.nextBoolean() ? walletCash : walletBank;
 
             createTx(selectedWallet, randomCategory, randomAmount, Transaction.TransactionType.EXPENSE, randomDate, "Chi tiêu tự động " + i);
         }
 
-        // Chèn giao dịch khớp với hình 2.png
         createTx(walletCash, expenseCategories.get(0), 100000.0, Transaction.TransactionType.EXPENSE, today, "Phở sáng");
         createTx(walletCash, expenseCategories.get(1), 100000.0, Transaction.TransactionType.EXPENSE, today, "Đổ xăng");
 
         log.info("Đã seed thành công dữ liệu mẫu siêu to khổng lồ!");
     }
 
-    // Hàm phụ trợ tạo Giao dịch cho ngắn code
     private void createTx(Wallet wallet, Category category, Double amount, Transaction.TransactionType type, LocalDate date, String desc) {
         Transaction tx = new Transaction();
         tx.setWallet(wallet);

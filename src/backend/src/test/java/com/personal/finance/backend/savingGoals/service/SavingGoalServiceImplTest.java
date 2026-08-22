@@ -1,5 +1,7 @@
 package com.personal.finance.backend.savingGoals.service;
 
+import com.personal.finance.backend.categories.entity.Category;
+import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.savingGoals.dto.request.AddFundRequest;
 import com.personal.finance.backend.savingGoals.dto.request.CreateSavingGoalRequest;
 import com.personal.finance.backend.savingGoals.dto.request.UpdateSavingGoalRequest;
@@ -41,6 +43,9 @@ class SavingGoalServiceImplTest {
     private WalletRepository walletRepository;
     @Mock
     private TransactionRepository transactionRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
 
     @InjectMocks
     private SavingGoalServiceImpl savingGoalService;
@@ -117,13 +122,19 @@ class SavingGoalServiceImplTest {
     @Test
     void addFunds_Success_UpdatesWalletAndCreatesTransaction() {
         AddFundRequest request = new AddFundRequest();
-        request.setAmount(3000000.0); // Nạp thêm 3 triệu
+        request.setAmount(3000000.0);
         request.setWalletId(100L);
 
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(true);
         when(walletRepository.findById(100L)).thenReturn(Optional.of(mockWallet));
         when(savingGoalRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockGoal));
         when(savingGoalRepository.addFundsToGoal(10L, 1L, 3000000.0)).thenReturn(1);
+        Category mockCategory = new Category();
+        mockCategory.setId(1L);
+        mockCategory.setName("Chuyển tiền tiết kiệm");
+
+        when(categoryRepository.findByNameAndUserId("Chuyển tiền tiết kiệm", 1L)).thenReturn(Optional.of(mockCategory));
+
         when(savingGoalMapper.toDTO(any())).thenReturn(new SavingGoalDTO());
 
         savingGoalService.addFunds(10L, 1L, request);
@@ -141,7 +152,7 @@ class SavingGoalServiceImplTest {
     @Test
     void addFunds_InsufficientWalletBalance_ThrowsException() {
         AddFundRequest request = new AddFundRequest();
-        request.setAmount(20000000.0); // Nạp 20 triệu nhưng ví chỉ có 15 triệu
+        request.setAmount(20000000.0);
         request.setWalletId(100L);
 
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(true);
@@ -173,7 +184,7 @@ class SavingGoalServiceImplTest {
 
     @Test
     void addFunds_GoalAlreadyCompleted_ThrowsException() {
-        mockGoal.setStatus(SavingGoal.GoalStatus.COMPLETE); // Mục tiêu đã xong
+        mockGoal.setStatus(SavingGoal.GoalStatus.COMPLETE);
 
         AddFundRequest request = new AddFundRequest();
         request.setAmount(1000000.0);
@@ -200,7 +211,11 @@ class SavingGoalServiceImplTest {
         when(walletRepository.findById(100L)).thenReturn(Optional.of(mockWallet));
         when(savingGoalRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockGoal));
         when(savingGoalRepository.addFundsToGoal(10L, 1L, 15000000.0)).thenReturn(1);
+        Category mockCategory = new Category();
+        mockCategory.setId(1L);
+        mockCategory.setName("Chuyển tiền tiết kiệm");
 
+        when(categoryRepository.findByNameAndUserId("Chuyển tiền tiết kiệm", 1L)).thenReturn(Optional.of(mockCategory));
         savingGoalService.addFunds(10L, 1L, request);
 
 

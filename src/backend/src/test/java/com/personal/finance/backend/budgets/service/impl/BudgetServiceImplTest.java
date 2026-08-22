@@ -95,7 +95,7 @@ class BudgetServiceImplTest {
 
         when(budgetRepository.existsByUserIdAndCategoryIdAndMonthAndYear(1L, 10L, 8, 2026)).thenReturn(false);
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
-        when(categoryRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockCategory));
+        when(categoryRepository.findByIdAndAccessibleByUser(10L, 1L)).thenReturn(Optional.of(mockCategory));
         when(budgetRepository.save(any(Budget.class))).thenReturn(mockBudget);
         when(budgetMapper.toDTO(any(Budget.class))).thenReturn(mockBudgetDTO);
 

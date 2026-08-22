@@ -17,6 +17,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
 import FamilyPage from './pages/FamilyPage';
+import ToolsPage from './pages/ToolsPage';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/categories" element={<AdminCategoriesPage />} />
         <Route path="/family" element={<FamilyPage />} />
+        <Route path="/tools" element={<ToolsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

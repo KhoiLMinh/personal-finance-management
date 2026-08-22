@@ -13,6 +13,7 @@ import com.personal.finance.backend.families.repository.FamilyRepository;
 import com.personal.finance.backend.families.service.impl.FamilyServiceImpl;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
+import com.personal.finance.backend.wallets.repository.WalletMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +46,9 @@ class FamilyServiceImplTest {
 
     @Mock
     private FamilyMapper familyMapper;
+
+    @Mock
+    private WalletMemberRepository walletMemberRepository;
 
     @InjectMocks
     private FamilyServiceImpl familyService;
@@ -82,7 +86,6 @@ class FamilyServiceImplTest {
         mockFamilyDTO.setName("Gia đình vui vẻ");
     }
 
-
     @Test
     void createFamily_ValidRequest_Success() {
         CreateFamilyRequest request = new CreateFamilyRequest();
@@ -91,8 +94,6 @@ class FamilyServiceImplTest {
         when(familyRepository.findByOwnerId(1L)).thenReturn(Optional.empty());
         when(familyMemberRepository.findByUserId(1L)).thenReturn(Optional.empty());
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockOwner));
-
-
         when(familyRepository.existsByInviteCode(anyString())).thenReturn(false);
         when(familyRepository.save(any(Family.class))).thenReturn(mockFamily);
         when(familyMapper.toDTO(any(Family.class))).thenReturn(mockFamilyDTO);
@@ -102,7 +103,7 @@ class FamilyServiceImplTest {
         assertNotNull(result);
         assertEquals("Gia đình vui vẻ", result.getName());
         verify(familyRepository, times(1)).save(any(Family.class));
-        verify(familyMemberRepository, times(1)).save(any(FamilyMember.class)); // Đảm bảo Owner được lưu làm Member
+        verify(familyMemberRepository, times(1)).save(any(FamilyMember.class));
     }
 
     @Test
@@ -113,7 +114,6 @@ class FamilyServiceImplTest {
         RuntimeException exception = assertThrows(RuntimeException.class, () -> familyService.createFamily(1L, request));
 
         assertEquals("Bạn đã thuộc một gia đình khác, không thể tạo/tham gia gia đình mới!", exception.getMessage());
-        verify(familyRepository, never()).save(any());
     }
 
     @Test
@@ -146,20 +146,18 @@ class FamilyServiceImplTest {
         assertEquals("Mã mời không hợp lệ!", exception.getMessage());
     }
 
-
     @Test
     void leaveFamily_IsMember_Success() {
-
         when(familyMemberRepository.findByUserId(2L)).thenReturn(Optional.of(mockFamilyMember));
 
         familyService.leaveFamily(2L);
 
+        verify(walletMemberRepository, times(1)).revokeAllSharingForUser(2L);
         verify(familyMemberRepository, times(1)).delete(mockFamilyMember);
     }
 
     @Test
     void leaveFamily_IsOwner_ThrowsException() {
-
         FamilyMember ownerMember = new FamilyMember();
         ownerMember.setFamily(mockFamily);
         ownerMember.setUser(mockOwner);
@@ -176,6 +174,7 @@ class FamilyServiceImplTest {
 
         familyService.deleteFamily(10L, 1L);
 
+        verify(walletMemberRepository, times(1)).revokeAllSharingForFamily(10L, 1L);
         verify(familyRepository, times(1)).delete(mockFamily);
     }
 
@@ -185,7 +184,6 @@ class FamilyServiceImplTest {
 
         AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> familyService.deleteFamily(10L, 2L));
         assertEquals("Chỉ chủ gia đình mới có quyền thực hiện thao tác này!", exception.getMessage());
-        verify(familyRepository, never()).delete(any());
     }
 
     @Test

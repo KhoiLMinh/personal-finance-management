@@ -56,6 +56,7 @@ export default function Sidebar() {
             <NavLink to="/budgets" className={navLinkClass} style={navLinkStyle}><PieChart size={20} className="me-3" /> Ngân sách</NavLink>
             <NavLink to="/wallets" className={navLinkClass} style={navLinkStyle}><WalletCards size={20} className="me-3" /> Tài khoản ví</NavLink>
             <NavLink to="/import" className={navLinkClass} style={navLinkStyle}><UploadCloud size={20} className="me-3" /> Nhập sao kê</NavLink>
+            <NavLink to="/family" className={navLinkClass} style={navLinkStyle}><Users size={20} className="me-3" /> Gia đình</NavLink>
             <hr className="my-3 mx-4 text-muted" />
             <NavLink to="/ai-assistant" className={navLinkClass} style={navLinkStyle}><Bot size={20} className="me-3" /> Hỏi trợ lý AI</NavLink>
           </>

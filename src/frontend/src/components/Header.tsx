@@ -26,8 +26,15 @@ export default function Header({ title = "Tổng quan về tài chính" }: Heade
   };
 
   useEffect(() => {
+  const handleReload = () => {
     fetchNotifications();
-  }, []);
+  };
+
+  window.addEventListener('reload-notifications', handleReload);
+  return () => {
+    window.removeEventListener('reload-notifications', handleReload);
+  };
+}, []);
 
   const handleMarkAsRead = async (id: number) => {
     await notificationService.markAsRead(id);

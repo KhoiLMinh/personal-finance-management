@@ -10,6 +10,7 @@ import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.common.service.EmailService;
 import com.personal.finance.backend.notifications.service.NotificationService;
+import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
@@ -183,17 +184,17 @@ class BudgetServiceImplTest {
 
         Page<Budget> budgetPage = new PageImpl<>(List.of(mockBudget));
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
-        
 
-        when(transactionRepository.sumExpenseByCategoryAndMonth(10L, 1L, 8, 2026)).thenReturn(5500000.0);
+
+        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(5500000.0);
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);
 
 
-        assertEquals(Budget.BudgetStatus.EXCEED, mockBudget.getStatus()); // Đã chuyển trạng thái
-        verify(budgetRepository, times(1)).save(mockBudget); // Đã lưu vào DB
-        verify(notificationService, times(1)).createSystemNotification(eq(1L), anyString(), anyString()); // Đã gửi thông báo In-app
-        verify(emailService, times(1)).sendEmail(eq("test@gmail.com"), anyString(), anyString()); // Đã gửi Email
+        assertEquals(Budget.BudgetStatus.EXCEED, mockBudget.getStatus());
+        verify(budgetRepository, times(1)).save(mockBudget);
+        verify(notificationService, times(1)).createSystemNotification(eq(1L), anyString(), anyString());
+        verify(emailService, times(1)).sendEmail(eq("test@gmail.com"), anyString(), anyString());
     }
 
     @Test
@@ -201,8 +202,8 @@ class BudgetServiceImplTest {
 
         Page<Budget> budgetPage = new PageImpl<>(List.of(mockBudget));
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
-        
-        when(transactionRepository.sumExpenseByCategoryAndMonth(10L, 1L, 8, 2026)).thenReturn(4500000.0);
+
+        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(4500000.0);
 
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);
@@ -220,9 +221,9 @@ class BudgetServiceImplTest {
 
         Page<Budget> budgetPage = new PageImpl<>(List.of(mockBudget));
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
-        
 
-        when(transactionRepository.sumExpenseByCategoryAndMonth(10L, 1L, 8, 2026)).thenReturn(2000000.0);
+
+        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(2000000.0);
 
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);

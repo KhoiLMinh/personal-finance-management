@@ -9,6 +9,7 @@ import com.personal.finance.backend.budgets.repository.BudgetRepository;
 import com.personal.finance.backend.budgets.service.BudgetService;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
+import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -121,7 +122,8 @@ public class BudgetServiceImpl implements BudgetService {
                 .findFirst()
                 .ifPresent(budget -> {
 
-                    Double totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(categoryId, userId, month, year);
+                    Double totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(
+                            categoryId, userId, month, year, Transaction.TransactionType.EXPENSE);
                     User user = budget.getUser();
 
 

@@ -1,6 +1,7 @@
 package com.personal.finance.backend.wallets.service;
 
 import com.personal.finance.backend.common.service.EmailService;
+import com.personal.finance.backend.notifications.service.NotificationService;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
 import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
@@ -44,6 +45,9 @@ class WalletServiceImplTest {
     private WalletMemberRepository walletMemberRepository;
     @Mock
     private EmailService emailService;
+
+    @Mock
+    private NotificationService notificationService;
 
     private User owner;
     private Wallet mockWallet;

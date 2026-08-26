@@ -12,4 +12,6 @@ public interface BudgetService {
     BudgetDTO getBudgetById(Long id, Long userId);
     BudgetDTO updateBudget(Long id, Long userId, UpdateBudgetRequest request);
     void deleteBudget(Long id, Long userId);
+
+    void checkAndAlertBudget(Long userId, Long categoryId, int month, int year);
 }

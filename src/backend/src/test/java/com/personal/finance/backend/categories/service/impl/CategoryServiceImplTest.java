@@ -1,12 +1,11 @@
-package com.personal.finance.backend.categories.service;
+package com.personal.finance.backend.categories.service.impl;
 
-import com.personal.finance.backend.budgets.entity.Budget;
 import com.personal.finance.backend.categories.dto.request.CreateCategoryRequest;
 import com.personal.finance.backend.categories.dto.response.CategoryDTO;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.mapper.CategoryMapper;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
-import com.personal.finance.backend.categories.service.impl.CategoryServiceImpl;
+import com.personal.finance.backend.categories.repository.CategoryRuleRepository;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
@@ -32,6 +31,9 @@ class CategoryServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private CategoryRuleRepository categoryRuleRepository;
 
     @Mock
     private CategoryMapper categoryMapper;
@@ -85,7 +87,7 @@ class CategoryServiceImplTest {
 
     @Test
     void createCategory_ParentTypeMismatch_ThrowsException() {
-        // Arrange
+
         CreateCategoryRequest request = new CreateCategoryRequest();
         request.setName("Tiền thưởng");
         request.setType(Category.CategoryType.INCOME);
@@ -161,5 +163,42 @@ class CategoryServiceImplTest {
         });
 
         assertEquals("Không tìm thấy danh mục!", exception.getMessage());
+    }
+
+    @Test
+    void addRule_ValidRequest_Success() {
+        com.personal.finance.backend.categories.dto.request.CreateCategoryRuleRequest request =
+                new com.personal.finance.backend.categories.dto.request.CreateCategoryRuleRequest();
+        request.setKeyword("Highlands");
+        request.setPriority(1);
+
+        when(categoryRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockCategory));
+        when(categoryRuleRepository.save(any(com.personal.finance.backend.categories.entity.CategoryRule.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        com.personal.finance.backend.categories.dto.response.CategoryRuleDTO ruleDTO =
+                new com.personal.finance.backend.categories.dto.response.CategoryRuleDTO();
+        ruleDTO.setKeyword("Highlands");
+        when(categoryMapper.toDTO(any(com.personal.finance.backend.categories.entity.CategoryRule.class))).thenReturn(ruleDTO);
+
+
+        com.personal.finance.backend.categories.dto.response.CategoryRuleDTO result = categoryService.addRule(10L, 1L, request);
+
+
+        assertNotNull(result);
+        assertEquals("Highlands", result.getKeyword());
+        verify(categoryRuleRepository, times(1)).save(any());
+    }
+
+    @Test
+    void deleteRule_NotOwnerOfCategory_ThrowsException() {
+        when(categoryRepository.findByIdAndUserId(10L, 99L)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            categoryService.deleteRule(10L, 1L, 99L);
+        });
+
+        assertEquals("Không tìm thấy danh mục!", exception.getMessage());
+        verify(categoryRuleRepository, never()).delete(any());
     }
 }

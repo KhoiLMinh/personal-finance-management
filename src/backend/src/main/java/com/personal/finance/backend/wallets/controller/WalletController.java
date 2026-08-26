@@ -1,8 +1,10 @@
 package com.personal.finance.backend.wallets.controller;
 
+import com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest;
 import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
 import com.personal.finance.backend.users.dto.request.UpdateWalletRequest;
 import com.personal.finance.backend.wallets.dto.response.WalletDTO;
+import com.personal.finance.backend.wallets.dto.response.WalletMemberDTO;
 import com.personal.finance.backend.wallets.service.WalletService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,5 +55,20 @@ public class WalletController {
             @PathVariable Long id) {
         walletService.deleteWallet(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/members")
+    public ResponseEntity<List<WalletMemberDTO>> getWalletMembers(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(walletService.getWalletMembers(id, userId));
+    }
+
+    @PostMapping("/{id}/members/share")
+    public ResponseEntity<WalletMemberDTO> shareWallet(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long id,
+            @Valid @RequestBody AddWalletMemberRequest request) {
+        return ResponseEntity.ok(walletService.shareWallet(id, userId, request));
     }
 }

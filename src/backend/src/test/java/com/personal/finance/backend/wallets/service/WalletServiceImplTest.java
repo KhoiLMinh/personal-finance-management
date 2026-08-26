@@ -1,5 +1,7 @@
 package com.personal.finance.backend.wallets.service;
 
+import com.personal.finance.backend.common.service.EmailService;
+import com.personal.finance.backend.notifications.service.NotificationService;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
 import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
@@ -7,8 +9,9 @@ import com.personal.finance.backend.users.dto.request.UpdateWalletRequest;
 import com.personal.finance.backend.wallets.dto.response.WalletDTO;
 import com.personal.finance.backend.wallets.entity.Wallet;
 import com.personal.finance.backend.wallets.mapper.WalletMapper;
+import com.personal.finance.backend.wallets.repository.WalletMemberRepository;
 import com.personal.finance.backend.wallets.repository.WalletRepository;
-import com.personal.finance.backend.wallets.repository.impl.WalletServiceImpl;
+import com.personal.finance.backend.wallets.service.impl.WalletServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +40,14 @@ class WalletServiceImplTest {
 
     @InjectMocks
     private WalletServiceImpl walletService;
+
+    @Mock
+    private WalletMemberRepository walletMemberRepository;
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private NotificationService notificationService;
 
     private User owner;
     private Wallet mockWallet;
@@ -166,5 +177,62 @@ class WalletServiceImplTest {
 
         assertEquals("Bạn không có quyền thao tác trên ví này!", exception.getMessage());
         verify(walletRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteWallet_IsOwner_Success() {
+        Long requesterId = 1L;
+
+        when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
+
+        walletService.deleteWallet(10L, requesterId);
+
+        verify(walletRepository, times(1)).delete(mockWallet);
+    }
+
+    @Test
+    void shareWallet_ValidRequest_SuccessAndSendsEmail() {
+        Long requesterId = 1L;
+        com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest request =
+                new com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest();
+        request.setEmail("friend@example.com");
+        request.setPermission(com.personal.finance.backend.wallets.entity.WalletMember.Permission.VIEW);
+
+        User targetUser = new User();
+        targetUser.setId(2L);
+        targetUser.setEmail("friend@example.com");
+        targetUser.setFullName("Bạn Thân");
+
+        when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
+        when(userRepository.findByEmail("friend@example.com")).thenReturn(Optional.of(targetUser));
+        when(walletMemberRepository.findByWalletIdAndUserId(10L, 2L)).thenReturn(Optional.empty());
+
+        com.personal.finance.backend.wallets.entity.WalletMember savedMember = new com.personal.finance.backend.wallets.entity.WalletMember();
+        when(walletMemberRepository.save(any(com.personal.finance.backend.wallets.entity.WalletMember.class))).thenReturn(savedMember);
+
+        walletService.shareWallet(10L, requesterId, request);
+
+        verify(walletMemberRepository, times(1)).save(any(com.personal.finance.backend.wallets.entity.WalletMember.class));
+        verify(emailService, times(1)).sendEmail(eq("friend@example.com"), anyString(), anyString()); // Xác nhận có gửi email
+    }
+
+    @Test
+    void shareWallet_InviteSelf_ThrowsException() {
+        Long requesterId = 1L;
+        com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest request =
+                new com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest();
+        request.setEmail("owner_user@example.com");
+
+        when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
+
+        when(userRepository.findByEmail("owner_user@example.com")).thenReturn(Optional.of(owner));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            walletService.shareWallet(10L, requesterId, request);
+        });
+
+        assertEquals("Không thể mời chính chủ sở hữu vào ví!", exception.getMessage());
+        verify(walletMemberRepository, never()).save(any());
+        verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());
     }
 }

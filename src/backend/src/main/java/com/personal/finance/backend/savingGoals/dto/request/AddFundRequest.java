@@ -11,4 +11,7 @@ public class AddFundRequest {
     @NotNull(message = "Số tiền nộp thêm không được để trống")
     @Positive(message = "Số tiền nộp thêm phải lớn hơn 0")
     private Double amount;
+
+    @NotNull(message = "Vui lòng chọn ví để trích tiền")
+    private Long walletId;
 }

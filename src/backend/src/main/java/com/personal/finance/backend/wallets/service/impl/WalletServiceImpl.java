@@ -1,12 +1,18 @@
-package com.personal.finance.backend.wallets.repository.impl;
+package com.personal.finance.backend.wallets.service.impl;
 
+import com.personal.finance.backend.common.service.EmailService;
+import com.personal.finance.backend.notifications.service.NotificationService;
+import com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest;
 import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
 import com.personal.finance.backend.users.dto.request.UpdateWalletRequest;
 import com.personal.finance.backend.wallets.dto.response.WalletDTO;
 import com.personal.finance.backend.users.entity.User;
+import com.personal.finance.backend.wallets.dto.response.WalletMemberDTO;
 import com.personal.finance.backend.wallets.entity.Wallet;
+import com.personal.finance.backend.wallets.entity.WalletMember;
 import com.personal.finance.backend.wallets.mapper.WalletMapper;
 import com.personal.finance.backend.users.repository.UserRepository;
+import com.personal.finance.backend.wallets.repository.WalletMemberRepository;
 import com.personal.finance.backend.wallets.repository.WalletRepository;
 import com.personal.finance.backend.wallets.service.WalletService;
 import jakarta.transaction.Transactional;
@@ -23,6 +29,9 @@ public class WalletServiceImpl implements WalletService {
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
     private final WalletMapper walletMapper;
+    private final WalletMemberRepository walletMemberRepository;
+    private final EmailService emailService;
+    private final NotificationService notificationService;
 
     private Wallet getWalletEntity(Long walletId) {
         return walletRepository.findById(walletId)
@@ -90,5 +99,55 @@ public class WalletServiceImpl implements WalletService {
         Wallet wallet = getWalletEntity(walletId);
         requireOwner(wallet, requesterId);
         walletRepository.delete(wallet);
+    }
+
+    @Override
+    public List<WalletMemberDTO> getWalletMembers(Long walletId, Long requesterId) {
+        Wallet wallet = getWalletEntity(walletId);
+        requireAccess(wallet, requesterId);
+        return walletMemberRepository.findAllByWalletId(walletId)
+                .stream()
+                .map(walletMapper::toMemberDTO)
+                .toList();
+    }
+    //FR-13
+    @Override
+    @Transactional
+    public WalletMemberDTO shareWallet(Long walletId, Long requesterId, AddWalletMemberRequest request) {
+        Wallet wallet = getWalletEntity(walletId);
+        requireOwner(wallet, requesterId);
+
+        User targetUser = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email này trong hệ thống!"));
+
+        if (wallet.getOwner().getId().equals(targetUser.getId())) {
+            throw new RuntimeException("Không thể mời chính chủ sở hữu vào ví!");
+        }
+
+        WalletMember member = walletMemberRepository.findByWalletIdAndUserId(walletId, targetUser.getId())
+                .orElse(new WalletMember());
+
+        member.setWallet(wallet);
+        member.setUser(targetUser);
+        member.setPermissions(request.getPermission());
+
+        WalletMember savedMember = walletMemberRepository.save(member);
+
+        String roleName = request.getPermission() == WalletMember.Permission.EDIT ? "CHỈNH SỬA" : "CHỈ XEM";
+        String emailBody = String.format(
+                "Xin chào %s,\n\n" +
+                        "Bạn vừa được chia sẻ quyền truy cập vào ví gia đình: '%s'.\n" +
+                        "Vai trò của bạn: %s.\n\n" +
+                        "Hãy đăng nhập vào hệ thống Personal Finance ngay để xem chi tiết và cùng quản lý chi tiêu nhé!\n\n" +
+                        "Trân trọng,\nĐội ngũ Hỗ trợ.",
+                targetUser.getFullName(), wallet.getName(), roleName
+        );
+
+        emailService.sendEmail(targetUser.getEmail(), "Bạn được mời tham gia Ví gia đình!", emailBody);
+        String notifContent = String.format("Bạn vừa được %s mời tham gia quản lý ví '%s' với quyền %s.",
+                wallet.getOwner().getFullName(), wallet.getName(), roleName);
+        notificationService.createSystemNotification(targetUser.getId(), "🤝 Lời mời tham gia ví", notifContent);
+
+        return walletMapper.toMemberDTO(savedMember);
     }
 }

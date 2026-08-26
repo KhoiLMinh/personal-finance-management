@@ -1,8 +1,10 @@
 package com.personal.finance.backend.transactions.service;
 
+import com.personal.finance.backend.budgets.service.BudgetService;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.transactions.dto.request.CreateTransactionRequest;
+import com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest;
 import com.personal.finance.backend.transactions.dto.response.TransactionDTO;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.transactions.mapper.TransactionMapper;
@@ -41,6 +43,9 @@ class TransactionServiceImplTest {
     @Mock
     private TransactionMapper transactionMapper;
 
+    @Mock
+    private BudgetService budgetService;
+
     @InjectMocks
     private TransactionServiceImpl transactionService;
 
@@ -75,12 +80,11 @@ class TransactionServiceImplTest {
 
     @Test
     void createTransaction_HasEditPermission_Success() {
-
         Long userId = 10L;
 
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
         when(walletRepository.findById(1L)).thenReturn(Optional.of(mockWallet));
-        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
 
@@ -88,7 +92,6 @@ class TransactionServiceImplTest {
 
         assertNotNull(result);
         verify(transactionRepository, times(1)).save(any(Transaction.class));
-
         verify(walletRepository, times(1)).updateBalance(eq(1L), eq(-50000.0));
     }
 
@@ -102,7 +105,6 @@ class TransactionServiceImplTest {
         });
 
         assertEquals("Bạn không có quyền thêm giao dịch vào ví này!", exception.getMessage());
-
         verify(transactionRepository, never()).save(any());
         verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
     }
@@ -110,20 +112,15 @@ class TransactionServiceImplTest {
 
     @Test
     void deleteTransaction_HasEditPermission_SuccessAndRevertBalance() {
-
         Long userId = 10L;
         Long transactionId = 100L;
 
         when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
-
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
-
 
         transactionService.deleteTransaction(transactionId, userId);
 
-
         verify(transactionRepository, times(1)).delete(mockTransaction);
-
         verify(walletRepository, times(1)).updateBalance(eq(1L), eq(50000.0));
     }
 
@@ -141,5 +138,122 @@ class TransactionServiceImplTest {
         assertEquals("Không tìm thấy giao dịch hoặc truy cập trái phép!", exception.getMessage());
         verify(transactionRepository, never()).delete(any());
         verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+    }
+
+
+    @Test
+    void updateTransaction_HasEditPermission_UpdateAmountExpense_Success() {
+        Long userId = 10L;
+        Long transactionId = 100L;
+
+        UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
+        updateReq.setCategoryId(2L);
+        updateReq.setAmount(70000.0);
+        updateReq.setType(Transaction.TransactionType.EXPENSE);
+        updateReq.setDate(LocalDate.now());
+        updateReq.setDescription("Ăn trưa xịn hơn");
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
+
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
+        when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
+
+        TransactionDTO result = transactionService.updateTransaction(transactionId, userId, updateReq);
+
+        assertNotNull(result);
+        verify(transactionRepository, times(1)).save(mockTransaction);
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(-20000.0));
+    }
+
+    @Test
+    void updateTransaction_HasEditPermission_ChangeToIncome_Success() {
+        Long userId = 10L;
+        Long transactionId = 100L;
+
+        UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
+        updateReq.setCategoryId(2L);
+        updateReq.setAmount(100000.0);
+        updateReq.setType(Transaction.TransactionType.INCOME);
+        updateReq.setDate(LocalDate.now());
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        // ĐÃ SỬA THÀNH findByIdAndAccessibleByUser
+        when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
+
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
+        when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
+
+        transactionService.updateTransaction(transactionId, userId, updateReq);
+
+        verify(transactionRepository, times(1)).save(mockTransaction);
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(150000.0));
+    }
+
+    @Test
+    void updateTransaction_ViewPermissionOnly_ThrowsException() {
+        Long userId = 11L;
+        Long transactionId = 100L;
+        UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(false);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
+            transactionService.updateTransaction(transactionId, userId, updateReq);
+        });
+
+        assertEquals("Bạn không có quyền sửa giao dịch trong ví này!", exception.getMessage());
+
+        verify(transactionRepository, never()).save(any());
+        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+    }
+
+    @Test
+    void deleteTransaction_ViewPermissionOnly_ThrowsException() {
+        Long userId = 11L;
+        Long transactionId = 100L;
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(false);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
+            transactionService.deleteTransaction(transactionId, userId);
+        });
+
+        assertEquals("Bạn không có quyền xóa giao dịch trong ví này!", exception.getMessage());
+        verify(transactionRepository, never()).delete(any());
+    }
+
+    @Test
+    void createTransaction_ExpenseType_TriggersBudgetCheck() {
+        Long userId = 10L;
+        request.setType(Transaction.TransactionType.EXPENSE);
+
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(walletRepository.findById(1L)).thenReturn(Optional.of(mockWallet));
+        when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
+        when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
+
+        transactionService.createTransaction(userId, request);
+
+        verify(budgetService, times(1)).checkAndAlertBudget(eq(userId), eq(2L), anyInt(), anyInt());
+    }
+
+    @Test
+    void getTransactionById_Success() {
+        Long userId = 10L;
+        Long transactionId = 100L;
+
+        when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
+        when(transactionMapper.toDTO(mockTransaction)).thenReturn(new TransactionDTO());
+
+        TransactionDTO result = transactionService.getTransactionById(transactionId, userId);
+
+        assertNotNull(result);
+        verify(transactionRepository, times(1)).findByIdAndAccessibleByUser(transactionId, userId);
     }
 }

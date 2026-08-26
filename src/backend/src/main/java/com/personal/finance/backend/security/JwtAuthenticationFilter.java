@@ -21,7 +21,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-
+    //FR-14
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,

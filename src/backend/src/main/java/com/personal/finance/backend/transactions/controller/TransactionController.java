@@ -1,6 +1,7 @@
 package com.personal.finance.backend.transactions.controller;
 
 import com.personal.finance.backend.transactions.dto.request.CreateTransactionRequest;
+import com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest;
 import com.personal.finance.backend.transactions.dto.response.TransactionDTO;
 import com.personal.finance.backend.transactions.service.TransactionService;
 import jakarta.validation.Valid;
@@ -54,5 +55,13 @@ public class TransactionController {
             @PathVariable Long id) {
         transactionService.deleteTransaction(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TransactionDTO> updateTransaction(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTransactionRequest request) {
+        return ResponseEntity.ok(transactionService.updateTransaction(id, userId, request));
     }
 }

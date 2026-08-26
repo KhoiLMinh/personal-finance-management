@@ -23,6 +23,10 @@ public class CustomeUserDetailsService implements UserDetailsService {
         if(myUser == null)
             throw new UsernameNotFoundException("Không tìm thấy user");
 
+        if (!myUser.isActive()) {
+            throw new RuntimeException("Tài khoản của bạn đã bị quản trị viên khóa!");
+        }
+
         return new User(myUser.getEmail(), myUser.getPassword(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + myUser.getRole())));
     }

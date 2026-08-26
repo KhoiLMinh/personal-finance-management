@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,7 +78,7 @@ public class DataSeeder implements CommandLineRunner {
         walletCash.setName("Tiền mặt");
         walletCash.setIcon("Wallet");
         walletCash.setColor("#10b981");
-        walletCash.setBalance(5000000.0);
+        walletCash.setBalance(BigDecimal.valueOf(5000000.0));
         walletRepository.save(walletCash);
 
         Wallet walletBank = new Wallet();
@@ -85,7 +86,7 @@ public class DataSeeder implements CommandLineRunner {
         walletBank.setName("Vietcombank");
         walletBank.setIcon("CreditCard");
         walletBank.setColor("#3b82f6");
-        walletBank.setBalance(44500000.0);
+        walletBank.setBalance(BigDecimal.valueOf(44500000.0));
         walletRepository.save(walletBank);
 
         String[][] expenses = {
@@ -126,8 +127,8 @@ public class DataSeeder implements CommandLineRunner {
         SavingGoal goal1 = new SavingGoal();
         goal1.setUser(demoUser);
         goal1.setTitle("Đổi xe SH");
-        goal1.setTargetAmount(80000000.0);
-        goal1.setCurrentAmount(18000000.0);
+        goal1.setTargetAmount(BigDecimal.valueOf(80000000.0));
+        goal1.setCurrentAmount(BigDecimal.valueOf(18000000.0));
         goal1.setDeadline(LocalDate.now().plusMonths(6));
         goal1.setStatus(SavingGoal.GoalStatus.IN_PROGRESS);
         savingGoalRepository.save(goal1);
@@ -135,8 +136,8 @@ public class DataSeeder implements CommandLineRunner {
         SavingGoal goal2 = new SavingGoal();
         goal2.setUser(demoUser);
         goal2.setTitle("Quỹ khẩn cấp");
-        goal2.setTargetAmount(30000000.0);
-        goal2.setCurrentAmount(30000000.0);
+        goal2.setTargetAmount(BigDecimal.valueOf(30000000.0));
+        goal2.setCurrentAmount(BigDecimal.valueOf(30000000.0));
         goal2.setDeadline(LocalDate.now().plusMonths(1));
         goal2.setStatus(SavingGoal.GoalStatus.COMPLETE);
         savingGoalRepository.save(goal2);
@@ -150,7 +151,7 @@ public class DataSeeder implements CommandLineRunner {
         budget1.setCategory(expenseCategories.get(0));
         budget1.setMonth(currentMonth);
         budget1.setYear(currentYear);
-        budget1.setLimitAmount(6000000.0);
+        budget1.setLimitAmount(BigDecimal.valueOf(6000000.0));
         budget1.setWarningPercent(80.0);
         budget1.setStatus(Budget.BudgetStatus.ACTIVE);
         budgetRepository.save(budget1);
@@ -160,33 +161,32 @@ public class DataSeeder implements CommandLineRunner {
         budget2.setCategory(expenseCategories.get(2));
         budget2.setMonth(currentMonth);
         budget2.setYear(currentYear);
-        budget2.setLimitAmount(2000000.0);
+        budget2.setLimitAmount(BigDecimal.valueOf(2000000.0));
         budget2.setWarningPercent(90.0);
         budget2.setStatus(Budget.BudgetStatus.EXCEED);
         budgetRepository.save(budget2);
 
-
-        createTx(walletBank, salaryCat, 25000000.0, Transaction.TransactionType.INCOME, today.minusMonths(1).withDayOfMonth(5), "Lương tháng trước");
-        createTx(walletBank, salaryCat, 28000000.0, Transaction.TransactionType.INCOME, today.withDayOfMonth(5), "Lương tháng này");
-        createTx(walletBank, bonusCat, 5000000.0, Transaction.TransactionType.INCOME, today.withDayOfMonth(15), "Tiền làm dự án ngoài");
+        createTx(walletBank, salaryCat, BigDecimal.valueOf(25000000.0), Transaction.TransactionType.INCOME, today.minusMonths(1).withDayOfMonth(5), "Lương tháng trước");
+        createTx(walletBank, salaryCat, BigDecimal.valueOf(28000000.0), Transaction.TransactionType.INCOME, today.withDayOfMonth(5), "Lương tháng này");
+        createTx(walletBank, bonusCat, BigDecimal.valueOf(5000000.0), Transaction.TransactionType.INCOME, today.withDayOfMonth(15), "Tiền làm dự án ngoài");
 
         Random random = new Random();
         for (int i = 0; i < 35; i++) {
             LocalDate randomDate = today.minusDays(random.nextInt(45));
             Category randomCategory = expenseCategories.get(random.nextInt(expenseCategories.size()));
-            Double randomAmount = 50000.0 + (random.nextInt(30) * 50000.0);
+            BigDecimal randomAmount = BigDecimal.valueOf(50000.0 + (random.nextInt(30) * 50000.0));
             Wallet selectedWallet = random.nextBoolean() ? walletCash : walletBank;
 
             createTx(selectedWallet, randomCategory, randomAmount, Transaction.TransactionType.EXPENSE, randomDate, "Chi tiêu tự động " + i);
         }
 
-        createTx(walletCash, expenseCategories.get(0), 100000.0, Transaction.TransactionType.EXPENSE, today, "Phở sáng");
-        createTx(walletCash, expenseCategories.get(1), 100000.0, Transaction.TransactionType.EXPENSE, today, "Đổ xăng");
+        createTx(walletCash, expenseCategories.get(0), BigDecimal.valueOf(100000.0), Transaction.TransactionType.EXPENSE, today, "Phở sáng");
+        createTx(walletCash, expenseCategories.get(1), BigDecimal.valueOf(100000.0), Transaction.TransactionType.EXPENSE, today, "Đổ xăng");
 
         log.info("Đã seed thành công dữ liệu mẫu siêu to khổng lồ!");
     }
 
-    private void createTx(Wallet wallet, Category category, Double amount, Transaction.TransactionType type, LocalDate date, String desc) {
+    private void createTx(Wallet wallet, Category category, BigDecimal amount, Transaction.TransactionType type, LocalDate date, String desc) {
         Transaction tx = new Transaction();
         tx.setWallet(wallet);
         tx.setCategory(category);

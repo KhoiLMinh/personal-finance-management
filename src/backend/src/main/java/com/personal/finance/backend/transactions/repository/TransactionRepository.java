@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -55,7 +56,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             "LEFT JOIN w.members wm " +
             "WHERE t.category.id = :categoryId AND (w.owner.id = :userId OR wm.user.id = :userId) " +
             "AND t.type = :type AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
-    Double sumExpenseByCategoryAndMonth(
+    BigDecimal sumExpenseByCategoryAndMonth(
             @Param("categoryId") Long categoryId,
             @Param("userId") Long userId,
             @Param("month") Integer month,
@@ -73,7 +74,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         AND (:startDate IS NULL OR t.date >= :startDate) 
         AND (:endDate IS NULL OR t.date <= :endDate)
         """)
-    Double getTotalAmountByType(
+    BigDecimal getTotalAmountByType(
             @Param("userId") Long userId,
             @Param("type") Transaction.TransactionType type,
             @Param("startDate") LocalDate startDate,

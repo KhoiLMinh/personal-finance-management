@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.HashMap;
@@ -68,7 +69,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
     @Override
     public String chatWithAi(Long userId, String userMessage) {
-        Double currentBalance = walletRepository.getTotalBalanceAccessibleByUser(userId);
+        BigDecimal currentBalance = walletRepository.getTotalBalanceAccessibleByUser(userId);
         String systemInstruction = String.format(
                 "Bạn là Trợ lý tài chính ảo thông minh. Người dùng hiện đang có tổng số dư là %,.0f VNĐ trong các ví. " +
                         "Hãy trả lời câu hỏi của họ một cách ngắn gọn, thân thiện và có tính chuyên môn tài chính.",

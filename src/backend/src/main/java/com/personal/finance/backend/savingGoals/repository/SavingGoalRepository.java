@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 @Repository
@@ -21,5 +22,5 @@ public interface SavingGoalRepository extends JpaRepository<SavingGoal, Long> {
     @Modifying
     @Query("UPDATE SavingGoal sg SET sg.currentAmount = sg.currentAmount + :amount " +
             "WHERE sg.id = :id AND sg.user.id = :userId")
-    int addFundsToGoal(@Param("id") Long id, @Param("userId") Long userId, @Param("amount") Double amount);
+    int addFundsToGoal(@Param("id") Long id, @Param("userId") Long userId, @Param("amount") BigDecimal amount);
 }

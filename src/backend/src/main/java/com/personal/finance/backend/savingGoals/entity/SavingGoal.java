@@ -18,6 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -32,12 +33,12 @@ public class SavingGoal extends Base {
 
     @NotNull
     @Positive
-    @Column(nullable = false)
-    private Double targetAmount;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal targetAmount;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 2)
     @PositiveOrZero
-    private Double currentAmount;
+    private BigDecimal currentAmount;
 
     @NotNull
     @Column(nullable = false)

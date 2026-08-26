@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -65,7 +66,7 @@ public class WalletServiceImpl implements WalletService {
 
         Wallet wallet = new Wallet();
         wallet.setName(request.getName());
-        wallet.setBalance(request.getBalance() == null ? 0.0 : request.getBalance());
+        wallet.setBalance(request.getBalance() == null ? BigDecimal.ZERO : request.getBalance());
         wallet.setIcon(request.getIcon());
         wallet.setColor(request.getColor());
         wallet.setOwner(owner);

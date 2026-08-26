@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Slf4j
@@ -60,9 +61,10 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        Double deltaAmount = request.getType() == Transaction.TransactionType.INCOME
+        BigDecimal deltaAmount = request.getType() == Transaction.TransactionType.INCOME
                 ? request.getAmount()
-                : -request.getAmount();
+                : request.getAmount().negate();
+
         walletRepository.updateBalance(wallet.getId(), deltaAmount);
 
         if (request.getType() == Transaction.TransactionType.EXPENSE) {
@@ -103,8 +105,8 @@ public class TransactionServiceImpl implements TransactionService {
             throw new AccessDeniedException("Bạn không có quyền xóa giao dịch trong ví này!");
         }
 
-        Double revertAmount = transaction.getType() == Transaction.TransactionType.INCOME
-                ? -transaction.getAmount()
+        BigDecimal revertAmount = transaction.getType() == Transaction.TransactionType.INCOME
+                ? transaction.getAmount().negate()
                 : transaction.getAmount();
         walletRepository.updateBalance(transaction.getWallet().getId(), revertAmount);
 
@@ -127,17 +129,13 @@ public class TransactionServiceImpl implements TransactionService {
         Category category = categoryRepository.findByIdAndAccessibleByUser(request.getCategoryId(), userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục hoặc không có quyền sử dụng!"));
 
-        Double oldImpact = transaction.getType() == Transaction.TransactionType.INCOME
-                ? transaction.getAmount()
-                : -transaction.getAmount();
+        BigDecimal oldImpact = transaction.getType() == Transaction.TransactionType.INCOME
+                ? transaction.getAmount() : transaction.getAmount().negate();
+        BigDecimal newImpact = request.getType() == Transaction.TransactionType.INCOME
+                ? request.getAmount() : request.getAmount().negate();
+        BigDecimal netChange = newImpact.subtract(oldImpact);
 
-        Double newImpact = request.getType() == Transaction.TransactionType.INCOME
-                ? request.getAmount()
-                : -request.getAmount();
-
-        Double netChange = newImpact - oldImpact;
-
-        if (netChange != 0.0) {
+        if (netChange.compareTo(BigDecimal.ZERO) != 0) {
             walletRepository.updateBalance(transaction.getWallet().getId(), netChange);
         }
 

@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -102,7 +103,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 Transaction transaction = new Transaction();
                 transaction.setWallet(wallet);
                 transaction.setImportBatch(batch);
-                transaction.setAmount(Math.abs(amount));
+                transaction.setAmount(BigDecimal.valueOf(Math.abs(amount)));
                 transaction.setType(amount >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
                 transaction.setDate(date);
                 transaction.setDescription(description);
@@ -137,7 +138,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
 
             if (!transactionsToSave.isEmpty()) {
                 transactionRepository.saveAll(transactionsToSave);
-                walletRepository.updateBalance(walletId, netBalanceChange);
+                walletRepository.updateBalance(walletId, BigDecimal.valueOf(netBalanceChange));
             }
 
             batch.setTotalRows(totalRows);

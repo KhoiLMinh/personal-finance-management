@@ -13,10 +13,11 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -26,12 +27,11 @@ import java.time.LocalDate;
 public class Transaction extends Base {
 
     @NotNull
-    @Positive
-    @Column(nullable = false)
-    private Double amount;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 20)
+    @Column(nullable = false, length = 20)
     private TransactionType type;
 
     private String description;

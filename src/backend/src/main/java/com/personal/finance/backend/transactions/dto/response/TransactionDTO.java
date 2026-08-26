@@ -3,6 +3,7 @@ package com.personal.finance.backend.transactions.dto.response;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -13,7 +14,7 @@ public class TransactionDTO {
     private String walletName;
     private Long categoryId;
     private String categoryName;
-    private Double amount;
+    private BigDecimal amount;
     private String type;
     private LocalDate date;
     private String description;

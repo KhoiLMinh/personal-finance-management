@@ -22,6 +22,8 @@ import com.personal.finance.backend.common.service.EmailService;
 import com.personal.finance.backend.notifications.service.NotificationService;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
 
+import java.math.BigDecimal;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -122,15 +124,15 @@ public class BudgetServiceImpl implements BudgetService {
                 .findFirst()
                 .ifPresent(budget -> {
 
-                    Double totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(
+                    BigDecimal totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(
                             categoryId, userId, month, year, Transaction.TransactionType.EXPENSE);
                     User user = budget.getUser();
 
 
-                    double warningLimit = budget.getLimitAmount() * (budget.getWarningPercent() / 100.0);
+                    BigDecimal warningLimit = budget.getLimitAmount().multiply(BigDecimal.valueOf(budget.getWarningPercent() / 100.0));
 
 
-                    if (totalSpent >= budget.getLimitAmount() && budget.getStatus() != Budget.BudgetStatus.EXCEED) {
+                    if (totalSpent.compareTo(budget.getLimitAmount()) >= 0 && budget.getStatus() != Budget.BudgetStatus.EXCEED) {
                         budget.setStatus(Budget.BudgetStatus.EXCEED);
                         budgetRepository.save(budget);
 
@@ -141,7 +143,7 @@ public class BudgetServiceImpl implements BudgetService {
                         emailService.sendEmail(user.getEmail(), "Cảnh báo vượt ngân sách - Personal Finance", msg);
                     }
 
-                    else if (totalSpent >= warningLimit && totalSpent < budget.getLimitAmount() && !budget.isWarningSent()) {
+                    else if (totalSpent.compareTo(warningLimit) >= 0 && totalSpent.compareTo(budget.getLimitAmount()) < 0 && !budget.isWarningSent()) {
                         budget.setWarningSent(true);
                         budgetRepository.save(budget);
 

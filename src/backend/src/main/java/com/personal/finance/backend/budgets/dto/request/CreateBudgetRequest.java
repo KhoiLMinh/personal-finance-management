@@ -1,11 +1,14 @@
 package com.personal.finance.backend.budgets.dto.request;
 
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -23,7 +26,7 @@ public class CreateBudgetRequest {
 
     @NotNull(message = "Hạn mức không được để trống")
     @Positive(message = "Hạn mức ngân sách phải lớn hơn 0")
-    private Double limitAmount;
+    private BigDecimal limitAmount;
 
     @Positive(message = "Tỷ lệ cảnh báo phải lớn hơn 0")
     private Double warningPercent;

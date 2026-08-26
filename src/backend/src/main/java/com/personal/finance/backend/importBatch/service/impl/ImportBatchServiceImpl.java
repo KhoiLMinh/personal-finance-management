@@ -7,7 +7,7 @@ import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.categories.repository.CategoryRuleRepository;
 import com.personal.finance.backend.importBatch.dto.response.ImportBatchDTO;
 import com.personal.finance.backend.importBatch.entity.ImportBatch;
-import com.personal.finance.backend.importBatch.mapper.ImportBatchMapper; // <-- Import Mapper
+import com.personal.finance.backend.importBatch.mapper.ImportBatchMapper;
 import com.personal.finance.backend.importBatch.repository.ImportBatchRepository;
 import com.personal.finance.backend.importBatch.service.ImportBatchService;
 import com.personal.finance.backend.transactions.entity.Transaction;
@@ -71,12 +71,10 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         List<Transaction> transactionsToSave = new ArrayList<>();
         List<Transaction> needAiCategorization = new ArrayList<>();
         List<String> descriptionsForAi = new ArrayList<>();
-        double netBalanceChange = 0.0;
+        BigDecimal netBalanceChange = BigDecimal.ZERO;
         int totalRows = 0;
         int successRows = 0;
         int duplicateRows = 0;
-
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("d/M/yyyy");
 
         try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
@@ -85,15 +83,14 @@ public class ImportBatchServiceImpl implements ImportBatchService {
             while ((line = br.readLine()) != null) {
                 if (isHeader) { isHeader = false; continue; }
                 totalRows++;
-
                 String[] fields = line.split(CSV_SPLIT_REGEX, -1);
                 if (fields.length < 3) continue;
-
-                LocalDate date = LocalDate.parse(fields[0].replace("\"", "").trim(), dateFormatter);
-                Double amount = Double.parseDouble(fields[1].replace("\"", "").replace(",", "").trim());
+                LocalDate date = parseFlexibleDate(fields[0].replace("\"", "").trim());
+                Double rawAmount = Double.parseDouble(fields[1].replace("\"", "").replace(",", "").trim());
+                BigDecimal absoluteAmount = BigDecimal.valueOf(Math.abs(rawAmount));
                 String description = fields[2].replace("\"", "").trim();
-                //FR-07
-                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId, date, amount, description)) {
+
+                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId, date, absoluteAmount.doubleValue(), description)) {
                     duplicateRows++;
                     continue;
                 }
@@ -103,8 +100,8 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 Transaction transaction = new Transaction();
                 transaction.setWallet(wallet);
                 transaction.setImportBatch(batch);
-                transaction.setAmount(BigDecimal.valueOf(Math.abs(amount)));
-                transaction.setType(amount >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
+                transaction.setAmount(absoluteAmount);
+                transaction.setType(rawAmount >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
                 transaction.setDate(date);
                 transaction.setDescription(description);
                 transaction.setStatus("COMPLETED");
@@ -118,7 +115,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 }
 
                 transactionsToSave.add(transaction);
-                netBalanceChange += amount;
+                netBalanceChange = netBalanceChange.add(BigDecimal.valueOf(rawAmount));
                 successRows++;
             }
 
@@ -138,7 +135,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
 
             if (!transactionsToSave.isEmpty()) {
                 transactionRepository.saveAll(transactionsToSave);
-                walletRepository.updateBalance(walletId, BigDecimal.valueOf(netBalanceChange));
+                walletRepository.updateBalance(walletId, netBalanceChange);
             }
 
             batch.setTotalRows(totalRows);
@@ -158,6 +155,17 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         return importBatchMapper.toDTO(batch);
     }
 
+    private LocalDate parseFlexibleDate(String dateStr) {
+        String[] dateFormats = {"d/M/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "MM/dd/yyyy", "d-M-yyyy", "dd-MM-yyyy"};
+        for (String format : dateFormats) {
+            try {
+                return LocalDate.parse(dateStr, DateTimeFormatter.ofPattern(format));
+            } catch (Exception ignored) {
+            }
+        }
+        throw new RuntimeException("Không hỗ trợ định dạng ngày: " + dateStr);
+    }
+
     private Category categorizeTransaction(String description, List<CategoryRule> rules, Category fallback) {
         String lowerDesc = description.toLowerCase();
         for (CategoryRule rule : rules) {
@@ -167,7 +175,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         }
         return fallback;
     }
-    //FR-08
+
     private Category getOrCreateUncategorizedCategory(Long userId) {
         return categoryRepository.findByNameAndUserId("Chưa phân loại", userId)
                 .orElseGet(() -> {

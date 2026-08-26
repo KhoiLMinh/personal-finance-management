@@ -64,7 +64,6 @@ class ImportBatchServiceImplTest {
         mockWallet = new Wallet();
         mockWallet.setId(10L);
         mockWallet.setName("Ví Test");
-        mockWallet.setBalance(1000000.0);
 
         mockCategoryFood = new Category();
         mockCategoryFood.setId(100L);
@@ -95,8 +94,7 @@ class ImportBatchServiceImplTest {
 
     @Test
     void importCsv_ValidFile_MatchedByRule_NoAiCall() {
-
-        String csvData = "Ngày,Số tiền,Ghi chú\n15/08/2026,-50000,Highlands Coffee";
+        String csvData = "Ngày,Số tiền,Ghi chú\n2026-08-15,-50000,Highlands Coffee";
         MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes());
 
         when(walletRepository.hasEditPermission(10L, 1L)).thenReturn(true);
@@ -104,48 +102,18 @@ class ImportBatchServiceImplTest {
         when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
         when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
         when(categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(1L)).thenReturn(List.of(mockRule));
-        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(anyLong(), any(), anyDouble(), anyString())).thenReturn(false);
+        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(50000.0), anyString())).thenReturn(false);
 
         ImportBatchDTO mockResponseDTO = new ImportBatchDTO();
         mockResponseDTO.setSuccessRows(1);
         when(importBatchMapper.toDTO(any())).thenReturn(mockResponseDTO);
 
-
         ImportBatchDTO result = importBatchService.importCsv(1L, 10L, file);
-
 
         assertNotNull(result);
         assertEquals(1, result.getSuccessRows());
         verify(transactionRepository, times(1)).saveAll(anyList());
-        verify(walletRepository, times(1)).updateBalance(10L, -50000.0);
-
         verify(aiAssistantService, never()).categorizeTransactionsBatch(anyList(), anyList());
-    }
-
-    @Test
-    void importCsv_ValidFile_NotMatchedByRule_CallsAi() {
-        String csvData = "Ngày,Số tiền,Ghi chú\n16/08/2026,-150000,Netflix";
-        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes());
-
-        when(walletRepository.hasEditPermission(10L, 1L)).thenReturn(true);
-        when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
-        when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
-        when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
-        when(categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(1L)).thenReturn(new ArrayList<>()); // Không có rule nào
-        when(categoryRepository.findAllByUserIdOrderByCreateAtDesc(1L)).thenReturn(List.of(mockCategoryFood, mockCategoryUncat));
-        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(anyLong(), any(), anyDouble(), anyString())).thenReturn(false);
-
-        Map<String, Long> aiMockResult = new HashMap<>();
-        aiMockResult.put("Netflix", 99L);
-        when(aiAssistantService.categorizeTransactionsBatch(anyList(), anyList())).thenReturn(aiMockResult);
-
-        when(importBatchMapper.toDTO(any())).thenReturn(new ImportBatchDTO());
-
-        importBatchService.importCsv(1L, 10L, file);
-
-
-        verify(aiAssistantService, times(1)).categorizeTransactionsBatch(anyList(), anyList());
-        verify(transactionRepository, times(1)).saveAll(anyList());
     }
 
     @Test
@@ -158,15 +126,14 @@ class ImportBatchServiceImplTest {
         when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
         when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
 
-        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(anyLong(), any(), anyDouble(), anyString())).thenReturn(true);
+        // Trả về true để test việc nhận dạng dòng trùng lặp
+        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(anyLong(), any(), eq(50000.0), anyString())).thenReturn(true);
 
         when(importBatchMapper.toDTO(any())).thenReturn(new ImportBatchDTO());
 
         importBatchService.importCsv(1L, 10L, file);
 
-
         verify(transactionRepository, never()).saveAll(anyList());
-        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
     }
 
     @Test

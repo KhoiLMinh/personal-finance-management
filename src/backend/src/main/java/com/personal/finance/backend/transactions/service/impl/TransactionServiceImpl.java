@@ -6,8 +6,11 @@ import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.transactions.dto.request.CreateTransactionRequest;
 import com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest;
 import com.personal.finance.backend.transactions.dto.response.TransactionDTO;
+import com.personal.finance.backend.transactions.dto.response.TransactionHistoryDTO;
 import com.personal.finance.backend.transactions.entity.Transaction;
+import com.personal.finance.backend.transactions.entity.TransactionHistory;
 import com.personal.finance.backend.transactions.mapper.TransactionMapper;
+import com.personal.finance.backend.transactions.repository.TransactionHistoryRepository;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
 import com.personal.finance.backend.transactions.service.TransactionService;
 import com.personal.finance.backend.wallets.entity.Wallet;
@@ -22,6 +25,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -29,18 +34,17 @@ import java.time.LocalDate;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final TransactionHistoryRepository transactionHistoryRepository;
     private final WalletRepository walletRepository;
     private final CategoryRepository categoryRepository;
     private final TransactionMapper transactionMapper;
     private final BudgetService budgetService;
 
-    //FR-02
     @Override
     @Transactional
     public TransactionDTO createTransaction(Long userId, CreateTransactionRequest request) {
         boolean canEditWallet = walletRepository.hasEditPermission(request.getWalletId(), userId);
         if (!canEditWallet) {
-            log.warn("Truy cập trái phép: User {} cố gắng tạo giao dịch trên Wallet {}", userId, request.getWalletId());
             throw new AccessDeniedException("Bạn không có quyền thêm giao dịch vào ví này!");
         }
 
@@ -68,19 +72,13 @@ public class TransactionServiceImpl implements TransactionService {
         walletRepository.updateBalance(wallet.getId(), deltaAmount);
 
         if (request.getType() == Transaction.TransactionType.EXPENSE) {
-            budgetService.checkAndAlertBudget(
-                    userId,
-                    request.getCategoryId(),
-                    request.getDate().getMonthValue(),
-                    request.getDate().getYear()
-            );
+            budgetService.checkAndAlertBudget(userId, request.getCategoryId(), request.getDate().getMonthValue(), request.getDate().getYear());
         }
 
-        log.info("Tạo giao dịch thành công ID: {} cho ví ID: {}", savedTransaction.getId(), wallet.getId());
+        log.info("Tạo giao dịch thành công ID: {}", savedTransaction.getId());
         return transactionMapper.toDTO(savedTransaction);
     }
 
-    //FR-04
     @Override
     public Page<TransactionDTO> filterTransactions(Long userId, Long walletId, Long categoryId, LocalDate startDate, LocalDate endDate, String keyword, Pageable pageable) {
         return transactionRepository.filterTransactions(userId, walletId, categoryId, startDate, endDate, keyword, pageable)
@@ -111,10 +109,9 @@ public class TransactionServiceImpl implements TransactionService {
         walletRepository.updateBalance(transaction.getWallet().getId(), revertAmount);
 
         transactionRepository.delete(transaction);
-        log.info("Đã xóa giao dịch ID: {} và khôi phục số dư ví ID: {}", id, transaction.getWallet().getId());
+        log.info("Đã xóa giao dịch ID: {}", id);
     }
 
-    //FR-02
     @Override
     @Transactional
     public TransactionDTO updateTransaction(Long id, Long userId, UpdateTransactionRequest request) {
@@ -127,7 +124,29 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         Category category = categoryRepository.findByIdAndAccessibleByUser(request.getCategoryId(), userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục hoặc không có quyền sử dụng!"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
+
+        // === GHI LOG ĐỐI SOÁT LỊCH SỬ ===
+        boolean isChanged = transaction.getAmount().compareTo(request.getAmount()) != 0
+                || transaction.getType() != request.getType()
+                || !transaction.getDate().equals(request.getDate())
+                || !Objects.equals(transaction.getDescription(), request.getDescription())
+                || !transaction.getCategory().getId().equals(request.getCategoryId());
+
+        if (isChanged) {
+            TransactionHistory history = new TransactionHistory();
+            history.setTransaction(transaction);
+            history.setOldAmount(transaction.getAmount());
+            history.setNewAmount(request.getAmount());
+            history.setOldType(transaction.getType());
+            history.setNewType(request.getType());
+            history.setOldDate(transaction.getDate());
+            history.setNewDate(request.getDate());
+            history.setOldDescription(transaction.getDescription());
+            history.setNewDescription(request.getDescription());
+            history.setModifiedBy(userId);
+            transactionHistoryRepository.save(history);
+        }
 
         BigDecimal oldImpact = transaction.getType() == Transaction.TransactionType.INCOME
                 ? transaction.getAmount() : transaction.getAmount().negate();
@@ -146,17 +165,23 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setDescription(request.getDescription());
 
         if (request.getType() == Transaction.TransactionType.EXPENSE) {
-            budgetService.checkAndAlertBudget(
-                    userId,
-                    request.getCategoryId(),
-                    request.getDate().getMonthValue(),
-                    request.getDate().getYear()
-            );
+            budgetService.checkAndAlertBudget(userId, request.getCategoryId(), request.getDate().getMonthValue(), request.getDate().getYear());
         }
 
         Transaction updatedTransaction = transactionRepository.save(transaction);
         log.info("Cập nhật thành công giao dịch ID: {} bởi UserId: {}", id, userId);
 
         return transactionMapper.toDTO(updatedTransaction);
+    }
+
+    @Override
+    public List<TransactionHistoryDTO> getTransactionHistory(Long id, Long userId) {
+        transactionRepository.findByIdAndAccessibleByUser(id, userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch hoặc truy cập trái phép!"));
+
+        return transactionHistoryRepository.findAllByTransactionIdOrderByCreateAtDesc(id)
+                .stream()
+                .map(transactionMapper::toHistoryDTO)
+                .toList();
     }
 }

@@ -5,13 +5,7 @@ import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.common.entities.Base;
 import com.personal.finance.backend.importBatch.entity.ImportBatch;
 import com.personal.finance.backend.wallets.entity.Wallet;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,6 +13,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -55,6 +50,10 @@ public class Transaction extends Base {
     @JoinColumn(name = "import_batch_id")
     @JsonIgnore
     private ImportBatch importBatch;
+
+    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<TransactionHistory> histories = new java.util.ArrayList<>();
 
     public enum TransactionType {
         INCOME, EXPENSE

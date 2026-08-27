@@ -8,6 +8,7 @@ import com.personal.finance.backend.transactions.dto.request.UpdateTransactionRe
 import com.personal.finance.backend.transactions.dto.response.TransactionDTO;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.transactions.mapper.TransactionMapper;
+import com.personal.finance.backend.transactions.repository.TransactionHistoryRepository;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
 import com.personal.finance.backend.transactions.service.impl.TransactionServiceImpl;
 import com.personal.finance.backend.wallets.entity.Wallet;
@@ -45,6 +46,9 @@ class TransactionServiceImplTest {
 
     @Mock
     private BudgetService budgetService;
+
+    @Mock
+    private TransactionHistoryRepository transactionHistoryRepository;
 
     @InjectMocks
     private TransactionServiceImpl transactionService;

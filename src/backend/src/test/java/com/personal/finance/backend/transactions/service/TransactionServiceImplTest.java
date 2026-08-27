@@ -16,11 +16,13 @@ import com.personal.finance.backend.wallets.repository.WalletRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -63,7 +65,7 @@ class TransactionServiceImplTest {
         request = new CreateTransactionRequest();
         request.setWalletId(1L);
         request.setCategoryId(2L);
-        request.setAmount(50000.0);
+        request.setAmount(BigDecimal.valueOf(50000.0));
         request.setType(Transaction.TransactionType.EXPENSE);
         request.setDate(LocalDate.now());
         request.setDescription("Ăn sáng");
@@ -77,7 +79,7 @@ class TransactionServiceImplTest {
         mockTransaction = new Transaction();
         mockTransaction.setId(100L);
         mockTransaction.setWallet(mockWallet);
-        mockTransaction.setAmount(50000.0);
+        mockTransaction.setAmount(BigDecimal.valueOf(50000.0));
         mockTransaction.setType(Transaction.TransactionType.EXPENSE);
     }
 
@@ -96,7 +98,7 @@ class TransactionServiceImplTest {
 
         assertNotNull(result);
         verify(transactionRepository, times(1)).save(any(Transaction.class));
-        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(-50000.0));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), BigDecimal.valueOf(ArgumentMatchers.eq(-50000.0)));
     }
 
     @Test

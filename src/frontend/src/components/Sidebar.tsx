@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Dropdown } from 'react-bootstrap';
 import { LayoutDashboard, ReceiptText, PiggyBank, PieChart, WalletCards, UploadCloud, Bot, Settings, LogOut, Wallet, Users, List, Calculator } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { CalendarClock } from 'lucide-react';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
@@ -55,6 +56,9 @@ export default function Sidebar() {
             <NavLink to="/saving-goals" className={navLinkClass} style={navLinkStyle}><PiggyBank size={20} className="me-3" /> Tiết kiệm</NavLink>
             <NavLink to="/budgets" className={navLinkClass} style={navLinkStyle}><PieChart size={20} className="me-3" /> Ngân sách</NavLink>
             <NavLink to="/wallets" className={navLinkClass} style={navLinkStyle}><WalletCards size={20} className="me-3" /> Tài khoản ví</NavLink>
+            <NavLink to="/bills" className={navLinkClass} style={navLinkStyle}>
+              <CalendarClock size={20} className="me-3" /> Hóa đơn định kỳ
+            </NavLink>
             <NavLink to="/import" className={navLinkClass} style={navLinkStyle}><UploadCloud size={20} className="me-3" /> Nhập sao kê</NavLink>
             <NavLink to="/family" className={navLinkClass} style={navLinkStyle}><Users size={20} className="me-3" /> Gia đình</NavLink>
             <NavLink to="/tools" className={navLinkClass} style={navLinkStyle}><Calculator size={20} className="me-3" /> Công cụ</NavLink>

@@ -24,6 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -75,14 +76,14 @@ class BudgetServiceImplTest {
         mockBudget.setCategory(mockCategory);
         mockBudget.setMonth(8);
         mockBudget.setYear(2026);
-        mockBudget.setLimitAmount(5000000.0);
+        mockBudget.setLimitAmount(BigDecimal.valueOf(5000000.0));
         mockBudget.setWarningPercent(80.0); 
         mockBudget.setStatus(Budget.BudgetStatus.ACTIVE);
         mockBudget.setWarningSent(false);
 
         mockBudgetDTO = new BudgetDTO();
         mockBudgetDTO.setId(100L);
-        mockBudgetDTO.setLimitAmount(5000000.0);
+        mockBudgetDTO.setLimitAmount(BigDecimal.valueOf(5000000.0));
     }
 
     @Test
@@ -91,7 +92,7 @@ class BudgetServiceImplTest {
         request.setCategoryId(10L);
         request.setMonth(8);
         request.setYear(2026);
-        request.setLimitAmount(5000000.0);
+        request.setLimitAmount(BigDecimal.valueOf(5000000.0));
         request.setWarningPercent(80.0);
 
         when(budgetRepository.existsByUserIdAndCategoryIdAndMonthAndYear(1L, 10L, 8, 2026)).thenReturn(false);
@@ -153,20 +154,20 @@ class BudgetServiceImplTest {
     @Test
     void updateBudget_ValidRequest_Success() {
         UpdateBudgetRequest request = new UpdateBudgetRequest();
-        request.setLimitAmount(6000000.0);
+        request.setLimitAmount(BigDecimal.valueOf(6000000.0));
         request.setWarningPercent(90.0);
 
         when(budgetRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(mockBudget));
         when(budgetRepository.save(any(Budget.class))).thenReturn(mockBudget);
         
         BudgetDTO updatedDTO = new BudgetDTO();
-        updatedDTO.setLimitAmount(6000000.0);
+        updatedDTO.setLimitAmount(BigDecimal.valueOf(6000000.0));
         when(budgetMapper.toDTO(any(Budget.class))).thenReturn(updatedDTO);
 
         BudgetDTO result = budgetService.updateBudget(100L, 1L, request);
 
-        assertEquals(6000000.0, mockBudget.getLimitAmount()); 
-        assertEquals(90.0, mockBudget.getWarningPercent()); 
+        assertEquals(BigDecimal.valueOf(6000000.0), mockBudget.getLimitAmount());
+        assertEquals(90.0, mockBudget.getWarningPercent());
         verify(budgetRepository, times(1)).save(mockBudget);
     }
 
@@ -186,7 +187,7 @@ class BudgetServiceImplTest {
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
 
 
-        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(5500000.0);
+        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.valueOf(5500000.0));
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);
 
@@ -203,7 +204,7 @@ class BudgetServiceImplTest {
         Page<Budget> budgetPage = new PageImpl<>(List.of(mockBudget));
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
 
-        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(4500000.0);
+        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.valueOf(4500000.0));
 
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);
@@ -223,7 +224,7 @@ class BudgetServiceImplTest {
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
 
 
-        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(2000000.0);
+        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.valueOf(2000000.0));
 
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);

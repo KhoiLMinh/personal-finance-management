@@ -16,7 +16,6 @@ import com.personal.finance.backend.wallets.repository.WalletRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -83,7 +82,6 @@ class TransactionServiceImplTest {
         mockTransaction.setType(Transaction.TransactionType.EXPENSE);
     }
 
-
     @Test
     void createTransaction_HasEditPermission_Success() {
         Long userId = 10L;
@@ -98,7 +96,7 @@ class TransactionServiceImplTest {
 
         assertNotNull(result);
         verify(transactionRepository, times(1)).save(any(Transaction.class));
-        verify(walletRepository, times(1)).updateBalance(eq(1L), BigDecimal.valueOf(ArgumentMatchers.eq(-50000.0)));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(BigDecimal.valueOf(-50000.0)));
     }
 
     @Test
@@ -112,7 +110,7 @@ class TransactionServiceImplTest {
 
         assertEquals("Bạn không có quyền thêm giao dịch vào ví này!", exception.getMessage());
         verify(transactionRepository, never()).save(any());
-        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+        verify(walletRepository, never()).updateBalance(anyLong(), any(BigDecimal.class));
     }
 
 
@@ -127,7 +125,7 @@ class TransactionServiceImplTest {
         transactionService.deleteTransaction(transactionId, userId);
 
         verify(transactionRepository, times(1)).delete(mockTransaction);
-        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(50000.0));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(BigDecimal.valueOf(50000.0)));
     }
 
     @Test
@@ -143,7 +141,7 @@ class TransactionServiceImplTest {
 
         assertEquals("Không tìm thấy giao dịch hoặc truy cập trái phép!", exception.getMessage());
         verify(transactionRepository, never()).delete(any());
-        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+        verify(walletRepository, never()).updateBalance(anyLong(), any(BigDecimal.class));
     }
 
 
@@ -154,7 +152,7 @@ class TransactionServiceImplTest {
 
         UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
         updateReq.setCategoryId(2L);
-        updateReq.setAmount(70000.0);
+        updateReq.setAmount(BigDecimal.valueOf(70000.0));
         updateReq.setType(Transaction.TransactionType.EXPENSE);
         updateReq.setDate(LocalDate.now());
         updateReq.setDescription("Ăn trưa xịn hơn");
@@ -170,7 +168,7 @@ class TransactionServiceImplTest {
 
         assertNotNull(result);
         verify(transactionRepository, times(1)).save(mockTransaction);
-        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(-20000.0));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(BigDecimal.valueOf(-20000.0)));
     }
 
     @Test
@@ -180,13 +178,12 @@ class TransactionServiceImplTest {
 
         UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
         updateReq.setCategoryId(2L);
-        updateReq.setAmount(100000.0);
+        updateReq.setAmount(BigDecimal.valueOf(100000.0));
         updateReq.setType(Transaction.TransactionType.INCOME);
         updateReq.setDate(LocalDate.now());
 
         when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
-        // ĐÃ SỬA THÀNH findByIdAndAccessibleByUser
         when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
 
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
@@ -195,7 +192,7 @@ class TransactionServiceImplTest {
         transactionService.updateTransaction(transactionId, userId, updateReq);
 
         verify(transactionRepository, times(1)).save(mockTransaction);
-        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(150000.0));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(BigDecimal.valueOf(150000.0)));
     }
 
     @Test
@@ -214,7 +211,7 @@ class TransactionServiceImplTest {
         assertEquals("Bạn không có quyền sửa giao dịch trong ví này!", exception.getMessage());
 
         verify(transactionRepository, never()).save(any());
-        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+        verify(walletRepository, never()).updateBalance(anyLong(), any(BigDecimal.class));
     }
 
     @Test

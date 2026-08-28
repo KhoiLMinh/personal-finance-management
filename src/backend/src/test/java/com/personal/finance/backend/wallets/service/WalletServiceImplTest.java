@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -71,20 +72,20 @@ class WalletServiceImplTest {
         mockWallet = new Wallet();
         mockWallet.setId(10L);
         mockWallet.setName("Ví Tiền Mặt");
-        mockWallet.setBalance(500000.0);
+        mockWallet.setBalance(BigDecimal.valueOf(500000.0));
         mockWallet.setOwner(owner);
 
         mockWalletDTO = new WalletDTO();
         mockWalletDTO.setId(10L);
         mockWalletDTO.setName("Ví Tiền Mặt");
-        mockWalletDTO.setBalance(500000.0);
+        mockWalletDTO.setBalance(BigDecimal.valueOf(500000.0));
     }
 
     @Test
     void createWallet_ValidRequest_Success() {
         CreateWalletRequest request = new CreateWalletRequest();
         request.setName("Ví Tiết Kiệm");
-        request.setBalance(100000.0);
+        request.setBalance(BigDecimal.valueOf(100000.0));
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(walletRepository.save(any(Wallet.class))).thenReturn(mockWallet);

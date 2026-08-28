@@ -23,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -62,22 +63,22 @@ class SavingGoalServiceImplTest {
         mockGoal = new SavingGoal();
         mockGoal.setId(10L);
         mockGoal.setTitle("Mua Laptop mới");
-        mockGoal.setTargetAmount(20000000.0);
-        mockGoal.setCurrentAmount(5000000.0);
+        mockGoal.setTargetAmount(BigDecimal.valueOf(20000000.0));
+        mockGoal.setCurrentAmount(BigDecimal.valueOf(5000000.0));
         mockGoal.setStatus(SavingGoal.GoalStatus.IN_PROGRESS);
         mockGoal.setUser(mockUser);
 
         mockWallet = new Wallet();
         mockWallet.setId(100L);
         mockWallet.setName("Ví tiền mặt");
-        mockWallet.setBalance(15000000.0);
+        mockWallet.setBalance(BigDecimal.valueOf(15000000.0));
     }
 
     @Test
     void createSavingGoal_Success() {
         CreateSavingGoalRequest request = new CreateSavingGoalRequest();
         request.setTitle("Du lịch");
-        request.setTargetAmount(10000000.0);
+        request.setTargetAmount(BigDecimal.valueOf(10000000.0));
         request.setDeadline(LocalDate.now().plusMonths(6));
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
@@ -105,7 +106,7 @@ class SavingGoalServiceImplTest {
     void updateSavingGoal_ReachTarget_ChangesStatusToComplete() {
         UpdateSavingGoalRequest request = new UpdateSavingGoalRequest();
         request.setTitle("Mua Laptop mới");
-        request.setTargetAmount(4000000.0);
+        request.setTargetAmount(BigDecimal.valueOf(4000000.0));
         request.setDeadline(LocalDate.now().plusMonths(1));
 
         when(savingGoalRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockGoal));
@@ -113,38 +114,32 @@ class SavingGoalServiceImplTest {
 
         savingGoalService.updateSavingGoal(10L, 1L, request);
 
-
         assertEquals(SavingGoal.GoalStatus.COMPLETE, mockGoal.getStatus());
         verify(savingGoalRepository, times(1)).save(mockGoal);
     }
 
-
     @Test
     void addFunds_Success_UpdatesWalletAndCreatesTransaction() {
         AddFundRequest request = new AddFundRequest();
-        request.setAmount(3000000.0);
+        request.setAmount(BigDecimal.valueOf(3000000.0));
         request.setWalletId(100L);
 
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(true);
         when(walletRepository.findById(100L)).thenReturn(Optional.of(mockWallet));
         when(savingGoalRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockGoal));
-        when(savingGoalRepository.addFundsToGoal(10L, 1L, 3000000.0)).thenReturn(1);
+        when(savingGoalRepository.addFundsToGoal(10L, 1L, BigDecimal.valueOf(3000000.0))).thenReturn(1);
+
         Category mockCategory = new Category();
         mockCategory.setId(1L);
         mockCategory.setName("Chuyển tiền tiết kiệm");
-
         when(categoryRepository.findByNameAndUserId("Chuyển tiền tiết kiệm", 1L)).thenReturn(Optional.of(mockCategory));
 
         when(savingGoalMapper.toDTO(any())).thenReturn(new SavingGoalDTO());
 
         savingGoalService.addFunds(10L, 1L, request);
-
-
-        verify(walletRepository, times(1)).updateBalance(100L, -3000000.0);
-
+        verify(walletRepository, times(1)).updateBalance(100L, BigDecimal.valueOf(3000000.0).negate());
         verify(transactionRepository, times(1)).save(any(Transaction.class));
-
-        verify(savingGoalRepository, times(1)).addFundsToGoal(10L, 1L, 3000000.0);
+        verify(savingGoalRepository, times(1)).addFundsToGoal(10L, 1L, BigDecimal.valueOf(3000000.0));
 
         assertEquals(SavingGoal.GoalStatus.IN_PROGRESS, mockGoal.getStatus());
     }
@@ -152,7 +147,7 @@ class SavingGoalServiceImplTest {
     @Test
     void addFunds_InsufficientWalletBalance_ThrowsException() {
         AddFundRequest request = new AddFundRequest();
-        request.setAmount(20000000.0);
+        request.setAmount(BigDecimal.valueOf(20000000.0));
         request.setWalletId(100L);
 
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(true);
@@ -163,14 +158,14 @@ class SavingGoalServiceImplTest {
         });
 
         assertEquals("Số dư trong ví không đủ để trích vào mục tiêu tiết kiệm!", exception.getMessage());
-        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+        verify(walletRepository, never()).updateBalance(anyLong(), any(BigDecimal.class));
         verify(transactionRepository, never()).save(any());
     }
 
     @Test
     void addFunds_NoEditPermissionOnWallet_ThrowsException() {
         AddFundRequest request = new AddFundRequest();
-        request.setAmount(1000000.0);
+        request.setAmount(BigDecimal.valueOf(1000000.0));
         request.setWalletId(100L);
 
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(false); // Bị từ chối quyền
@@ -187,7 +182,7 @@ class SavingGoalServiceImplTest {
         mockGoal.setStatus(SavingGoal.GoalStatus.COMPLETE);
 
         AddFundRequest request = new AddFundRequest();
-        request.setAmount(1000000.0);
+        request.setAmount(BigDecimal.valueOf(1000000.0));
         request.setWalletId(100L);
 
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(true);
@@ -204,20 +199,21 @@ class SavingGoalServiceImplTest {
     @Test
     void addFunds_ReachesTarget_ChangesStatusToComplete() {
         AddFundRequest request = new AddFundRequest();
-        request.setAmount(15000000.0);
+        request.setAmount(BigDecimal.valueOf(15000000.0));
         request.setWalletId(100L);
 
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(true);
         when(walletRepository.findById(100L)).thenReturn(Optional.of(mockWallet));
         when(savingGoalRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockGoal));
-        when(savingGoalRepository.addFundsToGoal(10L, 1L, 15000000.0)).thenReturn(1);
+        when(savingGoalRepository.addFundsToGoal(10L, 1L, BigDecimal.valueOf(15000000.0))).thenReturn(1);
+
         Category mockCategory = new Category();
         mockCategory.setId(1L);
         mockCategory.setName("Chuyển tiền tiết kiệm");
 
         when(categoryRepository.findByNameAndUserId("Chuyển tiền tiết kiệm", 1L)).thenReturn(Optional.of(mockCategory));
-        savingGoalService.addFunds(10L, 1L, request);
 
+        savingGoalService.addFunds(10L, 1L, request);
 
         assertEquals(SavingGoal.GoalStatus.COMPLETE, mockGoal.getStatus());
         verify(savingGoalRepository, times(1)).save(mockGoal);

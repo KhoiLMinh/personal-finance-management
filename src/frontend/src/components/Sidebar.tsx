@@ -61,7 +61,6 @@ export default function Sidebar() {
             </NavLink>
             <NavLink to="/import" className={navLinkClass} style={navLinkStyle}><UploadCloud size={20} className="me-3" /> Nhập sao kê</NavLink>
             <NavLink to="/family" className={navLinkClass} style={navLinkStyle}><Users size={20} className="me-3" /> Gia đình</NavLink>
-            <NavLink to="/tools" className={navLinkClass} style={navLinkStyle}><Calculator size={20} className="me-3" /> Công cụ</NavLink>
             <hr className="my-3 mx-4 text-muted" />
             <NavLink to="/ai-assistant" className={navLinkClass} style={navLinkStyle}><Bot size={20} className="me-3" /> Hỏi trợ lý AI</NavLink>
           </>

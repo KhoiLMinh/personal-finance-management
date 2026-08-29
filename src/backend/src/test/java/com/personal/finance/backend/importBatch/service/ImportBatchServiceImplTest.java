@@ -10,7 +10,6 @@ import com.personal.finance.backend.importBatch.entity.ImportBatch;
 import com.personal.finance.backend.importBatch.mapper.ImportBatchMapper;
 import com.personal.finance.backend.importBatch.repository.ImportBatchRepository;
 import com.personal.finance.backend.importBatch.service.impl.ImportBatchServiceImpl;
-import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
@@ -25,10 +24,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -79,13 +76,27 @@ class ImportBatchServiceImplTest {
     }
 
     @Test
-    void importCsv_NoEditPermission_ThrowsException() {
-        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", "data".getBytes());
+    void extractHeaders_Csv_Success() {
+        String csvData = "Ngày,Số tiền,Nội dung\n2026-08-15,-50000,Highlands Coffee";
+        // Bắt buộc thêm StandardCharsets.UTF_8 để mock file không bị lỗi font
+        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes(StandardCharsets.UTF_8));
+
+        List<String> headers = importBatchService.extractHeaders(file);
+
+        assertEquals(3, headers.size());
+        assertEquals("Ngày", headers.get(0));
+        assertEquals("Số tiền", headers.get(1));
+        assertEquals("Nội dung", headers.get(2));
+    }
+
+    @Test
+    void importData_NoEditPermission_ThrowsException() {
+        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", "data".getBytes(StandardCharsets.UTF_8));
 
         when(walletRepository.hasEditPermission(10L, 1L)).thenReturn(false);
 
         AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
-            importBatchService.importCsv(1L, 10L, file);
+            importBatchService.importData(1L, 10L, 0, 1, 2, file);
         });
 
         assertEquals("Bạn không có quyền import dữ liệu vào ví này!", exception.getMessage());
@@ -93,22 +104,23 @@ class ImportBatchServiceImplTest {
     }
 
     @Test
-    void importCsv_ValidFile_MatchedByRule_NoAiCall() {
+    void importData_ValidFile_MatchedByRule_NoAiCall() {
         String csvData = "Ngày,Số tiền,Ghi chú\n2026-08-15,-50000,Highlands Coffee";
-        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes());
+        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes(StandardCharsets.UTF_8));
 
         when(walletRepository.hasEditPermission(10L, 1L)).thenReturn(true);
         when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
         when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
         when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
         when(categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(1L)).thenReturn(List.of(mockRule));
-        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(50000.0), anyString())).thenReturn(false);
+
+        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(50000.0), eq("Highlands Coffee"))).thenReturn(false);
 
         ImportBatchDTO mockResponseDTO = new ImportBatchDTO();
         mockResponseDTO.setSuccessRows(1);
         when(importBatchMapper.toDTO(any())).thenReturn(mockResponseDTO);
 
-        ImportBatchDTO result = importBatchService.importCsv(1L, 10L, file);
+        ImportBatchDTO result = importBatchService.importData(1L, 10L, 0, 1, 2, file);
 
         assertNotNull(result);
         assertEquals(1, result.getSuccessRows());
@@ -117,29 +129,32 @@ class ImportBatchServiceImplTest {
     }
 
     @Test
-    void importCsv_DuplicateData_SkipsRow() {
-        String csvData = "Ngày,Số tiền,Ghi chú\n15/08/2026,-50000,Highlands Coffee";
-        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes());
+    void importData_DuplicateData_SkipsRow() {
+        String csvData = "Ngày,Số tiền,Ghi chú\n2026-08-15,-50000,Highlands Coffee";
+        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes(StandardCharsets.UTF_8));
 
         when(walletRepository.hasEditPermission(10L, 1L)).thenReturn(true);
         when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
         when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
         when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
 
-        // Trả về true để test việc nhận dạng dòng trùng lặp
-        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(anyLong(), any(), eq(50000.0), anyString())).thenReturn(true);
+        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(50000.0), eq("Highlands Coffee"))).thenReturn(true);
 
-        when(importBatchMapper.toDTO(any())).thenReturn(new ImportBatchDTO());
+        ImportBatchDTO mockResponseDTO = new ImportBatchDTO();
+        mockResponseDTO.setDuplicatedRows(1);
+        when(importBatchMapper.toDTO(any())).thenReturn(mockResponseDTO);
 
-        importBatchService.importCsv(1L, 10L, file);
+        ImportBatchDTO result = importBatchService.importData(1L, 10L, 0, 1, 2, file);
 
+        assertNotNull(result);
+        assertEquals(1, result.getDuplicatedRows());
         verify(transactionRepository, never()).saveAll(anyList());
     }
 
     @Test
-    void importCsv_InvalidFormat_ThrowsExceptionAndRollback() {
+    void importData_InvalidFormat_ThrowsExceptionAndRollback() {
         String csvData = "Ngày,Số tiền,Ghi chú\nABC,-50000,Lỗi format";
-        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes());
+        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes(StandardCharsets.UTF_8));
 
         when(walletRepository.hasEditPermission(10L, 1L)).thenReturn(true);
         when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
@@ -147,10 +162,10 @@ class ImportBatchServiceImplTest {
         when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            importBatchService.importCsv(1L, 10L, file);
+            importBatchService.importData(1L, 10L, 0, 1, 2, file);
         });
 
-        assertTrue(exception.getMessage().contains("Định dạng file CSV không hợp lệ hoặc chứa dữ liệu sai"));
+        assertTrue(exception.getMessage().contains("Lỗi định dạng file hoặc dữ liệu không hợp lệ"));
         verify(transactionRepository, never()).saveAll(anyList());
     }
 }

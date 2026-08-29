@@ -8,15 +8,16 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'EXPENSE',
     color: '#3b82f6',
-    icon: 'Layers'
+    icon: 'Layers',
+    parentId: ''
   });
+
 
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
@@ -44,9 +45,13 @@ export default function AdminCategoriesPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await categoryService.createCategory(formData);
+      const payload = {
+        ...formData,
+        parentId: formData.parentId ? Number(formData.parentId) : undefined
+      };
+      await categoryService.createCategory(payload);
       setShowModal(false);
-      setFormData({ name: '', type: 'EXPENSE', color: '#3b82f6', icon: 'Layers' });
+      setFormData({ name: '', type: 'EXPENSE', color: '#3b82f6', icon: 'Layers', parentId: '' });
       fetchCategories(); 
     } catch (error: any) {
       alert(error.response?.data?.error?.message || "Lỗi tạo danh mục!");
@@ -106,6 +111,14 @@ export default function AdminCategoriesPage() {
     }
   };
 
+  const sortedCategories: any[] = [];
+  categories.filter(c => !c.parentId).forEach(parent => {
+    sortedCategories.push(parent);
+    categories.filter(c => c.parentId === parent.id).forEach(child => {
+      sortedCategories.push({ ...child, isChild: true, parentName: parent.name });
+    });
+  });
+
   if (loading) return <MySpinner />;
 
   return (
@@ -119,14 +132,14 @@ export default function AdminCategoriesPage() {
             </div>
             <div>
               <h3 className="fw-bold text-dark mb-1">Danh mục hệ thống mặc định</h3>
-              <p className="text-dark mb-0 opacity-75">Tạo các danh mục Thu/Chi tiêu chuẩn cho ứng dụng</p>
+              <p className="text-dark mb-0 opacity-75">Quản lý danh mục cha/con và quy tắc nhận diện (Rules)</p>
             </div>
           </div>
           
           <Button 
             variant="primary" 
             className="rounded-pill px-4 fw-bold d-flex align-items-center"
-            onClick={() => setShowModal(true)}
+            onClick={() => { setFormData({...formData, parentId: ''}); setShowModal(true); }}
           >
             <Plus size={20} className="me-1" /> Thêm danh mục
           </Button>
@@ -134,9 +147,9 @@ export default function AdminCategoriesPage() {
       </Card>
 
       <Row className="g-3">
-        {categories.map(c => (
+        {sortedCategories.map(c => (
           <Col md={4} lg={3} key={c.id}>
-            <Card className="border-0 rounded-4 shadow-sm h-100">
+            <Card className={`border-0 rounded-4 shadow-sm h-100 ${c.isChild ? 'ms-4 opacity-75' : ''}`}>
               <Card.Body className="d-flex flex-column justify-content-between">
                 <div className="d-flex align-items-center gap-3 mb-3">
                   <div 
@@ -146,10 +159,16 @@ export default function AdminCategoriesPage() {
                     <Layers size={18} />
                   </div>
                   <div className="min-width-0">
-                    <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '140px' }}>{c.name}</div>
-                    <Badge bg={c.type === 'INCOME' ? 'success' : 'danger'}>
-                      {c.type === 'INCOME' ? 'THU NHẬP' : 'CHI TIÊU'}
-                    </Badge>
+                    <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '140px' }}>
+                      {c.isChild && '↳ '}{c.name}
+                    </div>
+                    {c.isChild ? (
+                      <Badge bg="secondary" className="fw-normal">Con của: {c.parentName}</Badge>
+                    ) : (
+                      <Badge bg={c.type === 'INCOME' ? 'success' : 'danger'}>
+                        {c.type === 'INCOME' ? 'THU NHẬP' : 'CHI TIÊU'}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 
@@ -182,21 +201,39 @@ export default function AdminCategoriesPage() {
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="text-muted fw-medium small">Loại thu/chi</Form.Label>
-              <Form.Select 
-                size="lg" className="bg-light border-0"
-                value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}
-              >
-                <option value="EXPENSE">Khoản chi tiêu (-)</option>
-                <option value="INCOME">Khoản thu nhập (+)</option>
-              </Form.Select>
-            </Form.Group>
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-muted fw-medium small">Loại thu/chi</Form.Label>
+                  <Form.Select 
+                    size="lg" className="bg-light border-0"
+                    value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value, parentId: ''})}
+                  >
+                    <option value="EXPENSE">Khoản chi tiêu (-)</option>
+                    <option value="INCOME">Khoản thu nhập (+)</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-muted fw-medium small">Danh mục cha (Tùy chọn)</Form.Label>
+                  <Form.Select 
+                    size="lg" className="bg-light border-0"
+                    value={formData.parentId} onChange={(e) => setFormData({...formData, parentId: e.target.value})}
+                  >
+                    <option value="">-- Không có --</option>
+                    {categories.filter(c => c.type === formData.type && !c.parentId).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
 
             <Row className="mb-4">
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="text-muted fw-medium small">Biểu tượng</Form.Label>
+                  <Form.Label className="text-muted fw-medium small">Biểu tượng (Icon)</Form.Label>
                   <Form.Select size="lg" className="bg-light border-0" value={formData.icon} onChange={(e) => setFormData({...formData, icon: e.target.value})}>
                     <option value="Layers">Cơ bản (Layers)</option>
                     <option value="Utensils">Ăn uống (Utensils)</option>

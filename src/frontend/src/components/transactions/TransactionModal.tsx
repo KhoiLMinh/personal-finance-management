@@ -113,8 +113,17 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
             <Form.Select size="lg" className="bg-light border-0" required
               value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: e.target.value})}>
               <option value="">-- Chọn danh mục --</option>
-              {categories.filter(c => c.type === formData.type && !c.hidden).map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              {categories
+                .filter(c => c.type === formData.type && !c.hidden && !c.parentId)
+                .map(parent => (
+                  <React.Fragment key={parent.id}>
+                    <option value={parent.id} className="fw-bold">{parent.name}</option>
+                    {categories
+                      .filter(child => child.type === formData.type && !child.hidden && child.parentId === parent.id)
+                      .map(child => (
+                        <option key={child.id} value={child.id}>&nbsp;&nbsp;&nbsp;↳ {child.name}</option>
+                      ))}
+                  </React.Fragment>
               ))}
             </Form.Select>
           </Form.Group>

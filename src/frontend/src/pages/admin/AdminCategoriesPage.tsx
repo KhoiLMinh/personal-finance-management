@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Row, Col, Badge, Spinner, Modal, Form } from 'react-bootstrap';
-import { Layers, Plus, Trash2, Save } from 'lucide-react';
+import { Card, Button, Row, Col, Badge, Spinner, Modal, Form, Table, InputGroup } from 'react-bootstrap';
+import { Layers, Plus, Trash2, Save, Tags, PlusCircle } from 'lucide-react';
 import categoryService from '../../services/categoryService';
 import MySpinner from '../../components/MySpinner';
-//FR-15
+
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +17,12 @@ export default function AdminCategoriesPage() {
     color: '#3b82f6',
     icon: 'Layers'
   });
+
+  const [showRuleModal, setShowRuleModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [rules, setRules] = useState<any[]>([]);
+  const [ruleKeyword, setRuleKeyword] = useState('');
+  const [ruleLoading, setRuleLoading] = useState(false);
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -33,7 +39,6 @@ export default function AdminCategoriesPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
-
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +63,46 @@ export default function AdminCategoriesPage() {
       } catch (error: any) {
         alert(error.response?.data?.error?.message || "Lỗi xóa danh mục!");
       }
+    }
+  };
+
+  const handleOpenRules = async (category: any) => {
+    setSelectedCategory(category);
+    setShowRuleModal(true);
+    fetchRules(category.id);
+  };
+
+  const fetchRules = async (categoryId: number) => {
+    setRuleLoading(true);
+    try {
+      const data = await categoryService.getCategoryRules(categoryId);
+      setRules(data);
+    } catch (error) {
+      console.error("Lỗi lấy danh sách quy tắc:", error);
+    } finally {
+      setRuleLoading(false);
+    }
+  };
+
+  const handleAddRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ruleKeyword.trim() || !selectedCategory) return;
+    try {
+      await categoryService.addCategoryRule(selectedCategory.id, { keyword: ruleKeyword.trim(), priority: 0 });
+      setRuleKeyword('');
+      fetchRules(selectedCategory.id);
+    } catch (error: any) {
+      alert(error.response?.data?.error?.message || "Lỗi thêm từ khóa!");
+    }
+  };
+
+  const handleDeleteRule = async (ruleId: number) => {
+    if (!selectedCategory) return;
+    try {
+      await categoryService.deleteCategoryRule(selectedCategory.id, ruleId);
+      fetchRules(selectedCategory.id);
+    } catch (error: any) {
+      alert(error.response?.data?.error?.message || "Lỗi xóa từ khóa!");
     }
   };
 
@@ -88,29 +133,34 @@ export default function AdminCategoriesPage() {
         </Card.Body>
       </Card>
 
-
       <Row className="g-3">
         {categories.map(c => (
           <Col md={4} lg={3} key={c.id}>
             <Card className="border-0 rounded-4 shadow-sm h-100">
-              <Card.Body className="d-flex justify-content-between align-items-center">
-                <div className="d-flex align-items-center gap-3">
+              <Card.Body className="d-flex flex-column justify-content-between">
+                <div className="d-flex align-items-center gap-3 mb-3">
                   <div 
                     className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                     style={{ width: 40, height: 40, backgroundColor: c.color || '#ccc', color: '#fff' }}
                   >
                     <Layers size={18} />
                   </div>
-                  <div>
-                    <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '120px' }}>{c.name}</div>
+                  <div className="min-width-0">
+                    <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '140px' }}>{c.name}</div>
                     <Badge bg={c.type === 'INCOME' ? 'success' : 'danger'}>
                       {c.type === 'INCOME' ? 'THU NHẬP' : 'CHI TIÊU'}
                     </Badge>
                   </div>
                 </div>
-                <Button variant="light" size="sm" className="text-danger border-0 flex-shrink-0" onClick={() => handleDelete(c.id)}>
-                  <Trash2 size={16} />
-                </Button>
+                
+                <div className="d-flex justify-content-between border-top pt-2">
+                  <Button variant="light" size="sm" className="text-primary fw-medium border-0 px-3 flex-grow-1 me-2" onClick={() => handleOpenRules(c)}>
+                    <Tags size={16} className="me-1" /> Từ khóa
+                  </Button>
+                  <Button variant="light" size="sm" className="text-danger border-0 flex-shrink-0" onClick={() => handleDelete(c.id)}>
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
               </Card.Body>
             </Card>
           </Col>
@@ -123,27 +173,20 @@ export default function AdminCategoriesPage() {
         </Modal.Header>
         <Modal.Body className="px-4 pb-4 pt-3">
           <Form onSubmit={handleCreate}>
-            
             <Form.Group className="mb-3">
               <Form.Label className="text-muted fw-medium small">Tên danh mục</Form.Label>
               <Form.Control 
-                size="lg" 
-                type="text" 
-                required 
-                className="bg-light border-0" 
+                size="lg" type="text" required className="bg-light border-0" 
                 placeholder="VD: Tiền điện nước..."
-                value={formData.name} 
-                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} 
               />
             </Form.Group>
 
             <Form.Group className="mb-3">
               <Form.Label className="text-muted fw-medium small">Loại thu/chi</Form.Label>
               <Form.Select 
-                size="lg" 
-                className="bg-light border-0"
-                value={formData.type} 
-                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                size="lg" className="bg-light border-0"
+                value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}
               >
                 <option value="EXPENSE">Khoản chi tiêu (-)</option>
                 <option value="INCOME">Khoản thu nhập (+)</option>
@@ -153,43 +196,86 @@ export default function AdminCategoriesPage() {
             <Row className="mb-4">
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="text-muted fw-medium small">Biểu tượng (Icon)</Form.Label>
-                  <Form.Select 
-                    size="lg" 
-                    className="bg-light border-0"
-                    value={formData.icon} 
-                    onChange={(e) => setFormData({...formData, icon: e.target.value})}
-                  >
+                  <Form.Label className="text-muted fw-medium small">Biểu tượng</Form.Label>
+                  <Form.Select size="lg" className="bg-light border-0" value={formData.icon} onChange={(e) => setFormData({...formData, icon: e.target.value})}>
                     <option value="Layers">Cơ bản (Layers)</option>
                     <option value="Utensils">Ăn uống (Utensils)</option>
                     <option value="Car">Di chuyển (Car)</option>
-                    <option value="ShoppingBag">Mua sắm (Shopping Bag)</option>
-                    <option value="FileText">Hóa đơn (File Text)</option>
+                    <option value="ShoppingBag">Mua sắm (Bag)</option>
+                    <option value="FileText">Hóa đơn (File)</option>
                     <option value="Activity">Sức khỏe (Activity)</option>
-                    <option value="Banknote">Tiền lương (Banknote)</option>
+                    <option value="Banknote">Tiền lương (Cash)</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="text-muted fw-medium small">Màu nền</Form.Label>
-                  <Form.Control 
-                    type="color" 
-                    className="w-100 p-1 border-0 rounded-3 bg-light" 
-                    style={{ height: '48px', cursor: 'pointer' }}
-                    value={formData.color} 
-                    onChange={(e) => setFormData({...formData, color: e.target.value})} 
-                  />
+                  <Form.Control type="color" className="w-100 p-1 border-0 rounded-3 bg-light" style={{ height: '48px', cursor: 'pointer' }}
+                    value={formData.color} onChange={(e) => setFormData({...formData, color: e.target.value})} />
                 </Form.Group>
               </Col>
             </Row>
 
-            <Button type="submit" className="w-100 py-3 fs-5 fw-bold rounded-4 border-0 d-flex align-items-center justify-content-center" disabled={isSubmitting} style={{ backgroundColor: 'var(--color-primary)' }}>
-              {isSubmitting ? <Spinner size="sm" className="me-2"/> : <Save size={20} className="me-2"/>} 
-              Lưu danh mục
+            <Button type="submit" className="w-100 py-3 fs-5 fw-bold rounded-4 border-0" disabled={isSubmitting} style={{ backgroundColor: 'var(--color-primary)' }}>
+              {isSubmitting ? <Spinner size="sm" className="me-2"/> : <Save size={20} className="me-2"/>} Lưu danh mục
             </Button>
-            
           </Form>
+        </Modal.Body>
+      </Modal>
+
+      <Modal show={showRuleModal} onHide={() => setShowRuleModal(false)} centered scrollable>
+        <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
+          <Modal.Title className="fw-bold fs-5">
+            Từ khóa tự động nhận diện
+            <div className="small text-primary mt-1">{selectedCategory?.name}</div>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="px-4 pb-4 pt-3">
+          <p className="text-muted small mb-3">
+            Hệ thống (Import CSV) sẽ tự động gán giao dịch vào danh mục này nếu mô tả giao dịch chứa một trong các từ khóa dưới đây.
+          </p>
+          
+          <Form onSubmit={handleAddRule} className="mb-4">
+            <InputGroup>
+              <Form.Control
+                className="bg-light border-0"
+                placeholder="VD: Highlands, Starbucks, Tiền điện..."
+                value={ruleKeyword}
+                onChange={(e) => setRuleKeyword(e.target.value)}
+              />
+              <Button type="submit" variant="primary" className="fw-bold" disabled={!ruleKeyword.trim()}>
+                <PlusCircle size={18} /> Thêm
+              </Button>
+            </InputGroup>
+          </Form>
+
+          {ruleLoading ? (
+            <div className="text-center py-4"><Spinner size="sm" variant="primary" /></div>
+          ) : rules.length === 0 ? (
+            <div className="text-center text-muted small py-4 bg-light rounded-3">Chưa có từ khóa nào.</div>
+          ) : (
+            <Table hover size="sm" className="align-middle border rounded-3 overflow-hidden">
+              <thead className="bg-light text-muted">
+                <tr>
+                  <th className="py-2 px-3 fw-medium">Từ khóa</th>
+                  <th className="py-2 px-3 fw-medium text-end">Xóa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((rule) => (
+                  <tr key={rule.id}>
+                    <td className="px-3 fw-bold text-dark">{rule.keyword}</td>
+                    <td className="px-3 text-end">
+                      <Button variant="light" size="sm" className="text-danger border-0 p-1" onClick={() => handleDeleteRule(rule.id)}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
         </Modal.Body>
       </Modal>
 

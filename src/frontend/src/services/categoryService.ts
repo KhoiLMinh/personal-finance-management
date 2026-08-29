@@ -14,6 +14,20 @@ const categoryService = {
   deleteCategory: async (id: number) => {
     const response = await api.delete(`/categories/${id}`);
     return response.data;
+  },
+  getCategoryRules: async (categoryId: number) => {
+    const response = await api.get(`/categories/${categoryId}/rules`);
+    return response.data;
+  },
+
+  addCategoryRule: async (categoryId: number, data: { keyword: string; priority: number }) => {
+    const response = await api.post(`/categories/${categoryId}/rules`, data);
+    return response.data;
+  },
+
+  deleteCategoryRule: async (categoryId: number, ruleId: number) => {
+    const response = await api.delete(`/categories/${categoryId}/rules/${ruleId}`);
+    return response.data;
   }
 };
 

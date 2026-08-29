@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
+import AdminConfigsPage from './pages/admin/AdminConfigsPage'; // <-- Đã import
 import FamilyPage from './pages/FamilyPage';
 import RecurringBillsPage from './pages/RecurringBillsPage';
 
@@ -27,13 +28,19 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+// Component điều hướng luồng chính tự động
+const RootRedirect = () => {
+  const { user } = useAuth();
+  if (user?.role === 'ADMIN') return <Navigate to="/admin/users" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
+
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       
-
       <Route 
         element={
           <ProtectedRoute>
@@ -41,6 +48,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
+        <Route path="/" element={<RootRedirect />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/saving-goals" element={<SavingGoalsPage />} />
@@ -50,14 +58,17 @@ function AppRoutes() {
         <Route path="/ai-assistant" element={<AiAssistantPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
+        
+        {/* Admin Routes */}
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+        <Route path="/admin/configs" element={<AdminConfigsPage />} />
+        
         <Route path="/family" element={<FamilyPage />} />
         <Route path="/bills" element={<RecurringBillsPage />} />
+        
+        <Route path="*" element={<RootRedirect />} />
       </Route>
-
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
     </Routes>
   );
 }

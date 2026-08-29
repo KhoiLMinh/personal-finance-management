@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Image, Spinner } from 'react-bootstrap';
-
 import { Eye, EyeOff, Wallet, LogIn } from 'lucide-react'; 
 
 import authService from '../services/authService'; 
@@ -21,7 +20,6 @@ interface AuthResponse {
   user: User;
 }
 
-//FR1
 export default function LoginPage() {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -40,10 +38,14 @@ export default function LoginPage() {
     try {
       const response: AuthResponse = await authService.login({ username, password });
       login(response.user, response.token);
-      navigate('/dashboard');
+      
+      if (response.user.role === 'ADMIN') {
+        navigate('/admin/users');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error(err);
-
       if (err.response?.data?.error?.message) {
         setErrorMsg(err.response.data.error.message);
       } else {
@@ -64,10 +66,10 @@ export default function LoginPage() {
               FinManager
             </div>
             <Image 
-              src="" 
+              src="https://raw.githubusercontent.com/creativetimofficial/public-assets/master/argon-dashboard-pro/assets/img/signup-ill.jpg" 
               alt="Finance Illustration"
               fluid 
-              style={{ maxHeight: '300px' }} 
+              style={{ maxHeight: '300px', borderRadius: '15px' }} 
             />
           </Col>
 

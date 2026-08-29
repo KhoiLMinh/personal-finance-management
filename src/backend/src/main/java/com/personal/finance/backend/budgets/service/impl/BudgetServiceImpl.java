@@ -9,6 +9,7 @@ import com.personal.finance.backend.budgets.repository.BudgetRepository;
 import com.personal.finance.backend.budgets.service.BudgetService;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
+import com.personal.finance.backend.settings.repository.SystemSettingRepository;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
@@ -36,6 +37,7 @@ public class BudgetServiceImpl implements BudgetService {
     private final TransactionRepository transactionRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final SystemSettingRepository systemSettingRepository;
 
 
     private Budget getOwnedBudget(Long id, Long userId) {
@@ -73,7 +75,14 @@ public class BudgetServiceImpl implements BudgetService {
 
         budget.setLimitAmount(request.getLimitAmount());
 
-        budget.setWarningPercent(request.getWarningPercent() != null ? request.getWarningPercent() : 80.0);
+        double defaultWarning = 80.0;
+        try {
+            defaultWarning = systemSettingRepository.findById("DEFAULT_BUDGET_WARNING_PERCENT")
+                    .map(s -> Double.parseDouble(s.getValue()))
+                    .orElse(80.0);
+        } catch (Exception ignored) {}
+
+        budget.setWarningPercent(request.getWarningPercent() != null ? request.getWarningPercent() : defaultWarning);
         budget.setStatus(Budget.BudgetStatus.ACTIVE);
 
         Budget savedBudget = budgetRepository.save(budget);

@@ -3,6 +3,8 @@ package com.personal.finance.backend.budgets.dto.response;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 public class BudgetDTO {
@@ -11,7 +13,7 @@ public class BudgetDTO {
     private String categoryName;
     private Integer month;
     private Integer year;
-    private Double limitAmount;
+    private BigDecimal limitAmount;
     private Double warningPercent;
     private String status;
 }

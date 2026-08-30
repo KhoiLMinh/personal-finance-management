@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Image, Spinner, Badge } from 'react-bootstrap';
-import { User, ShieldCheck, Mail, ShieldAlert, KeyRound, Save } from 'lucide-react';
+import { User, ShieldCheck, Mail, ShieldAlert, KeyRound, Save, Download, Upload, Database } from 'lucide-react';
 
 import userService from '../services/userService';
 import authService from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 import MySpinner from '../components/MySpinner';
 import { Link } from 'react-router-dom';
+import { backupService } from '../services/backupService';
 
 export default function ProfilePage() {
   const { user, login, token } = useAuth(); 
   const [loading, setLoading] = useState(true);
-
 
   const [profileData, setProfileData] = useState({ username: '', email: '', fullName: '', role: '' });
   const [profileSaving, setProfileSaving] = useState(false);
@@ -20,6 +20,9 @@ export default function ProfilePage() {
   const [passData, setPassData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [passSaving, setPassSaving] = useState(false);
   const [passMsg, setPassMsg] = useState({ type: '', text: '' });
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -82,6 +85,36 @@ export default function ProfilePage() {
       setPassMsg({ type: 'danger', text: error.response?.data?.error?.message || 'Đổi mật khẩu thất bại!' });
     } finally {
       setPassSaving(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await backupService.exportData();
+      alert("Đã tải xuống bản sao lưu thành công!");
+    } catch (error) {
+      alert("Lỗi khi tải bản sao lưu.");
+    }
+  };
+
+  const handleRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm("CẢNH BÁO: Việc phục hồi sẽ nạp thêm dữ liệu vào tài khoản của bạn. Bạn có chắc chắn muốn tiếp tục?")) {
+      return;
+    }
+
+    setIsRestoring(true);
+    try {
+      await backupService.restoreData(file);
+      alert("Phục hồi dữ liệu thành công! Trang sẽ tự động tải lại.");
+      window.location.reload();
+    } catch (error: any) {
+      alert(error.response?.data?.error?.message || "Lỗi khi phục hồi dữ liệu.");
+    } finally {
+      setIsRestoring(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -148,7 +181,6 @@ export default function ProfilePage() {
           </Card>
         </Col>
 
-
         <Col lg={7} xl={8}>
           
           <Card className="border-0 shadow-sm rounded-4 mb-4">
@@ -185,26 +217,75 @@ export default function ProfilePage() {
             </Card.Body>
           </Card>
 
-
-            <Card className="border-0 shadow-sm rounded-4">
+          <Card className="border-0 shadow-sm rounded-4 mb-4">
             <Card.Body className="p-4 d-flex justify-content-between align-items-center">
-                <div className="d-flex align-items-center">
+              <div className="d-flex align-items-center">
                 <div className="p-2 rounded-circle me-3" style={{ backgroundColor: '#fee2e2' }}>
-                    <KeyRound size={24} className="text-danger" />
+                  <KeyRound size={24} className="text-danger" />
                 </div>
                 <div>
-                    <h5 className="fw-bold mb-0 text-dark">Mật khẩu và bảo mật</h5>
-                    <small className="text-muted">Cập nhật mật khẩu để bảo vệ tài khoản</small>
+                  <h5 className="fw-bold mb-0 text-dark">Mật khẩu và bảo mật</h5>
+                  <small className="text-muted">Cập nhật mật khẩu để bảo vệ tài khoản</small>
                 </div>
-                </div>
-                <Link to="/change-password" className="btn btn-danger fw-bold rounded-pill px-4">
+              </div>
+              <Link to="/change-password" className="btn btn-danger fw-bold rounded-pill px-4">
                 Đổi mật khẩu
-                </Link>
+              </Link>
             </Card.Body>
-            </Card>
+          </Card>
+
+          {/* COMPONENT SAO LƯU & PHỤC HỒI DỮ LIỆU */}
+          <Card className="border-0 shadow-sm rounded-4">
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-center mb-3">
+                <div className="p-2 rounded-circle me-3" style={{ backgroundColor: '#d1fae5' }}>
+                  <Database size={24} className="text-success" />
+                </div>
+                <div>
+                  <h5 className="fw-bold mb-0 text-dark">Sao lưu & Phục hồi dữ liệu</h5>
+                  <small className="text-muted">Lưu trữ an toàn toàn bộ dữ liệu tài chính (.json)</small>
+                </div>
+              </div>
+              
+              <p className="text-muted small mb-4 ms-5">
+                Bạn có thể tải xuống toàn bộ dữ liệu chi tiêu, danh mục, ngân sách và mục tiêu tiết kiệm. 
+                Hoặc tải lên file sao lưu cũ để phục hồi. 
+              </p>
+
+              <div className="d-flex gap-3 ms-5">
+                <Button 
+                  variant="outline-primary" 
+                  className="rounded-pill px-4 fw-medium d-flex align-items-center" 
+                  onClick={handleExport}
+                >
+                  <Download size={18} className="me-2" />
+                  Tải bản sao lưu
+                </Button>
+                
+                <Button 
+                  variant="success" 
+                  className="rounded-pill px-4 fw-medium text-white d-flex align-items-center" 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isRestoring}
+                >
+                  {isRestoring ? <Spinner size="sm" className="me-2" /> : <Upload size={18} className="me-2" />}
+                  {isRestoring ? 'Đang phục hồi...' : 'Phục hồi dữ liệu'}
+                </Button>
+
+                <input 
+                  type="file" 
+                  accept=".json" 
+                  ref={fileInputRef} 
+                  onChange={handleRestore} 
+                  className="d-none" 
+                />
+              </div>
+            </Card.Body>
+          </Card>
 
         </Col>
       </Row>
+      
     </div>
   );
 }

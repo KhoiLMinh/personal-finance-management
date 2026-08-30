@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Dropdown } from 'react-bootstrap';
-import { LayoutDashboard, ReceiptText, PiggyBank, PieChart, WalletCards, UploadCloud, Bot, Settings, LogOut, Wallet, Users, List } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, PiggyBank, PieChart, WalletCards, UploadCloud, Bot, Settings, LogOut, Wallet, Users, List, Calculator, CalendarClock, Settings2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
@@ -47,6 +47,9 @@ export default function Sidebar() {
             <NavLink to="/admin/categories" className={navLinkClass} style={navLinkStyle}>
               <List size={20} className="me-3" /> Danh mục mặc định
             </NavLink>
+            <NavLink to="/admin/configs" className={navLinkClass} style={navLinkStyle}>
+              <Settings2 size={20} className="me-3" /> Cấu hình hệ thống
+            </NavLink>
           </>
         ) : (
           <>
@@ -55,7 +58,12 @@ export default function Sidebar() {
             <NavLink to="/saving-goals" className={navLinkClass} style={navLinkStyle}><PiggyBank size={20} className="me-3" /> Tiết kiệm</NavLink>
             <NavLink to="/budgets" className={navLinkClass} style={navLinkStyle}><PieChart size={20} className="me-3" /> Ngân sách</NavLink>
             <NavLink to="/wallets" className={navLinkClass} style={navLinkStyle}><WalletCards size={20} className="me-3" /> Tài khoản ví</NavLink>
+            <NavLink to="/bills" className={navLinkClass} style={navLinkStyle}>
+              <CalendarClock size={20} className="me-3" /> Hóa đơn định kỳ
+            </NavLink>
             <NavLink to="/import" className={navLinkClass} style={navLinkStyle}><UploadCloud size={20} className="me-3" /> Nhập sao kê</NavLink>
+            <NavLink to="/family" className={navLinkClass} style={navLinkStyle}><Users size={20} className="me-3" /> Gia đình</NavLink>
+            <NavLink to="/tools" className={navLinkClass} style={navLinkStyle}><Calculator size={20} className="me-3" /> Công cụ</NavLink>
             <hr className="my-3 mx-4 text-muted" />
             <NavLink to="/ai-assistant" className={navLinkClass} style={navLinkStyle}><Bot size={20} className="me-3" /> Hỏi trợ lý AI</NavLink>
           </>

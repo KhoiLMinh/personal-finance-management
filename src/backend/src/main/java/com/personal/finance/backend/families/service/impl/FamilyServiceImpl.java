@@ -13,6 +13,7 @@ import com.personal.finance.backend.families.repository.FamilyRepository;
 import com.personal.finance.backend.families.service.FamilyService;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
+import com.personal.finance.backend.wallets.repository.WalletMemberRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ public class FamilyServiceImpl implements FamilyService {
     private final FamilyMemberRepository familyMemberRepository;
     private final UserRepository userRepository;
     private final FamilyMapper familyMapper;
+    private final WalletMemberRepository walletMemberRepository;
 
     private void requireNoExistingFamily(Long userId) {
         if (familyRepository.findByOwnerId(userId).isPresent()
@@ -114,10 +116,11 @@ public class FamilyServiceImpl implements FamilyService {
         FamilyMember member = familyMemberRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Bạn chưa thuộc gia đình nào!"));
 
-        // BR: owner khong duoc roi truc tiep, tranh de lai family khong co chu
         if (member.getFamily().getOwner().getId().equals(userId)) {
             throw new RuntimeException("Chủ gia đình không thể tự rời đi. Hãy xoá gia đình nếu muốn dừng sử dụng!");
         }
+
+        walletMemberRepository.revokeAllSharingForUser(userId);
 
         familyMemberRepository.delete(member);
     }
@@ -125,7 +128,6 @@ public class FamilyServiceImpl implements FamilyService {
     @Override
     public Page<FamilyMemberDTO> getMembers(Long familyId, Long requesterId, Pageable pageable) {
         Family family = getFamilyEntity(familyId);
-        // SE-06: chi owner hoac member trong chinh family do moi duoc xem danh sach
         boolean isOwner = family.getOwner().getId().equals(requesterId);
         boolean isMember = familyMemberRepository.findByUserId(requesterId)
                 .map(m -> m.getFamily().getId().equals(familyId))
@@ -168,6 +170,8 @@ public class FamilyServiceImpl implements FamilyService {
             throw new RuntimeException("Không thể tự xoá chính chủ gia đình. Hãy xoá gia đình nếu muốn dừng sử dụng!");
         }
 
+        walletMemberRepository.revokeAllSharingForUser(member.getUser().getId());
+
         familyMemberRepository.delete(member);
     }
 
@@ -186,6 +190,9 @@ public class FamilyServiceImpl implements FamilyService {
     public void deleteFamily(Long familyId, Long requesterId) {
         Family family = getFamilyEntity(familyId);
         requireOwner(family, requesterId);
-        familyRepository.delete(family); // cascade xoa het FamilyMember (orphanRemoval = true tren Family.members)
+
+        walletMemberRepository.revokeAllSharingForFamily(familyId, requesterId);
+
+        familyRepository.delete(family);
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface WalletRepository extends JpaRepository<Wallet, Long> {
@@ -34,13 +35,13 @@ public interface WalletRepository extends JpaRepository<Wallet, Long> {
 
     @Modifying
     @Query("UPDATE Wallet w SET w.balance = w.balance + :amount WHERE w.id = :walletId")
-    int updateBalance(@Param("walletId") Long walletId, @Param("amount") Double amount);
+    int updateBalance(@Param("walletId") Long walletId, @Param("amount") BigDecimal amount);
 
 
     @Query("""
-        SELECT COALESCE(SUM(w.balance), 0.0) 
+        SELECT COALESCE(SUM(w.balance), 0)
         FROM Wallet w LEFT JOIN WalletMember wm ON wm.wallet = w 
         WHERE w.owner.id = :userId OR wm.user.id = :userId
         """)
-    Double getTotalBalanceAccessibleByUser(@Param("userId") Long userId);
+    BigDecimal getTotalBalanceAccessibleByUser(@Param("userId") Long userId);
 }

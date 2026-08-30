@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -51,13 +52,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     boolean existsByWalletIdAndDateAndAmountAndDescription(Long walletId, java.time.LocalDate date, Double amount, String description);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0.0) FROM Transaction t " +
-            "WHERE t.category.id = :categoryId AND t.wallet.owner.id = :userId " +
-            "AND t.type = 'EXPENSE' AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
-    Double sumExpenseByCategoryAndMonth(
+            "LEFT JOIN t.wallet w " +
+            "LEFT JOIN w.members wm " +
+            "WHERE t.category.id = :categoryId AND (w.owner.id = :userId OR wm.user.id = :userId) " +
+            "AND t.type = :type AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
+    BigDecimal sumExpenseByCategoryAndMonth(
             @Param("categoryId") Long categoryId,
             @Param("userId") Long userId,
             @Param("month") Integer month,
-            @Param("year") Integer year);
+            @Param("year") Integer year,
+            @Param("type") Transaction.TransactionType type);
 
 
     @Query("""
@@ -70,7 +74,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         AND (:startDate IS NULL OR t.date >= :startDate) 
         AND (:endDate IS NULL OR t.date <= :endDate)
         """)
-    Double getTotalAmountByType(
+    BigDecimal getTotalAmountByType(
             @Param("userId") Long userId,
             @Param("type") Transaction.TransactionType type,
             @Param("startDate") LocalDate startDate,

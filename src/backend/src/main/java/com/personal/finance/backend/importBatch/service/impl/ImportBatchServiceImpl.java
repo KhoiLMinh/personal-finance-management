@@ -7,7 +7,7 @@ import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.categories.repository.CategoryRuleRepository;
 import com.personal.finance.backend.importBatch.dto.response.ImportBatchDTO;
 import com.personal.finance.backend.importBatch.entity.ImportBatch;
-import com.personal.finance.backend.importBatch.mapper.ImportBatchMapper; // <-- Import Mapper
+import com.personal.finance.backend.importBatch.mapper.ImportBatchMapper;
 import com.personal.finance.backend.importBatch.repository.ImportBatchRepository;
 import com.personal.finance.backend.importBatch.service.ImportBatchService;
 import com.personal.finance.backend.transactions.entity.Transaction;
@@ -19,18 +19,19 @@ import com.personal.finance.backend.wallets.repository.WalletRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -49,8 +50,40 @@ public class ImportBatchServiceImpl implements ImportBatchService {
     private static final String CSV_SPLIT_REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
 
     @Override
+    public List<String> extractHeaders(MultipartFile file) {
+        String filename = file.getOriginalFilename().toLowerCase();
+        List<String> headers = new ArrayList<>();
+
+        try {
+            if (filename.endsWith(".csv")) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+                    String line = br.readLine();
+                    if (line != null) {
+                        String[] fields = line.split(CSV_SPLIT_REGEX);
+                        for (String f : fields) headers.add(f.replace("\"", "").trim());
+                    }
+                }
+            } else if (filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
+                Workbook workbook = WorkbookFactory.create(file.getInputStream());
+                Sheet sheet = workbook.getSheetAt(0);
+                Row headerRow = sheet.getRow(0);
+                if (headerRow != null) {
+                    for (Cell cell : headerRow) {
+                        headers.add(getCellValueAsString(cell));
+                    }
+                }
+                workbook.close();
+            }
+        } catch (Exception e) {
+            log.error("Lỗi đọc header file: ", e);
+            throw new RuntimeException("Không thể đọc tiêu đề của file. File có thể bị hỏng.");
+        }
+        return headers;
+    }
+
+    @Override
     @Transactional
-    public ImportBatchDTO importCsv(Long userId, Long walletId, MultipartFile file) {
+    public ImportBatchDTO importData(Long userId, Long walletId, int dateCol, int amountCol, int descCol, MultipartFile file) {
         if (!walletRepository.hasEditPermission(walletId, userId)) {
             throw new AccessDeniedException("Bạn không có quyền import dữ liệu vào ví này!");
         }
@@ -70,42 +103,75 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         List<Transaction> transactionsToSave = new ArrayList<>();
         List<Transaction> needAiCategorization = new ArrayList<>();
         List<String> descriptionsForAi = new ArrayList<>();
-        double netBalanceChange = 0.0;
+        BigDecimal netBalanceChange = BigDecimal.ZERO;
+
         int totalRows = 0;
         int successRows = 0;
         int duplicateRows = 0;
 
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("d/M/yyyy");
+        String filename = file.getOriginalFilename().toLowerCase();
 
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            boolean isHeader = true;
+        try {
+            List<String[]> rawData = new ArrayList<>();
 
-            while ((line = br.readLine()) != null) {
-                if (isHeader) { isHeader = false; continue; }
+            if (filename.endsWith(".csv")) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    boolean isHeader = true;
+                    while ((line = br.readLine()) != null) {
+                        if (isHeader) { isHeader = false; continue; }
+                        rawData.add(line.split(CSV_SPLIT_REGEX, -1));
+                    }
+                }
+            }
+            else if (filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
+                Workbook workbook = WorkbookFactory.create(file.getInputStream());
+                Sheet sheet = workbook.getSheetAt(0);
+                boolean isHeader = true;
+                for (Row row : sheet) {
+                    if (isHeader) { isHeader = false; continue; }
+
+                    int maxCol = Math.max(Math.max(dateCol, amountCol), descCol) + 1;
+                    String[] rowData = new String[maxCol];
+                    for (int i = 0; i < maxCol; i++) {
+                        Cell cell = row.getCell(i, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                        rowData[i] = getCellValueAsString(cell);
+                    }
+                    rawData.add(rowData);
+                }
+                workbook.close();
+            }
+
+            // Map data
+            for (String[] fields : rawData) {
+                if (fields.length <= Math.max(Math.max(dateCol, amountCol), descCol)) continue;
+
+                String dateStr = fields[dateCol].replace("\"", "").trim();
+                String amountStr = fields[amountCol].replace("\"", "").replace(",", "").trim();
+                String descStr = fields[descCol].replace("\"", "").trim();
+
+                if (dateStr.isEmpty() || amountStr.isEmpty()) continue; // Skip dòng rỗng
+
                 totalRows++;
 
-                String[] fields = line.split(CSV_SPLIT_REGEX, -1);
-                if (fields.length < 3) continue;
+                LocalDate date = parseFlexibleDate(dateStr);
+                Double rawAmount = Double.parseDouble(amountStr);
+                BigDecimal absoluteAmount = BigDecimal.valueOf(Math.abs(rawAmount));
 
-                LocalDate date = LocalDate.parse(fields[0].replace("\"", "").trim(), dateFormatter);
-                Double amount = Double.parseDouble(fields[1].replace("\"", "").replace(",", "").trim());
-                String description = fields[2].replace("\"", "").trim();
-                //FR-07
-                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId, date, amount, description)) {
+                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId, date, absoluteAmount.doubleValue(), descStr)) {
                     duplicateRows++;
                     continue;
                 }
 
-                Category matchedCategory = categorizeTransaction(description, userRules, null);
+                Category matchedCategory = categorizeTransaction(descStr, userRules, null);
 
                 Transaction transaction = new Transaction();
                 transaction.setWallet(wallet);
                 transaction.setImportBatch(batch);
-                transaction.setAmount(Math.abs(amount));
-                transaction.setType(amount >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
+                transaction.setAmount(absoluteAmount);
+                transaction.setType(rawAmount >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
                 transaction.setDate(date);
-                transaction.setDescription(description);
+                transaction.setDescription(descStr);
                 transaction.setStatus("COMPLETED");
 
                 if (matchedCategory != null) {
@@ -113,11 +179,11 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 } else {
                     transaction.setCategory(uncategorized);
                     needAiCategorization.add(transaction);
-                    descriptionsForAi.add(description);
+                    descriptionsForAi.add(descStr);
                 }
 
                 transactionsToSave.add(transaction);
-                netBalanceChange += amount;
+                netBalanceChange = netBalanceChange.add(BigDecimal.valueOf(rawAmount));
                 successRows++;
             }
 
@@ -146,15 +212,39 @@ public class ImportBatchServiceImpl implements ImportBatchService {
             batch.setStatus(true);
             importBatchRepository.save(batch);
 
-            log.info("Import thành công file {} cho ví {}. Tổng: {}, Mới: {}, Trùng: {}",
-                    file.getOriginalFilename(), walletId, totalRows, successRows, duplicateRows);
-
         } catch (Exception e) {
-            log.error("Lỗi khi parse file CSV: ", e);
-            throw new RuntimeException("Định dạng file CSV không hợp lệ hoặc chứa dữ liệu sai. Rollback toàn bộ!");
+            log.error("Lỗi parse file sao kê: ", e);
+            throw new RuntimeException("Lỗi định dạng file hoặc dữ liệu không hợp lệ. Vui lòng kiểm tra lại cấu hình cột!");
         }
 
         return importBatchMapper.toDTO(batch);
+    }
+
+    private String getCellValueAsString(Cell cell) {
+        if (cell == null) return "";
+        switch (cell.getCellType()) {
+            case STRING: return cell.getStringCellValue().trim();
+            case NUMERIC:
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    LocalDate date = cell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                    return date.toString();
+                }
+                return String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN: return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA: return cell.getCellFormula();
+            default: return "";
+        }
+    }
+
+    private LocalDate parseFlexibleDate(String dateStr) {
+        // Đã bổ sung yyyy-MM-dd và các định dạng phổ biến nhất
+        String[] dateFormats = {"yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "yyyy/MM/dd", "dd-MM-yyyy", "d-M-yyyy"};
+        for (String format : dateFormats) {
+            try {
+                return LocalDate.parse(dateStr, DateTimeFormatter.ofPattern(format));
+            } catch (Exception ignored) {}
+        }
+        throw new RuntimeException("Không hỗ trợ định dạng ngày: " + dateStr);
     }
 
     private Category categorizeTransaction(String description, List<CategoryRule> rules, Category fallback) {
@@ -166,7 +256,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         }
         return fallback;
     }
-    //FR-08
+
     private Category getOrCreateUncategorizedCategory(Long userId) {
         return categoryRepository.findByNameAndUserId("Chưa phân loại", userId)
                 .orElseGet(() -> {

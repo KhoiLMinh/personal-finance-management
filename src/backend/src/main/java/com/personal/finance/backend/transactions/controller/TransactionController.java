@@ -3,6 +3,7 @@ package com.personal.finance.backend.transactions.controller;
 import com.personal.finance.backend.transactions.dto.request.CreateTransactionRequest;
 import com.personal.finance.backend.transactions.dto.request.UpdateTransactionRequest;
 import com.personal.finance.backend.transactions.dto.response.TransactionDTO;
+import com.personal.finance.backend.transactions.dto.response.TransactionHistoryDTO;
 import com.personal.finance.backend.transactions.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/transactions")
@@ -63,5 +65,12 @@ public class TransactionController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateTransactionRequest request) {
         return ResponseEntity.ok(transactionService.updateTransaction(id, userId, request));
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<TransactionHistoryDTO>> getTransactionHistory(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(transactionService.getTransactionHistory(id, userId));
     }
 }

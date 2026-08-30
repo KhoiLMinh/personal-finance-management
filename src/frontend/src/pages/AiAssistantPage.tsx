@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, Form, Button, InputGroup, Spinner } from 'react-bootstrap';
 import { Bot, Send, User, Trash2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import aiService from '../services/aiService';
 
 interface ChatMessage {
@@ -21,6 +22,7 @@ function renderWithBold(text: string) {
 }
 
 export default function AiAssistantPage() {
+  const location = useLocation();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,6 +50,14 @@ export default function AiAssistantPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     scrollToBottom();
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    if (location.state?.adviceContext) {
+      const cleanAdvice = location.state.adviceContext.replace(/\*\*/g, '').replace(/\n/g, ' ').trim();
+      setInput(`Dựa trên nhận xét: "${cleanAdvice}". Hãy lập cho tôi một kế hoạch chi tiêu và tiết kiệm chi tiết cho tháng tới.`);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();

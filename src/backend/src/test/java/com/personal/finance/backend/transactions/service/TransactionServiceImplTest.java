@@ -8,6 +8,7 @@ import com.personal.finance.backend.transactions.dto.request.UpdateTransactionRe
 import com.personal.finance.backend.transactions.dto.response.TransactionDTO;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.transactions.mapper.TransactionMapper;
+import com.personal.finance.backend.transactions.repository.TransactionHistoryRepository;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
 import com.personal.finance.backend.transactions.service.impl.TransactionServiceImpl;
 import com.personal.finance.backend.wallets.entity.Wallet;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -46,6 +48,9 @@ class TransactionServiceImplTest {
     @Mock
     private BudgetService budgetService;
 
+    @Mock
+    private TransactionHistoryRepository transactionHistoryRepository;
+
     @InjectMocks
     private TransactionServiceImpl transactionService;
 
@@ -59,7 +64,7 @@ class TransactionServiceImplTest {
         request = new CreateTransactionRequest();
         request.setWalletId(1L);
         request.setCategoryId(2L);
-        request.setAmount(50000.0);
+        request.setAmount(BigDecimal.valueOf(50000.0));
         request.setType(Transaction.TransactionType.EXPENSE);
         request.setDate(LocalDate.now());
         request.setDescription("Ăn sáng");
@@ -73,10 +78,9 @@ class TransactionServiceImplTest {
         mockTransaction = new Transaction();
         mockTransaction.setId(100L);
         mockTransaction.setWallet(mockWallet);
-        mockTransaction.setAmount(50000.0);
+        mockTransaction.setAmount(BigDecimal.valueOf(50000.0));
         mockTransaction.setType(Transaction.TransactionType.EXPENSE);
     }
-
 
     @Test
     void createTransaction_HasEditPermission_Success() {
@@ -92,7 +96,7 @@ class TransactionServiceImplTest {
 
         assertNotNull(result);
         verify(transactionRepository, times(1)).save(any(Transaction.class));
-        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(-50000.0));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(BigDecimal.valueOf(-50000.0)));
     }
 
     @Test
@@ -106,7 +110,7 @@ class TransactionServiceImplTest {
 
         assertEquals("Bạn không có quyền thêm giao dịch vào ví này!", exception.getMessage());
         verify(transactionRepository, never()).save(any());
-        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+        verify(walletRepository, never()).updateBalance(anyLong(), any(BigDecimal.class));
     }
 
 
@@ -121,7 +125,7 @@ class TransactionServiceImplTest {
         transactionService.deleteTransaction(transactionId, userId);
 
         verify(transactionRepository, times(1)).delete(mockTransaction);
-        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(50000.0));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(BigDecimal.valueOf(50000.0)));
     }
 
     @Test
@@ -137,7 +141,7 @@ class TransactionServiceImplTest {
 
         assertEquals("Không tìm thấy giao dịch hoặc truy cập trái phép!", exception.getMessage());
         verify(transactionRepository, never()).delete(any());
-        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+        verify(walletRepository, never()).updateBalance(anyLong(), any(BigDecimal.class));
     }
 
 
@@ -148,7 +152,7 @@ class TransactionServiceImplTest {
 
         UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
         updateReq.setCategoryId(2L);
-        updateReq.setAmount(70000.0);
+        updateReq.setAmount(BigDecimal.valueOf(70000.0));
         updateReq.setType(Transaction.TransactionType.EXPENSE);
         updateReq.setDate(LocalDate.now());
         updateReq.setDescription("Ăn trưa xịn hơn");
@@ -164,7 +168,7 @@ class TransactionServiceImplTest {
 
         assertNotNull(result);
         verify(transactionRepository, times(1)).save(mockTransaction);
-        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(-20000.0));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(BigDecimal.valueOf(-20000.0)));
     }
 
     @Test
@@ -174,13 +178,12 @@ class TransactionServiceImplTest {
 
         UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
         updateReq.setCategoryId(2L);
-        updateReq.setAmount(100000.0);
+        updateReq.setAmount(BigDecimal.valueOf(100000.0));
         updateReq.setType(Transaction.TransactionType.INCOME);
         updateReq.setDate(LocalDate.now());
 
         when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
-        // ĐÃ SỬA THÀNH findByIdAndAccessibleByUser
         when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
 
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
@@ -189,7 +192,7 @@ class TransactionServiceImplTest {
         transactionService.updateTransaction(transactionId, userId, updateReq);
 
         verify(transactionRepository, times(1)).save(mockTransaction);
-        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(150000.0));
+        verify(walletRepository, times(1)).updateBalance(eq(1L), eq(BigDecimal.valueOf(150000.0)));
     }
 
     @Test
@@ -208,7 +211,7 @@ class TransactionServiceImplTest {
         assertEquals("Bạn không có quyền sửa giao dịch trong ví này!", exception.getMessage());
 
         verify(transactionRepository, never()).save(any());
-        verify(walletRepository, never()).updateBalance(anyLong(), anyDouble());
+        verify(walletRepository, never()).updateBalance(anyLong(), any(BigDecimal.class));
     }
 
     @Test

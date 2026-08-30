@@ -56,8 +56,8 @@ export default function DashboardPage() {
       setAiLoading(false);
     }
   };
-  //FR-16
-  const handleExportReport = async () => {
+  //Fr13
+  const handleExportExcel = async () => {
     try {
       const date = new Date();
       const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
@@ -65,6 +65,17 @@ export default function DashboardPage() {
       await reportService.downloadExcel(firstDay, lastDay);
     } catch (error) {
       alert("Lỗi khi tải báo cáo Excel!");
+    }
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      const date = new Date();
+      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+      const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+      await reportService.downloadPdf(firstDay, lastDay);
+    } catch (error) {
+      alert("Lỗi khi tải báo cáo PDF!");
     }
   };
 
@@ -80,7 +91,8 @@ export default function DashboardPage() {
         aiError={aiError}
         onRetryAi={fetchAiAdvice}
         overview={overview}
-        onExport={handleExportReport}
+        onExportExcel={handleExportExcel}
+        onExportPdf={handleExportPdf}  
       />
       <SummaryCards overview={overview} />
       <Row className="g-4">

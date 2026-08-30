@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,10 +45,8 @@ class ReportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-
         startDate = LocalDate.of(2026, 8, 1);
         endDate = LocalDate.of(2026, 8, 31);
-
         prevStartDate = LocalDate.of(2026, 7, 1);
         prevEndDate = LocalDate.of(2026, 7, 31);
     }
@@ -56,31 +55,26 @@ class ReportServiceImplTest {
     void getDashboardOverview_Success_CalculatesCorrectly() {
         Long userId = 1L;
 
+        when(walletRepository.getTotalBalanceAccessibleByUser(userId)).thenReturn(BigDecimal.valueOf(50000000.0));
+        when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, startDate, endDate)).thenReturn(BigDecimal.valueOf(20000000.0));
+        when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, startDate, endDate)).thenReturn(BigDecimal.valueOf(10000000.0));
 
-        when(walletRepository.getTotalBalanceAccessibleByUser(userId)).thenReturn(50000000.0);
-        when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, startDate, endDate)).thenReturn(20000000.0);
-        when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, startDate, endDate)).thenReturn(10000000.0);
+        lenient().when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, prevStartDate, prevEndDate)).thenReturn(BigDecimal.valueOf(10000000.0));
+        lenient().when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, prevStartDate, prevEndDate)).thenReturn(BigDecimal.valueOf(12500000.0));
 
-
-        lenient().when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, prevStartDate, prevEndDate)).thenReturn(10000000.0);
-        lenient().when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, prevStartDate, prevEndDate)).thenReturn(12500000.0);
-
-
-        List<CategoryExpenseDTO> pieChartData = List.of(new CategoryExpenseDTO(1L, "Ăn uống", "#ff0000", 5000000.0));
+        List<CategoryExpenseDTO> pieChartData = List.of(new CategoryExpenseDTO(1L, "Ăn uống", "#ff0000", BigDecimal.valueOf(5000000.0)));
         when(transactionRepository.getExpenseByCategory(userId, startDate, endDate)).thenReturn(pieChartData);
 
-
         List<Object[]> lineChartRawData = new ArrayList<>();
-        lineChartRawData.add(new Object[]{"2026-08-15", Transaction.TransactionType.INCOME, 500000.0});
-        lineChartRawData.add(new Object[]{"2026-08-15", Transaction.TransactionType.EXPENSE, 200000.0});
+        lineChartRawData.add(new Object[]{"2026-08-15", Transaction.TransactionType.INCOME, BigDecimal.valueOf(500000.0)});
+        lineChartRawData.add(new Object[]{"2026-08-15", Transaction.TransactionType.EXPENSE, BigDecimal.valueOf(200000.0)});
         when(transactionRepository.getTrendData(userId, startDate, endDate)).thenReturn(lineChartRawData);
-
 
         DashboardOverviewDTO result = reportService.getDashboardOverview(userId, startDate, endDate);
 
         assertNotNull(result);
-        assertEquals(50000000.0, result.getTotalBalance());
-        assertEquals(10000000.0, result.getNetSavings());
+        assertEquals(50000000.0, result.getTotalBalance().doubleValue());
+        assertEquals(10000000.0, result.getNetSavings().doubleValue());
 
         assertEquals(100.0, result.getIncomeChangePercent());
         assertEquals(-20.0, result.getExpenseChangePercent());
@@ -88,27 +82,24 @@ class ReportServiceImplTest {
         assertEquals(1, result.getExpenseByCategory().size());
         assertEquals(1, result.getTrendData().size());
         assertEquals("2026-08-15", result.getTrendData().get(0).getDate());
-        assertEquals(500000.0, result.getTrendData().get(0).getIncome());
-        assertEquals(200000.0, result.getTrendData().get(0).getExpense());
+        assertEquals(500000.0, result.getTrendData().get(0).getIncome().doubleValue());
+        assertEquals(200000.0, result.getTrendData().get(0).getExpense().doubleValue());
     }
 
     @Test
     void getDashboardOverview_PreviousDataIsNull_Calculates100PercentSafely() {
         Long userId = 1L;
 
+        when(walletRepository.getTotalBalanceAccessibleByUser(userId)).thenReturn(BigDecimal.valueOf(5000000.0));
+        when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, startDate, endDate)).thenReturn(BigDecimal.valueOf(5000000.0));
 
-        when(walletRepository.getTotalBalanceAccessibleByUser(userId)).thenReturn(5000000.0);
-        when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, startDate, endDate)).thenReturn(5000000.0);
-
-
-        lenient().when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, startDate, endDate)).thenReturn(0.0);
+        lenient().when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, startDate, endDate)).thenReturn(BigDecimal.ZERO);
         lenient().when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, prevStartDate, prevEndDate)).thenReturn(null);
         lenient().when(transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, prevStartDate, prevEndDate)).thenReturn(null);
         lenient().when(transactionRepository.getExpenseByCategory(userId, startDate, endDate)).thenReturn(new ArrayList<>());
         lenient().when(transactionRepository.getTrendData(userId, startDate, endDate)).thenReturn(new ArrayList<>());
 
         DashboardOverviewDTO result = reportService.getDashboardOverview(userId, startDate, endDate);
-
 
         assertEquals(100.0, result.getIncomeChangePercent());
     }
@@ -119,7 +110,7 @@ class ReportServiceImplTest {
         Transaction mockTx = new Transaction();
         mockTx.setDate(LocalDate.now());
         mockTx.setType(Transaction.TransactionType.EXPENSE);
-        mockTx.setAmount(50000.0);
+        mockTx.setAmount(BigDecimal.valueOf(50000.0));
 
         Category cat = new Category(); cat.setName("Test");
         Wallet wal = new Wallet(); wal.setName("Ví Test");
@@ -141,7 +132,7 @@ class ReportServiceImplTest {
         Transaction mockTx = new Transaction();
         mockTx.setDate(LocalDate.now());
         mockTx.setType(Transaction.TransactionType.EXPENSE);
-        mockTx.setAmount(50000.0);
+        mockTx.setAmount(BigDecimal.valueOf(50000.0));
 
         Category cat = new Category(); cat.setName("Test");
         Wallet wal = new Wallet(); wal.setName("Ví Test");

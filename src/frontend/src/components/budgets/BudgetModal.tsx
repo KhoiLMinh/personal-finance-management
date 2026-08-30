@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Spinner, Row, Col } from 'react-bootstrap';
 import budgetService from '../../services/budgetService';
+import settingService from '../../services/settingService';
 
 interface Props {
   show: boolean;
@@ -9,26 +10,35 @@ interface Props {
   editData?: any;
   categories: any[];
 }
-//FR-09
+
 export default function BudgetModal({ show, onHide, onSuccess, editData, categories }: Props) {
   const [loading, setLoading] = useState(false);
+  const [defaultWarning, setDefaultWarning] = useState('');
+
   const [formData, setFormData] = useState({
     categoryId: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     limitAmount: '',
-    warningPercent: 80
+    warningPercent: '' 
   });
 
   useEffect(() => {
     if (show) {
+      settingService.getAllSettings()
+        .then(data => {
+          const warningSetting = data.find((s: any) => s.key === 'DEFAULT_BUDGET_WARNING_PERCENT');
+          if (warningSetting) setDefaultWarning(warningSetting.value);
+        })
+        .catch(err => console.error("Không lấy được config:", err));
+
       if (editData) {
         setFormData({
           categoryId: editData.categoryId.toString(),
           month: editData.month,
           year: editData.year,
           limitAmount: editData.limitAmount.toString(),
-          warningPercent: editData.warningPercent || 80
+          warningPercent: editData.warningPercent ? editData.warningPercent.toString() : ''
         });
       } else {
         setFormData({
@@ -36,7 +46,7 @@ export default function BudgetModal({ show, onHide, onSuccess, editData, categor
           month: new Date().getMonth() + 1,
           year: new Date().getFullYear(),
           limitAmount: '',
-          warningPercent: 80
+          warningPercent: '' 
         });
       }
     }
@@ -51,7 +61,7 @@ export default function BudgetModal({ show, onHide, onSuccess, editData, categor
         month: Number(formData.month),
         year: Number(formData.year),
         limitAmount: Number(formData.limitAmount),
-        warningPercent: Number(formData.warningPercent)
+        warningPercent: formData.warningPercent ? Number(formData.warningPercent) : undefined 
       };
 
       if (editData) {
@@ -118,9 +128,10 @@ export default function BudgetModal({ show, onHide, onSuccess, editData, categor
           </Form.Group>
 
           <Form.Group className="mb-4">
-            <Form.Label className="text-muted fw-medium small">Cảnh báo khi đạt mức (%)</Form.Label>
-            <Form.Control size="lg" type="number" min="1" max="100" required className="bg-light border-0" 
-              value={formData.warningPercent} onChange={(e) => setFormData({...formData, warningPercent: Number(e.target.value)})} />
+            <Form.Label className="text-muted fw-medium small">Cảnh báo khi đạt mức (%) - Bỏ trống để dùng mặc định là {defaultWarning}%</Form.Label>
+            <Form.Control size="lg" type="number" min="1" max="100" className="bg-light border-0" 
+              placeholder={`Mặc định hệ thống: ${defaultWarning}%`}
+              value={formData.warningPercent} onChange={(e) => setFormData({...formData, warningPercent: e.target.value})} />
           </Form.Group>
 
           <Button type="submit" className="w-100 py-3 fs-5 fw-bold rounded-4 border-0" disabled={loading} style={{ backgroundColor: 'var(--color-primary)' }}>

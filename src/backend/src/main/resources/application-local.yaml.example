@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/financial_db?useUnicode=true&characterEncoding=UTF-8
+    username: root
+    password: password_cua_ban
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: email_cua_ban@gmail.com
+    password: app_password_cua_ban
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: thay_bang_chuoi_bi_mat_32_ky_tu_tro_len_cua_ban
+    expiration-ms: 3600000
+
+  google:
+    client-id: google_client_id_cua_ban
+
+  gemini:
+    api-key: gemini_api_key_cua_ban

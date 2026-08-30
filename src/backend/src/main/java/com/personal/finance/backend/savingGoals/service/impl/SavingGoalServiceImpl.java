@@ -23,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Slf4j
@@ -70,7 +71,7 @@ public class SavingGoalServiceImpl implements SavingGoalService {
         SavingGoal goal = new SavingGoal();
         goal.setTitle(request.getTitle());
         goal.setTargetAmount(request.getTargetAmount());
-        goal.setCurrentAmount(0.0); // Mặc định khi tạo mới là 0
+        goal.setCurrentAmount(BigDecimal.ZERO);
         goal.setDeadline(request.getDeadline());
         goal.setStatus(SavingGoal.GoalStatus.IN_PROGRESS);
         goal.setUser(user);
@@ -100,7 +101,7 @@ public class SavingGoalServiceImpl implements SavingGoalService {
         goal.setTargetAmount(request.getTargetAmount());
         goal.setDeadline(request.getDeadline());
 
-        if (goal.getCurrentAmount() >= goal.getTargetAmount()) {
+        if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
             goal.setStatus(SavingGoal.GoalStatus.COMPLETE);
         } else {
             goal.setStatus(SavingGoal.GoalStatus.IN_PROGRESS);
@@ -123,7 +124,7 @@ public class SavingGoalServiceImpl implements SavingGoalService {
         Wallet wallet = walletRepository.findById(request.getWalletId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ví!"));
 
-        if (wallet.getBalance() < request.getAmount()) {
+        if (wallet.getBalance().compareTo(request.getAmount()) < 0){
             throw new RuntimeException("Số dư trong ví không đủ để trích vào mục tiêu tiết kiệm!");
         }
 
@@ -133,7 +134,7 @@ public class SavingGoalServiceImpl implements SavingGoalService {
         }
 
 
-        walletRepository.updateBalance(wallet.getId(), -request.getAmount());
+        walletRepository.updateBalance(wallet.getId(), request.getAmount().negate());
 
 
         Category savingCategory = getOrCreateSavingCategory(userId);
@@ -151,9 +152,9 @@ public class SavingGoalServiceImpl implements SavingGoalService {
 
 
         savingGoalRepository.addFundsToGoal(id, userId, request.getAmount());
-        goal.setCurrentAmount(goal.getCurrentAmount() + request.getAmount());
+        goal.setCurrentAmount(goal.getCurrentAmount().add(request.getAmount()));
 
-        if (goal.getCurrentAmount() >= goal.getTargetAmount()) {
+        if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0){
             goal.setStatus(SavingGoal.GoalStatus.COMPLETE);
             savingGoalRepository.save(goal);
             log.info("Mục tiêu tiết kiệm ID: {} đã hoàn thành!", id);

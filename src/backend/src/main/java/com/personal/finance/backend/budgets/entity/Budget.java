@@ -20,6 +20,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -37,9 +39,9 @@ public class Budget extends Base {
     @Column(name = "budget_year", nullable = false)
     private Integer year;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 2)
     @Positive
-    private Double limitAmount;
+    private BigDecimal limitAmount;
 
     private Double warningPercent;
 

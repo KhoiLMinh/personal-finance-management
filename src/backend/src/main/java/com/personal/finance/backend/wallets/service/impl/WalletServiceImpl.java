@@ -1,6 +1,10 @@
 package com.personal.finance.backend.wallets.service.impl;
 
 import com.personal.finance.backend.common.service.EmailService;
+import com.personal.finance.backend.families.entity.Family;
+import com.personal.finance.backend.families.entity.FamilyMember;
+import com.personal.finance.backend.families.repository.FamilyMemberRepository;
+import com.personal.finance.backend.families.repository.FamilyRepository;
 import com.personal.finance.backend.notifications.service.NotificationService;
 import com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest;
 import com.personal.finance.backend.wallets.dto.request.CreateWalletRequest;
@@ -20,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -33,6 +38,9 @@ public class WalletServiceImpl implements WalletService {
     private final EmailService emailService;
     private final NotificationService notificationService;
 
+    private final FamilyRepository familyRepository;
+    private final FamilyMemberRepository familyMemberRepository;
+
     private Wallet getWalletEntity(Long walletId) {
         return walletRepository.findById(walletId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ví!"));
@@ -43,7 +51,7 @@ public class WalletServiceImpl implements WalletService {
             throw new AccessDeniedException("Bạn không có quyền thao tác trên ví này!");
         }
     }
-    
+
     private void requireAccess(Wallet wallet, Long requesterId) {
         if (!walletRepository.existsAccessibleByUser(wallet.getId(), requesterId)) {
             throw new AccessDeniedException("Bạn không có quyền truy cập ví này!");
@@ -58,7 +66,7 @@ public class WalletServiceImpl implements WalletService {
 
         Wallet wallet = new Wallet();
         wallet.setName(request.getName());
-        wallet.setBalance(request.getBalance() == null ? 0.0 : request.getBalance());
+        wallet.setBalance(request.getBalance() == null ? BigDecimal.ZERO : request.getBalance());
         wallet.setIcon(request.getIcon());
         wallet.setColor(request.getColor());
         wallet.setOwner(owner);
@@ -110,7 +118,8 @@ public class WalletServiceImpl implements WalletService {
                 .map(walletMapper::toMemberDTO)
                 .toList();
     }
-    //FR-13
+
+    // FR-13
     @Override
     @Transactional
     public WalletMemberDTO shareWallet(Long walletId, Long requesterId, AddWalletMemberRequest request) {
@@ -124,26 +133,41 @@ public class WalletServiceImpl implements WalletService {
             throw new RuntimeException("Không thể mời chính chủ sở hữu vào ví!");
         }
 
-        WalletMember member = walletMemberRepository.findByWalletIdAndUserId(walletId, targetUser.getId())
-                .orElse(new WalletMember());
+        Family ownerFamily = familyRepository.findByOwnerId(requesterId)
+                .orElseGet(() -> familyMemberRepository.findByUserId(requesterId)
+                        .map(com.personal.finance.backend.families.entity.FamilyMember::getFamily)
+                        .orElse(null));
+
+        Family targetFamily = familyRepository.findByOwnerId(targetUser.getId())
+                .orElseGet(() -> familyMemberRepository.findByUserId(targetUser.getId())
+                        .map(com.personal.finance.backend.families.entity.FamilyMember::getFamily)
+                        .orElse(null));
+
+        if (ownerFamily == null || targetFamily == null || !ownerFamily.getId().equals(targetFamily.getId())) {
+            throw new RuntimeException("Chỉ có thể chia sẻ ví cho các thành viên trong cùng một Gia đình!");
+        }
+
+        com.personal.finance.backend.wallets.entity.WalletMember member = walletMemberRepository.findByWalletIdAndUserId(walletId, targetUser.getId())
+                .orElse(new com.personal.finance.backend.wallets.entity.WalletMember());
 
         member.setWallet(wallet);
         member.setUser(targetUser);
         member.setPermissions(request.getPermission());
 
-        WalletMember savedMember = walletMemberRepository.save(member);
+        com.personal.finance.backend.wallets.entity.WalletMember savedMember = walletMemberRepository.save(member);
 
-        String roleName = request.getPermission() == WalletMember.Permission.EDIT ? "CHỈNH SỬA" : "CHỈ XEM";
+        String roleName = request.getPermission() == com.personal.finance.backend.wallets.entity.WalletMember.Permission.EDIT ? "CHỈNH SỬA" : "CHỈ XEM";
         String emailBody = String.format(
                 "Xin chào %s,\n\n" +
-                        "Bạn vừa được chia sẻ quyền truy cập vào ví gia đình: '%s'.\n" +
+                        "Bạn vừa được chia sẻ quyền truy cập vào ví: '%s' từ thành viên trong gia đình.\n" +
                         "Vai trò của bạn: %s.\n\n" +
                         "Hãy đăng nhập vào hệ thống Personal Finance ngay để xem chi tiết và cùng quản lý chi tiêu nhé!\n\n" +
                         "Trân trọng,\nĐội ngũ Hỗ trợ.",
                 targetUser.getFullName(), wallet.getName(), roleName
         );
 
-        emailService.sendEmail(targetUser.getEmail(), "Bạn được mời tham gia Ví gia đình!", emailBody);
+        emailService.sendEmail(targetUser.getEmail(), "Bạn được mời tham gia quản lý ví!", emailBody);
+
         String notifContent = String.format("Bạn vừa được %s mời tham gia quản lý ví '%s' với quyền %s.",
                 wallet.getOwner().getFullName(), wallet.getName(), roleName);
         notificationService.createSystemNotification(targetUser.getId(), "🤝 Lời mời tham gia ví", notifContent);

@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.time.temporal.ChronoUnit;
@@ -45,22 +46,22 @@ public class ReportServiceImpl implements ReportService {
         DashboardOverviewDTO overview = new DashboardOverviewDTO();
 
 
-        Double totalBalance = walletRepository.getTotalBalanceAccessibleByUser(userId);
+        BigDecimal totalBalance = walletRepository.getTotalBalanceAccessibleByUser(userId);
         overview.setTotalBalance(totalBalance);
 
-        Double totalIncome = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, startDate, endDate);
-        Double totalExpense = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, startDate, endDate);
+        BigDecimal totalIncome = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, startDate, endDate);
+        BigDecimal totalExpense = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, startDate, endDate);
 
         overview.setTotalIncome(totalIncome);
         overview.setTotalExpense(totalExpense);
-        overview.setNetSavings(totalIncome - totalExpense);
+        overview.setNetSavings(totalIncome.subtract(totalExpense));
 
         long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
         LocalDate prevEndDate = startDate.minusDays(1);
         LocalDate prevStartDate = prevEndDate.minusDays(daysBetween);
 
-        Double prevIncome = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, prevStartDate, prevEndDate);
-        Double prevExpense = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, prevStartDate, prevEndDate);
+        BigDecimal prevIncome = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.INCOME, prevStartDate, prevEndDate);
+        BigDecimal prevExpense = transactionRepository.getTotalAmountByType(userId, Transaction.TransactionType.EXPENSE, prevStartDate, prevEndDate);
 
         overview.setIncomeChangePercent(calculatePercentageChange(prevIncome, totalIncome));
         overview.setExpenseChangePercent(calculatePercentageChange(prevExpense, totalExpense));
@@ -74,12 +75,13 @@ public class ReportServiceImpl implements ReportService {
         return overview;
     }
 
-    private Double calculatePercentageChange(Double previous, Double current) {
-        if (previous == null || previous == 0.0) {
-            return (current != null && current > 0.0) ? 100.0 : 0.0;
+    private Double calculatePercentageChange(BigDecimal previous, BigDecimal current) {
+        double prev = previous != null ? previous.doubleValue() : 0.0;
+        double curr = current != null ? current.doubleValue() : 0.0;
+        if (prev == 0.0) {
+            return (curr > 0.0) ? 100.0 : 0.0;
         }
-        if (current == null) current = 0.0;
-        return ((current - previous) / previous) * 100.0;
+        return ((curr - prev) / prev) * 100.0;
     }
 
     private List<TrendDataDTO> formatTrendData(List<Object[]> rawData) {
@@ -88,9 +90,9 @@ public class ReportServiceImpl implements ReportService {
         for (Object[] row : rawData) {
             String dateStr = row[0].toString();
             Transaction.TransactionType type = (Transaction.TransactionType) row[1];
-            Double amount = (Double) row[2];
+            BigDecimal amount = (BigDecimal) row[2];
 
-            trendMap.putIfAbsent(dateStr, new TrendDataDTO(dateStr, 0.0, 0.0));
+            trendMap.putIfAbsent(dateStr, new TrendDataDTO(dateStr, BigDecimal.ZERO, BigDecimal.ZERO));
             TrendDataDTO dto = trendMap.get(dateStr);
 
             if (type == Transaction.TransactionType.INCOME) {
@@ -126,7 +128,7 @@ public class ReportServiceImpl implements ReportService {
                 row.createCell(1).setCellValue(t.getType() == Transaction.TransactionType.INCOME ? "Thu nhập" : "Chi tiêu");
                 row.createCell(2).setCellValue(t.getCategory().getName());
                 row.createCell(3).setCellValue(t.getWallet().getName());
-                row.createCell(4).setCellValue(t.getAmount());
+                row.createCell(4).setCellValue(t.getAmount().doubleValue());
                 row.createCell(5).setCellValue(t.getDescription() != null ? t.getDescription() : "");
             }
             for (int i = 0; i < headers.length; i++) {

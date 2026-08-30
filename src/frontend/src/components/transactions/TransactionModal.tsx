@@ -8,9 +8,10 @@ interface Props {
   onSuccess: () => void;
   wallets: any[];
   categories: any[];
+  editData?: any;
 }
 //FR-02
-export default function TransactionModal({ show, onHide, onSuccess, wallets, categories }: Props) {
+export default function TransactionModal({ show, onHide, onSuccess, wallets, categories, editData }: Props) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: 'EXPENSE',
@@ -23,26 +24,49 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
 
   useEffect(() => {
     if (show) {
-      setFormData(prev => ({
-        ...prev,
-        categoryId: categories.length > 0 ? categories[0].id : '',
-        walletId: wallets.length > 0 ? wallets[0].id : '',
-        amount: '',
-        description: ''
-      }));
+      if (editData) {
+        setFormData({
+          type: editData.type,
+          amount: editData.amount.toString(),
+          categoryId: editData.categoryId.toString(),
+          walletId: editData.walletId.toString(),
+          date: editData.date,
+          description: editData.description || ''
+        });
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          categoryId: categories.length > 0 ? categories[0].id : '',
+          walletId: wallets.length > 0 ? wallets[0].id : '',
+          amount: '',
+          description: '',
+          date: new Date().toISOString().split('T')[0],
+        }));
+      }
     }
-  }, [show, categories, wallets]);
+  }, [show, categories, wallets, editData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await transactionService.createTransaction({
+      const payload = {
         ...formData,
         amount: Number(formData.amount),
         categoryId: Number(formData.categoryId),
         walletId: Number(formData.walletId)
-      });
+      };
+
+      if (editData) {
+
+        await transactionService.updateTransaction(editData.id, payload);
+      } else {
+
+        await transactionService.createTransaction(payload);
+      }
+
+      window.dispatchEvent(new Event('reload-notifications'));
+
       onSuccess();
       onHide();
     } catch (error: any) {
@@ -55,7 +79,7 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
   return (
     <Modal show={show} onHide={onHide} centered size="lg">
       <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
-        <Modal.Title className="fw-bold fs-4">+ Thêm giao dịch mới</Modal.Title>
+        <Modal.Title className="fw-bold fs-4">{editData ? 'Sửa giao dịch' : '+ Thêm giao dịch mới'}</Modal.Title>
       </Modal.Header>
       <Modal.Body className="px-4 pb-4 pt-3">
         <Form onSubmit={handleSubmit}>
@@ -88,16 +112,27 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
             <Form.Label className="text-muted fw-medium small">Danh mục</Form.Label>
             <Form.Select size="lg" className="bg-light border-0" required
               value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: e.target.value})}>
-              {categories.filter(c => c.type === formData.type && !c.hidden).map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              <option value="">-- Chọn danh mục --</option>
+              {categories
+                .filter(c => c.type === formData.type && !c.hidden && !c.parentId)
+                .map(parent => (
+                  <React.Fragment key={parent.id}>
+                    <option value={parent.id} className="fw-bold">{parent.name}</option>
+                    {categories
+                      .filter(child => child.type === formData.type && !child.hidden && child.parentId === parent.id)
+                      .map(child => (
+                        <option key={child.id} value={child.id}>&nbsp;&nbsp;&nbsp;↳ {child.name}</option>
+                      ))}
+                  </React.Fragment>
               ))}
             </Form.Select>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label className="text-muted fw-medium small">Ví thanh toán</Form.Label>
-            <Form.Select size="lg" className="bg-light border-0" required
+            <Form.Select size="lg" className="bg-light border-0" required disabled={!!editData}
               value={formData.walletId} onChange={(e) => setFormData({...formData, walletId: e.target.value})}>
+              <option value="">-- Chọn ví --</option>
               {wallets.map(w => (
                 <option key={w.id} value={w.id}>{w.name} - Số dư: {w.balance.toLocaleString('vi-VN')}đ</option>
               ))}

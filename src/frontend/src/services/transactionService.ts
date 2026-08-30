@@ -19,6 +19,11 @@ const transactionService = {
   deleteTransaction: async (id: number) => {
     const response = await api.delete(`/transactions/${id}`);
     return response.data;
+  },
+
+  getTransactionHistory: async (id: number) => {
+    const response = await api.get(`/transactions/${id}/history`);
+    return response.data;
   }
 };
 

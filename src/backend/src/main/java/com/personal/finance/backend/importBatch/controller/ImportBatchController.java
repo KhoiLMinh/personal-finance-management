@@ -8,6 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/import-batches")
 @RequiredArgsConstructor
@@ -15,17 +18,32 @@ public class ImportBatchController {
 
     private final ImportBatchService importBatchService;
 
-    @PostMapping("/csv")
-    public ResponseEntity<ImportBatchDTO> importCsv(
-            @RequestAttribute("userId") Long userId,
-            @RequestParam("walletId") Long walletId,
+    @PostMapping("/preview")
+    public ResponseEntity<Map<String, Object>> previewFile(
             @RequestParam("file") MultipartFile file) {
 
-        if (file.isEmpty() || file.getOriginalFilename() == null || !file.getOriginalFilename().toLowerCase().endsWith(".csv")) {
-            throw new RuntimeException("Vui lòng tải lên file định dạng .csv");
+        String filename = file.getOriginalFilename();
+        if (file.isEmpty() || filename == null || (!filename.toLowerCase().endsWith(".csv") && !filename.toLowerCase().endsWith(".xlsx") && !filename.toLowerCase().endsWith(".xls"))) {
+            throw new RuntimeException("Vui lòng tải lên file định dạng .csv hoặc .xlsx / .xls");
         }
 
+        List<String> headers = importBatchService.extractHeaders(file);
+        return ResponseEntity.ok(Map.of(
+                "filename", filename,
+                "headers", headers
+        ));
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<ImportBatchDTO> importFile(
+            @RequestAttribute("userId") Long userId,
+            @RequestParam("walletId") Long walletId,
+            @RequestParam("dateCol") Integer dateCol,
+            @RequestParam("amountCol") Integer amountCol,
+            @RequestParam("descCol") Integer descCol,
+            @RequestParam("file") MultipartFile file) {
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(importBatchService.importCsv(userId, walletId, file));
+                .body(importBatchService.importData(userId, walletId, dateCol, amountCol, descCol, file));
     }
 }

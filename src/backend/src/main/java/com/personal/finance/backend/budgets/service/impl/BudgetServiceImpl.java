@@ -9,6 +9,8 @@ import com.personal.finance.backend.budgets.repository.BudgetRepository;
 import com.personal.finance.backend.budgets.service.BudgetService;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
+import com.personal.finance.backend.settings.repository.SystemSettingRepository;
+import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -20,6 +22,8 @@ import org.springframework.stereotype.Service;
 import com.personal.finance.backend.common.service.EmailService;
 import com.personal.finance.backend.notifications.service.NotificationService;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
+
+import java.math.BigDecimal;
 
 @Slf4j
 @Service
@@ -33,6 +37,7 @@ public class BudgetServiceImpl implements BudgetService {
     private final TransactionRepository transactionRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final SystemSettingRepository systemSettingRepository;
 
 
     private Budget getOwnedBudget(Long id, Long userId) {
@@ -70,7 +75,14 @@ public class BudgetServiceImpl implements BudgetService {
 
         budget.setLimitAmount(request.getLimitAmount());
 
-        budget.setWarningPercent(request.getWarningPercent() != null ? request.getWarningPercent() : 80.0);
+        double defaultWarning = 80.0;
+        try {
+            defaultWarning = systemSettingRepository.findById("DEFAULT_BUDGET_WARNING_PERCENT")
+                    .map(s -> Double.parseDouble(s.getValue()))
+                    .orElse(80.0);
+        } catch (Exception ignored) {}
+
+        budget.setWarningPercent(request.getWarningPercent() != null ? request.getWarningPercent() : defaultWarning);
         budget.setStatus(Budget.BudgetStatus.ACTIVE);
 
         Budget savedBudget = budgetRepository.save(budget);
@@ -121,14 +133,15 @@ public class BudgetServiceImpl implements BudgetService {
                 .findFirst()
                 .ifPresent(budget -> {
 
-                    Double totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(categoryId, userId, month, year);
+                    BigDecimal totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(
+                            categoryId, userId, month, year, Transaction.TransactionType.EXPENSE);
                     User user = budget.getUser();
 
 
-                    double warningLimit = budget.getLimitAmount() * (budget.getWarningPercent() / 100.0);
+                    BigDecimal warningLimit = budget.getLimitAmount().multiply(BigDecimal.valueOf(budget.getWarningPercent() / 100.0));
 
 
-                    if (totalSpent >= budget.getLimitAmount() && budget.getStatus() != Budget.BudgetStatus.EXCEED) {
+                    if (totalSpent.compareTo(budget.getLimitAmount()) >= 0 && budget.getStatus() != Budget.BudgetStatus.EXCEED) {
                         budget.setStatus(Budget.BudgetStatus.EXCEED);
                         budgetRepository.save(budget);
 
@@ -139,7 +152,7 @@ public class BudgetServiceImpl implements BudgetService {
                         emailService.sendEmail(user.getEmail(), "Cảnh báo vượt ngân sách - Personal Finance", msg);
                     }
 
-                    else if (totalSpent >= warningLimit && totalSpent < budget.getLimitAmount() && !budget.isWarningSent()) {
+                    else if (totalSpent.compareTo(warningLimit) >= 0 && totalSpent.compareTo(budget.getLimitAmount()) < 0 && !budget.isWarningSent()) {
                         budget.setWarningSent(true);
                         budgetRepository.save(budget);
 

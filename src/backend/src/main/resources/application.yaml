@@ -47,3 +47,8 @@ app:
 
   gemini:
     api-key: ${GEMINI_API_KEY:}
+
+  cloudinary:
+    cloud-name: drtp2ufx2
+    api-key: 546832713531937
+    api-secret: 2-Ut1TqwKjpIAbA3DUG6OgG7WrI

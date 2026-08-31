@@ -6,8 +6,19 @@ const userService = {
     return response.data;
   },
 
-  updateProfile: async (data: { fullName: string; avatar?: string }) => {
-    const response = await api.patch('/users/profile', data);
+  updateProfile: async (data: { fullName: string; avatarFile?: File | null }) => {
+    const formData = new FormData();
+    formData.append('fullName', data.fullName);
+    
+    if (data.avatarFile) {
+      formData.append('avatar', data.avatarFile); 
+    }
+
+    const response = await api.patch('/users/profile', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

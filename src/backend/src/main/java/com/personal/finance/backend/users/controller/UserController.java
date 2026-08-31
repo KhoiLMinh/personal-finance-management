@@ -5,6 +5,7 @@ import com.personal.finance.backend.users.dto.response.UserDTO;
 import com.personal.finance.backend.users.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -29,10 +30,10 @@ public class UserController {
         return ResponseEntity.ok(this.userService.getUserById(userId));
     }
 
-    @PatchMapping("/profile")
+    @PatchMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> updateProfile(
             @RequestAttribute("userId") Long userId,
-            @Valid @RequestBody UpdateProfileRequest request) {
+            @ModelAttribute UpdateProfileRequest request) {
         this.userService.updateUser(userId, request);
         return ResponseEntity.ok("Cập nhật thông tin thành công!");
     }

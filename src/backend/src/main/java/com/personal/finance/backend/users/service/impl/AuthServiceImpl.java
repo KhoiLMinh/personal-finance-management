@@ -97,7 +97,7 @@ public class AuthServiceImpl implements AuthService {
 
                     newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
                     newUser.setRole(User.Role.USER);
-
+                    newUser.setProvider(User.Provider.GOOGLE);
                     log.info("Tạo mới tài khoản qua Google cho email: {}", email);
                     return userRepository.save(newUser);
                 });
@@ -119,6 +119,10 @@ public class AuthServiceImpl implements AuthService {
     public void changePassword(Long id, ChangePasswordRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+
+        if (user.getProvider() == User.Provider.GOOGLE) {
+            throw new RuntimeException("Tài khoản liên kết với Google không hỗ trợ đổi mật khẩu!");
+        }
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new RuntimeException("Mật khẩu cũ không chính xác!");

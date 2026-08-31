@@ -16,6 +16,7 @@ public class UserMapper {
         dto.setFullName(user.getFullName());
         dto.setAvatar(user.getAvatar());
         dto.setRole(user.getRole().name());
+        dto.setProvider(user.getProvider() != null ? user.getProvider().name() : "LOCAL");
         dto.setCreateAt(user.getCreateAt());
         dto.setUpdateAt(user.getUpdateAt());
         return dto;

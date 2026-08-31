@@ -217,24 +217,26 @@ export default function ProfilePage() {
             </Card.Body>
           </Card>
 
-          <Card className="border-0 shadow-sm rounded-4 mb-4">
-            <Card.Body className="p-4 d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center">
-                <div className="p-2 rounded-circle me-3" style={{ backgroundColor: '#fee2e2' }}>
-                  <KeyRound size={24} className="text-danger" />
+          {user?.provider !== 'GOOGLE' && (
+            <Card className="border-0 shadow-sm rounded-4 mb-4">
+              <Card.Body className="p-4 d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center">
+                  <div className="p-2 rounded-circle me-3" style={{ backgroundColor: '#fee2e2' }}>
+                    <KeyRound size={24} className="text-danger" />
+                  </div>
+                  <div>
+                    <h5 className="fw-bold mb-0 text-dark">Mật khẩu và bảo mật</h5>
+                    <small className="text-muted">Cập nhật mật khẩu để bảo vệ tài khoản</small>
+                  </div>
                 </div>
-                <div>
-                  <h5 className="fw-bold mb-0 text-dark">Mật khẩu và bảo mật</h5>
-                  <small className="text-muted">Cập nhật mật khẩu để bảo vệ tài khoản</small>
-                </div>
-              </div>
-              <Link to="/change-password" className="btn btn-danger fw-bold rounded-pill px-4">
-                Đổi mật khẩu
-              </Link>
-            </Card.Body>
-          </Card>
+                <Link to="/change-password" className="btn btn-danger fw-bold rounded-pill px-4">
+                  Đổi mật khẩu
+                </Link>
+              </Card.Body>
+            </Card>
+          )}
 
-          {/* COMPONENT SAO LƯU & PHỤC HỒI DỮ LIỆU */}
+
           <Card className="border-0 shadow-sm rounded-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-center mb-3">

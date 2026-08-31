@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Image, Spinner } from 'react-bootstrap';
 import { Eye, EyeOff, Wallet, LogIn } from 'lucide-react'; 
+import { GoogleLogin } from '@react-oauth/google';
 
 import authService from '../services/authService'; 
 import { useAuth } from '../context/AuthContext'; 
@@ -13,6 +14,7 @@ interface User {
   fullName: string;
   avatar: string | null;
   role: 'ADMIN' | 'USER';
+  provider: string;
 }
 
 interface AuthResponse {
@@ -51,6 +53,29 @@ export default function LoginPage() {
       } else {
         setErrorMsg('Lỗi kết nối máy chủ. Vui lòng thử lại!');
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setErrorMsg('');
+    setIsLoading(true);
+    try {
+      const response: AuthResponse = await authService.googleLogin({ 
+        googleToken: credentialResponse.credential 
+      });
+      
+      login(response.user, response.token);
+      
+      if (response.user.role === 'ADMIN') {
+        navigate('/admin/users');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      console.error("Lỗi Google Login:", err);
+      setErrorMsg(err.response?.data?.error?.message || 'Đăng nhập Google thất bại!');
     } finally {
       setIsLoading(false);
     }
@@ -124,16 +149,29 @@ export default function LoginPage() {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <>
-                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                    Đang xác thực...
-                  </>
+                  <><Spinner as="span" animation="border" size="sm" className="me-2" /> Đang xác thực...</>
                 ) : (
-                  <>
-                    <LogIn size={20} className="me-2" /> Đăng nhập
-                  </>
+                  <><LogIn size={20} className="me-2" /> Đăng nhập</>
                 )}
               </Button>
+
+              {/* NÚT ĐĂNG NHẬP BẰNG GOOGLE NẰM Ở ĐÂY */}
+              <div className="d-flex align-items-center my-4">
+                <div className="border-bottom flex-grow-1"></div>
+                <span className="px-3 text-muted small fw-medium">HOẶC</span>
+                <div className="border-bottom flex-grow-1"></div>
+              </div>
+              
+              <div className="d-flex justify-content-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setErrorMsg('Cửa sổ đăng nhập Google đã bị đóng hoặc có lỗi xảy ra.')}
+                  useOneTap
+                  theme="outline"
+                  shape="rectangular"
+                  width="100%"
+                />
+              </div>
 
               <div className="text-center mt-4 small text-secondary"> 
                 Bạn chưa có tài khoản?{' '}

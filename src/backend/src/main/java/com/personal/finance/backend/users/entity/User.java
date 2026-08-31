@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.security.Provider;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,10 @@ public class User extends Base {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    private Provider provider = Provider.LOCAL;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private Role role = Role.USER;
 
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -78,4 +83,7 @@ public class User extends Base {
     public enum Role {
         ADMIN, USER
     }
+
+    public enum Provider {
+        LOCAL, GOOGLE }
 }

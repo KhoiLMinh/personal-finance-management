@@ -42,9 +42,8 @@ public class ReportServiceImpl implements ReportService {
 
     //FR-03, FR-12
     @Override
-    public DashboardOverviewDTO getDashboardOverview(Long userId, LocalDate startDate, LocalDate endDate) {
+    public DashboardOverviewDTO getDashboardOverview(Long userId, LocalDate startDate, LocalDate endDate, String timeUnit) {
         DashboardOverviewDTO overview = new DashboardOverviewDTO();
-
 
         BigDecimal totalBalance = walletRepository.getTotalBalanceAccessibleByUser(userId);
         overview.setTotalBalance(totalBalance);
@@ -70,7 +69,8 @@ public class ReportServiceImpl implements ReportService {
         overview.setExpenseByCategory(expenseByCategory);
 
         List<Object[]> rawTrendData = transactionRepository.getTrendData(userId, startDate, endDate);
-        overview.setTrendData(formatTrendData(rawTrendData));
+
+        overview.setTrendData(formatTrendData(rawTrendData, timeUnit));
 
         return overview;
     }
@@ -82,6 +82,49 @@ public class ReportServiceImpl implements ReportService {
             return (curr > 0.0) ? 100.0 : 0.0;
         }
         return ((curr - prev) / prev) * 100.0;
+    }
+
+    private List<TrendDataDTO> formatTrendData(List<Object[]> rawData, String timeUnit) {
+        Map<String, TrendDataDTO> trendMap = new LinkedHashMap<>();
+        if ("WEEK".equalsIgnoreCase(timeUnit)) {
+            for (int i = 1; i <= 5; i++) {
+                trendMap.put("Tuần " + i, new TrendDataDTO("Tuần " + i, BigDecimal.ZERO, BigDecimal.ZERO));
+            }
+        } else if ("MONTH".equalsIgnoreCase(timeUnit)) {
+            for (int i = 1; i <= 12; i++) {
+                trendMap.put("Tháng " + i, new TrendDataDTO("Tháng " + i, BigDecimal.ZERO, BigDecimal.ZERO));
+            }
+        }
+
+        for (Object[] row : rawData) {
+            String dateStr = row[0].toString();
+            LocalDate txDate = LocalDate.parse(dateStr);
+            Transaction.TransactionType type = (Transaction.TransactionType) row[1];
+            BigDecimal amount = (BigDecimal) row[2];
+
+            String key = dateStr;
+
+            if ("WEEK".equalsIgnoreCase(timeUnit)) {
+                int dayOfMonth = txDate.getDayOfMonth();
+                if (dayOfMonth <= 7) key = "Tuần 1";
+                else if (dayOfMonth <= 14) key = "Tuần 2";
+                else if (dayOfMonth <= 21) key = "Tuần 3";
+                else if (dayOfMonth <= 28) key = "Tuần 4";
+                else key = "Tuần 5";
+            } else if ("MONTH".equalsIgnoreCase(timeUnit)) {
+                key = "Tháng " + txDate.getMonthValue();
+            }
+
+            trendMap.putIfAbsent(key, new TrendDataDTO(key, BigDecimal.ZERO, BigDecimal.ZERO));
+            TrendDataDTO dto = trendMap.get(key);
+
+            if (type == Transaction.TransactionType.INCOME) {
+                dto.setIncome(dto.getIncome().add(amount));
+            } else {
+                dto.setExpense(dto.getExpense().add(amount));
+            }
+        }
+        return new ArrayList<>(trendMap.values());
     }
 
     private List<TrendDataDTO> formatTrendData(List<Object[]> rawData) {

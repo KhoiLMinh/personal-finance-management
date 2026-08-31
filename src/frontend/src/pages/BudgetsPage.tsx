@@ -9,6 +9,7 @@ import reportService from '../services/reportService';
 import MySpinner from '../components/MySpinner';
 import BudgetCard from '../components/budgets/BudgetCard';
 import BudgetModal from '../components/budgets/BudgetModal';
+import BudgetHistoryModal from '../components/budgets/BudgetHistoryModal'; // Import Component Mới
 
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<any[]>([]);
@@ -18,6 +19,8 @@ export default function BudgetsPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [editData, setEditData] = useState<any>(null);
+
+  const [historyBudgetId, setHistoryBudgetId] = useState<number | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -105,6 +108,7 @@ export default function BudgetsPage() {
               spentAmount={getSpentAmount(budget.categoryId)}
               onEdit={handleOpenEdit}
               onDelete={handleDelete}
+              onHistory={(id) => setHistoryBudgetId(id)}
             />
           </Col>
         )) : (
@@ -121,6 +125,13 @@ export default function BudgetsPage() {
         editData={editData} 
         categories={categories}
       />
+
+      {historyBudgetId && (
+        <BudgetHistoryModal
+          budgetId={historyBudgetId}
+          onClose={() => setHistoryBudgetId(null)}
+        />
+      )}
 
     </div>
   );

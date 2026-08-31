@@ -3,8 +3,10 @@ package com.personal.finance.backend.budgets.service.impl;
 import com.personal.finance.backend.budgets.dto.request.CreateBudgetRequest;
 import com.personal.finance.backend.budgets.dto.request.UpdateBudgetRequest;
 import com.personal.finance.backend.budgets.dto.response.BudgetDTO;
+import com.personal.finance.backend.budgets.dto.response.BudgetHistoryDTO;
 import com.personal.finance.backend.budgets.entity.Budget;
 import com.personal.finance.backend.budgets.mapper.BudgetMapper;
+import com.personal.finance.backend.budgets.repository.BudgetHistoryRepository;
 import com.personal.finance.backend.budgets.repository.BudgetRepository;
 import com.personal.finance.backend.budgets.service.BudgetService;
 import com.personal.finance.backend.categories.entity.Category;
@@ -24,6 +26,7 @@ import com.personal.finance.backend.notifications.service.NotificationService;
 import com.personal.finance.backend.transactions.repository.TransactionRepository;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -38,7 +41,7 @@ public class BudgetServiceImpl implements BudgetService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final SystemSettingRepository systemSettingRepository;
-
+    private final BudgetHistoryRepository budgetHistoryRepository;
 
     private Budget getOwnedBudget(Long id, Long userId) {
         return budgetRepository.findByIdAndUserId(id, userId)
@@ -102,16 +105,32 @@ public class BudgetServiceImpl implements BudgetService {
         return budgetMapper.toDTO(getOwnedBudget(id, userId));
     }
 
+
     @Override
     @Transactional
     public BudgetDTO updateBudget(Long id, Long userId, UpdateBudgetRequest request) {
         Budget budget = getOwnedBudget(id, userId);
+        boolean isChanged = false;
+        com.personal.finance.backend.budgets.entity.BudgetHistory history = new com.personal.finance.backend.budgets.entity.BudgetHistory();
+        history.setBudget(budget);
+        history.setOldLimitAmount(budget.getLimitAmount());
+        history.setOldWarningPercent(budget.getWarningPercent());
 
-        budget.setLimitAmount(request.getLimitAmount());
-        if (request.getWarningPercent() != null) {
-            budget.setWarningPercent(request.getWarningPercent());
+        if (budget.getLimitAmount().compareTo(request.getLimitAmount()) != 0) {
+            budget.setLimitAmount(request.getLimitAmount());
+            isChanged = true;
         }
 
+        if (request.getWarningPercent() != null && !request.getWarningPercent().equals(budget.getWarningPercent())) {
+            budget.setWarningPercent(request.getWarningPercent());
+            isChanged = true;
+        }
+        if (isChanged) {
+            history.setNewLimitAmount(budget.getLimitAmount());
+            history.setNewWarningPercent(budget.getWarningPercent());
+            history.setModifiedBy(userId);
+            budgetHistoryRepository.save(history);
+        }
         Budget updatedBudget = budgetRepository.save(budget);
         log.info("Cập nhật thành công ngân sách ID: {} bởi UserId: {}", id, userId);
         return budgetMapper.toDTO(updatedBudget);
@@ -163,5 +182,15 @@ public class BudgetServiceImpl implements BudgetService {
                         emailService.sendEmail(user.getEmail(), "Cảnh báo ngân sách - Personal Finance", msg);
                     }
                 });
+    }
+
+
+    @Override
+    public List<BudgetHistoryDTO> getBudgetHistory(Long id, Long userId) {
+        getOwnedBudget(id, userId);
+        return budgetHistoryRepository.findAllByBudgetIdOrderByCreateAtDesc(id)
+                .stream()
+                .map(budgetMapper::toHistoryDTO)
+                .toList();
     }
 }

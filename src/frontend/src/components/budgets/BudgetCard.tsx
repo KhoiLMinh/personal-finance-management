@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, ProgressBar, Dropdown } from 'react-bootstrap';
-import { Settings, PieChart, AlertTriangle } from 'lucide-react';
+import { Settings, PieChart, AlertTriangle, Edit, History, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
 
 interface Props {
@@ -8,13 +8,13 @@ interface Props {
   spentAmount: number;
   onEdit: (budget: any) => void;
   onDelete: (id: number) => void;
+  onHistory: (id: number) => void; 
 }
 
-export default function BudgetCard({ budget, spentAmount, onEdit, onDelete }: Props) {
+export default function BudgetCard({ budget, spentAmount, onEdit, onDelete, onHistory }: Props) {
   const remaining = Math.max(0, budget.limitAmount - spentAmount);
   const percentage = Math.min(100, Math.round((spentAmount / budget.limitAmount) * 100));
   
-  // Xử lý đổi màu Thanh Progress Bar: Đỏ khi Vượt, Cam khi Cảnh báo, Xanh khi An toàn
   let progressVariant = "primary";
   if (percentage >= 100) progressVariant = "danger";
   else if (percentage >= (budget.warningPercent || 80)) progressVariant = "warning";
@@ -22,7 +22,6 @@ export default function BudgetCard({ budget, spentAmount, onEdit, onDelete }: Pr
   return (
     <Card className="border-0 rounded-4 shadow-sm h-100 bg-white" style={{ border: '1px solid var(--color-border)' }}>
       <Card.Body className="p-4 d-flex flex-column">
-        {/* Header Thẻ: Icon + Tên Danh mục */}
         <div className="d-flex justify-content-between align-items-start mb-3">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-light rounded-3 d-flex align-items-center justify-content-center" style={{ width: 48, height: 48 }}>
@@ -39,14 +38,14 @@ export default function BudgetCard({ budget, spentAmount, onEdit, onDelete }: Pr
               <Settings size={18} />
             </Dropdown.Toggle>
             <Dropdown.Menu className="shadow border-0 rounded-3">
-              <Dropdown.Item onClick={() => onEdit(budget)}>Sửa hạn mức</Dropdown.Item>
+              <Dropdown.Item onClick={() => onEdit(budget)} className="d-flex align-items-center"><Edit size={16} className="me-2 text-primary"/>Sửa hạn mức</Dropdown.Item>
+              <Dropdown.Item onClick={() => onHistory(budget.id)} className="d-flex align-items-center"><History size={16} className="me-2 text-info"/>Xem lịch sử đối soát</Dropdown.Item>
               <Dropdown.Divider />
-              <Dropdown.Item onClick={() => onDelete(budget.id)} className="text-danger">Xóa ngân sách</Dropdown.Item>
+              <Dropdown.Item onClick={() => onDelete(budget.id)} className="text-danger d-flex align-items-center"><Trash2 size={16} className="me-2"/>Xóa ngân sách</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
         </div>
 
-        {/* Số liệu Còn lại / Tổng số */}
         <div className="d-flex justify-content-between align-items-end mb-2 mt-auto">
           <div>
             <span className="text-muted small">Còn lại: </span>
@@ -62,7 +61,6 @@ export default function BudgetCard({ budget, spentAmount, onEdit, onDelete }: Pr
 
         <ProgressBar now={percentage} variant={progressVariant} className="mb-2 rounded-pill" style={{ height: '8px' }} />
         
-        {/* Dòng chữ cảnh báo (Chỉ hiện khi vượt mốc % Warning) */}
         {percentage >= (budget.warningPercent || 80) && (
           <div className={`small fw-medium mt-2 d-flex align-items-center ${percentage >= 100 ? 'text-danger' : 'text-warning'}`}>
             <AlertTriangle size={14} className="me-1" />

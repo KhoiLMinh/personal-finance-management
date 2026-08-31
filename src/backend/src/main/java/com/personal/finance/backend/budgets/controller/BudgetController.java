@@ -3,6 +3,7 @@ package com.personal.finance.backend.budgets.controller;
 import com.personal.finance.backend.budgets.dto.request.CreateBudgetRequest;
 import com.personal.finance.backend.budgets.dto.request.UpdateBudgetRequest;
 import com.personal.finance.backend.budgets.dto.response.BudgetDTO;
+import com.personal.finance.backend.budgets.dto.response.BudgetHistoryDTO;
 import com.personal.finance.backend.budgets.service.BudgetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -55,5 +56,12 @@ public class BudgetController {
             @PathVariable Long id) {
         budgetService.deleteBudget(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<java.util.List<BudgetHistoryDTO>> getBudgetHistory(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(budgetService.getBudgetHistory(id, userId));
     }
 }

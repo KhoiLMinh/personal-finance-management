@@ -14,9 +14,11 @@ import java.util.Optional;
 
 @Repository
 public interface RecurringBillRepository extends JpaRepository<RecurringBill, Long> {
+
     Page<RecurringBill> findAllByUserId(Long userId, Pageable pageable);
+
     Optional<RecurringBill> findByIdAndUserId(Long id, Long userId);
 
-    @Query("SELECT r FROM RecurringBill r WHERE r.nextDueDate <= :today")
-    List<RecurringBill> findAllDueBills(@Param("today") LocalDate today);
+    @Query("SELECT r FROM RecurringBill r WHERE r.lastExecuted IS NULL OR r.lastExecuted < :today")
+    List<RecurringBill> findPendingBills(@Param("today") LocalDate today);
 }

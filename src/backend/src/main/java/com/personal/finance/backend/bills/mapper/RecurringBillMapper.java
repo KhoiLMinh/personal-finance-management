@@ -13,7 +13,6 @@ public class RecurringBillMapper {
         dto.setTitle(bill.getTitle());
         dto.setAmount(bill.getAmount());
         dto.setFrequency(bill.getFrequency().name());
-        dto.setNextDueDate(bill.getNextDueDate());
         dto.setDescription(bill.getDescription());
         return dto;
     }

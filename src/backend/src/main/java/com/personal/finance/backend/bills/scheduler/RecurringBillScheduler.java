@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Slf4j
@@ -21,32 +22,50 @@ public class RecurringBillScheduler {
     private final RecurringBillRepository recurringBillRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
-    //alarm at 7.00
-    @Scheduled(cron = "0 0 7 * * *")
+
+    @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void processRecurringBills() {
         LocalDate today = LocalDate.now();
-        List<RecurringBill> dueBills = recurringBillRepository.findAllDueBills(today);
+        LocalTime now = LocalTime.now();
 
-        for (RecurringBill bill : dueBills) {
-            String msg = String.format("Hôm nay là ngày đến hạn thanh toán hóa đơn '%s' với số tiền %,.0f VNĐ.",
-                    bill.getTitle(), bill.getAmount());
+        List<RecurringBill> pendingBills = recurringBillRepository.findPendingBills(today);
 
-            notificationService.createSystemNotification(bill.getUser().getId(), "Nhắc nhở hóa đơn", msg);
-            emailService.sendEmail(bill.getUser().getEmail(), "Nhắc nhở thanh toán hóa đơn", msg);
+        for (RecurringBill bill : pendingBills) {
+            boolean shouldExecuteToday = false;
 
-            LocalDate nextDate = calculateNextDueDate(bill.getNextDueDate(), bill.getFrequency());
-            bill.setNextDueDate(nextDate);
-            recurringBillRepository.save(bill);
+            if (bill.getFrequency() == RecurringBill.Frequency.DAILY) {
+                shouldExecuteToday = true;
+            } else if (bill.getFrequency() == RecurringBill.Frequency.WEEKLY) {
+                int currentDayOfWeek = today.getDayOfWeek().getValue() + 1;
+                if (bill.getExecutionDay() != null && bill.getExecutionDay() == currentDayOfWeek) {
+                    shouldExecuteToday = true;
+                }
+            } else if (bill.getFrequency() == RecurringBill.Frequency.MONTHLY) {
+                int currentDay = today.getDayOfMonth();
+                int lastDayOfMonth = today.lengthOfMonth();
+                int targetDay = bill.getExecutionDay() != null ? bill.getExecutionDay() : 1;
+
+                if (targetDay > lastDayOfMonth) targetDay = lastDayOfMonth;
+
+                if (currentDay == targetDay) shouldExecuteToday = true;
+            }
+
+            if (shouldExecuteToday) {
+                boolean isTimeReached = bill.getNotificationTime() == null || !bill.getNotificationTime().isAfter(now);
+
+                if (isTimeReached) {
+                    String msg = String.format("Đã đến hạn thanh toán hóa đơn định kỳ '%s' với dự toán khoảng %,.0f VNĐ. Hãy kiểm tra và thanh toán nhé!",
+                            bill.getTitle(), bill.getAmount());
+                    notificationService.createSystemNotification(bill.getUser().getId(), "Nhắc nhở thanh toán hóa đơn", msg);
+                    emailService.sendEmail(bill.getUser().getEmail(), "Nhắc nhở thanh toán hóa đơn - Personal Finance", msg);
+
+                    bill.setLastExecuted(today);
+                    recurringBillRepository.save(bill);
+
+                    log.info("Đã gửi thông báo nhắc nhở hóa đơn ID: {} cho user {}", bill.getId(), bill.getUser().getUsername());
+                }
+            }
         }
-    }
-
-    private LocalDate calculateNextDueDate(LocalDate currentDate, RecurringBill.Frequency frequency) {
-        return switch (frequency) {
-            case DAILY -> currentDate.plusDays(1);
-            case WEEKLY -> currentDate.plusWeeks(1);
-            case MONTHLY -> currentDate.plusMonths(1);
-            case YEARLY -> currentDate.plusYears(1);
-        };
     }
 }

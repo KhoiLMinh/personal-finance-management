@@ -13,9 +13,9 @@ import java.time.LocalTime;
 
 @Getter
 @Setter
-public class CreateRecurringBillRequest {
+public class UpdateRecurringBillRequest {
     @NotBlank(message = "Tên hóa đơn không được để trống")
-    private String title; // Frontend sẽ gửi title
+    private String title;
 
     @NotNull(message = "Số tiền không được để trống")
     @Positive(message = "Số tiền phải lớn hơn 0")

@@ -8,6 +8,7 @@ import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.entity.CategoryRule;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.categories.repository.CategoryRuleRepository;
+import com.personal.finance.backend.categories.service.CategoryService;
 import com.personal.finance.backend.savingGoals.entity.SavingGoal;
 import com.personal.finance.backend.savingGoals.repository.SavingGoalRepository;
 import com.personal.finance.backend.settings.entity.SystemSetting;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -46,6 +48,7 @@ public class DataSeeder implements CommandLineRunner {
     private final SavingGoalRepository savingGoalRepository;
     private final RecurringBillRepository recurringBillRepository;
     private final SystemSettingRepository systemSettingRepository;
+    private final CategoryService categoryService;
 
     @Override
     @Transactional
@@ -99,9 +102,14 @@ public class DataSeeder implements CommandLineRunner {
             demoUser.setFullName("Minh Khôi");
             demoUser.setRole(User.Role.USER);
             demoUser = userRepository.save(demoUser);
+            categoryService.cloneAdminCategoriesForNewUser(demoUser);
             log.info("Đã tạo tài khoản USER: user_demo / 123");
         } else {
             demoUser = userRepository.findByUsername("user_demo").get();
+        }
+
+        if (categoryRepository.findAllByUserIdOrderByCreateAtDesc(demoUser.getId()).isEmpty()) {
+            categoryService.cloneAdminCategoriesForNewUser(demoUser);
         }
 
         if (walletRepository.findAllWalletAccessByUser(demoUser.getId()).size() > 0) {
@@ -174,12 +182,14 @@ public class DataSeeder implements CommandLineRunner {
         budget2.setStatus(Budget.BudgetStatus.EXCEED);
         budgetRepository.save(budget2);
 
+        // Cập nhật phần Hóa đơn định kỳ theo logic mới: Có Execution Day và Notification Time
         RecurringBill bill1 = new RecurringBill();
         bill1.setUser(demoUser);
         bill1.setTitle("Tiền mạng Internet");
         bill1.setAmount(BigDecimal.valueOf(250000));
         bill1.setFrequency(RecurringBill.Frequency.MONTHLY);
-        bill1.setNextDueDate(today.plusDays(5));
+        bill1.setExecutionDay(15); // Nhắc vào ngày 15 hằng tháng
+        bill1.setNotificationTime(LocalTime.of(8, 0)); // Báo thức lúc 08:00 sáng
         recurringBillRepository.save(bill1);
 
         createTx(walletBank, salaryCat, BigDecimal.valueOf(25000000.0), Transaction.TransactionType.INCOME, today.minusMonths(1).withDayOfMonth(5), "Lương tháng trước");

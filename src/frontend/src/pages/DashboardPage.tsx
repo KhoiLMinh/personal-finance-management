@@ -18,26 +18,21 @@ export default function DashboardPage() {
   const [aiLoading, setAiLoading] = useState<boolean>(true);
   const [aiError, setAiError] = useState<boolean>(false);
 
-  // === STATE QUẢN LÝ BỘ LỌC ===
-  const [timeUnit, setTimeUnit] = useState<string>('WEEK'); // Mặc định xem theo Tuần (Từng tháng)
+  const [timeUnit, setTimeUnit] = useState<string>('WEEK'); 
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth() + 1);
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
 
   useEffect(() => {
     fetchOverview();
-    fetchAiAdvice();
-  }, [timeUnit, currentMonth, currentYear]); // Tự động load lại khi bộ lọc thay đổi
+  }, [timeUnit, currentMonth, currentYear]);
 
-  // Hàm helper để tính ngày bắt đầu và kết thúc dựa trên bộ lọc
   const getDateRange = () => {
     let firstDay, lastDay;
     if (timeUnit === 'WEEK') {
-      // Xem theo tuần -> Trích xuất dữ liệu của 1 tháng
       firstDay = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
       const lastDate = new Date(currentYear, currentMonth, 0).getDate();
       lastDay = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${lastDate}`;
     } else {
-      // Xem theo tháng -> Trích xuất dữ liệu của cả 1 năm
       firstDay = `${currentYear}-01-01`;
       lastDay = `${currentYear}-12-31`;
     }
@@ -50,6 +45,13 @@ export default function DashboardPage() {
       const { firstDay, lastDay } = getDateRange();
       const overviewData = await reportService.getOverview(firstDay, lastDay, timeUnit);
       setOverview(overviewData);
+
+      if (overviewData.totalIncome > 0 || overviewData.totalExpense > 0) {
+        fetchAiAdvice();
+      } else {
+        setAiAdvice(null);
+        setAiLoading(false);
+      }
     } catch (error) {
       console.error("Lỗi tải overview:", error);
     } finally {
@@ -72,7 +74,6 @@ export default function DashboardPage() {
     }
   };
   
-  //Fr13
   const handleExportExcel = async () => {
     try {
       const { firstDay, lastDay } = getDateRange();
@@ -92,15 +93,14 @@ export default function DashboardPage() {
   };
 
   if (overviewLoading && !overview) return <MySpinner />;
+  const hasData = overview && (overview.totalIncome > 0 || overview.totalExpense > 0);
 
   return (
     <div className="p-4 flex-grow-1" style={{ backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-
       <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <h4 className="fw-bold mb-3 mb-md-0 text-dark">Tổng quan tài chính</h4>
         
         <div className="d-flex gap-2">
-
           <Form.Select 
             className="border-0 shadow-sm rounded-3 fw-medium"
             value={currentYear}
@@ -143,23 +143,25 @@ export default function DashboardPage() {
         <p className="text-center mt-5 text-muted">Không có dữ liệu hiển thị.</p>
       ) : (
         <>
-          <AiAdviceCard
-            aiAdvice={aiAdvice}
-            aiLoading={aiLoading}
-            aiError={aiError}
-            onRetryAi={fetchAiAdvice}
-            overview={overview}
-            onExportExcel={handleExportExcel}
-            onExportPdf={handleExportPdf}  
-          />
+          {hasData && (
+            <AiAdviceCard
+              aiAdvice={aiAdvice}
+              aiLoading={aiLoading}
+              aiError={aiError}
+              onRetryAi={fetchAiAdvice}
+              overview={overview}
+              onExportExcel={handleExportExcel}
+              onExportPdf={handleExportPdf}  
+            />
+          )}
+
           <SummaryCards overview={overview} />
-          <Row className="g-4">
+          
+          <Row className="g-4 mt-1">
             <Col lg={5}>
-              {/* Tái sử dụng trọn vẹn Chart tròn của bạn */}
               <ExpenseCategoryChart data={overview.expenseByCategory} />
             </Col>
             <Col lg={7}>
-              {/* Tái sử dụng trọn vẹn Chart cột của bạn, dữ liệu X/Y/Z/W/V đã được Backend tự động tạo */}
               <TrendChart data={overview.trendData} />
             </Col>
           </Row>

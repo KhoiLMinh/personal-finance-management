@@ -57,6 +57,14 @@ public class CategoryController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/unhide")
+    public ResponseEntity<Void> unhideCategory(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long id) {
+        categoryService.unhideCategory(id, userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(
             @RequestAttribute("userId") Long userId,

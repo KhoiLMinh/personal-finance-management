@@ -5,6 +5,7 @@ import com.personal.finance.backend.categories.dto.request.CreateCategoryRuleReq
 import com.personal.finance.backend.categories.dto.request.UpdateCategoryRequest;
 import com.personal.finance.backend.categories.dto.response.CategoryDTO;
 import com.personal.finance.backend.categories.dto.response.CategoryRuleDTO;
+import com.personal.finance.backend.users.entity.User;
 
 import java.util.List;
 
@@ -14,7 +15,9 @@ public interface CategoryService {
     CategoryDTO getCategoryById(Long id, Long userId);
     CategoryDTO updateCategory(Long id, Long userId, UpdateCategoryRequest request);
     void hideCategory(Long id, Long userId);
+    void unhideCategory(Long id, Long userId);
     void deleteCategory(Long id, Long userId);
+    void cloneAdminCategoriesForNewUser(User newUser);
 
     CategoryRuleDTO addRule(Long categoryId, Long userId, CreateCategoryRuleRequest request);
     List<CategoryRuleDTO> getRules(Long categoryId, Long userId);

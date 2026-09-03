@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Button } from 'react-bootstrap';
-import { Plus } from 'lucide-react';
+import { Plus, Tags } from 'lucide-react'; // Import thêm icon Tags
+import { Link } from 'react-router-dom'; // Import Link để chuyển trang
 
 import walletService from '../services/walletService';
 import savingGoalService from '../services/savingGoalService';
@@ -100,7 +101,26 @@ export default function WalletsPage() {
         </Card.Body>
       </Card>
 
-      <h5 className="fw-bold text-dark mb-4">Danh sách Ví & Tài khoản ngân hàng</h5>
+      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h5 className="fw-bold text-dark mb-0">Danh sách Ví & Tài khoản ngân hàng</h5>
+        
+        <div className="d-flex gap-2 mt-3 mt-md-0">
+          <Button 
+            className="fw-bold px-4 py-2 rounded-pill border-0 shadow-sm text-white d-inline-flex align-items-center"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+            onClick={handleOpenCreate}
+          >
+            <Plus size={18} className="me-1" /> Tạo ví
+          </Button>
+
+          <Link 
+            to="/categories"
+            className="btn bg-white text-primary fw-bold px-4 py-2 rounded-pill border-0 shadow-sm d-inline-flex align-items-center"
+          >
+            <Tags size={18} className="me-2" /> Tùy chỉnh danh mục
+          </Link>
+        </div>
+      </div>
 
       <Row className="g-4 mb-4">
         {wallets.map((wallet: any) => (
@@ -114,16 +134,6 @@ export default function WalletsPage() {
           </Col>
         ))}
       </Row>
-
-      <div className="text-center mt-5 mb-3">
-        <Button 
-          className="fw-bold px-4 py-2 rounded-pill border-0 shadow-sm text-white d-inline-flex align-items-center"
-          style={{ backgroundColor: 'var(--color-primary)' }}
-          onClick={handleOpenCreate}
-        >
-          <Plus size={20} className="me-1" /> Tạo ví
-        </Button>
-      </div>
 
       <WalletModal 
         show={showModal} 

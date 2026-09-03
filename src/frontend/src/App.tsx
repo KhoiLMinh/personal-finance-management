@@ -19,6 +19,7 @@ import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
 import AdminConfigsPage from './pages/admin/AdminConfigsPage'; // <-- Đã import
 import FamilyPage from './pages/FamilyPage';
 import RecurringBillsPage from './pages/RecurringBillsPage';
+import CategoriesPage from './pages/CategoriesPage';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="/ai-assistant" element={<AiAssistantPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/categories" element={<CategoriesPage />} />
         
         {/* Admin Routes */}
         <Route path="/admin/users" element={<AdminUsersPage />} />

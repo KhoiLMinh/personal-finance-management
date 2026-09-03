@@ -28,7 +28,21 @@ const categoryService = {
   deleteCategoryRule: async (categoryId: number, ruleId: number) => {
     const response = await api.delete(`/categories/${categoryId}/rules/${ruleId}`);
     return response.data;
-  }
+  },
+  updateCategory: async (id: number, data: any) => {
+    const response = await api.put(`/categories/${id}`, data);
+    return response.data;
+  },
+
+  hideCategory: async (id: number) => {
+    const response = await api.patch(`/categories/${id}/hide`);
+    return response.data;
+  },
+
+  unhideCategory: async (id: number) => {
+    const response = await api.patch(`/categories/${id}/unhide`);
+    return response.data;
+  },
 };
 
 export default categoryService;

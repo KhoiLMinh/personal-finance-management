@@ -1,7 +1,8 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { Dropdown } from 'react-bootstrap';
-import { LayoutDashboard, ReceiptText, PiggyBank, PieChart, WalletCards, UploadCloud, Bot, Settings, LogOut, Wallet, Users, List, Calculator, CalendarClock, Settings2 } from 'lucide-react';
+
+import { LayoutDashboard, ReceiptText, PiggyBank, PieChart, WalletCards, UploadCloud, Bot, Settings, LogOut, Wallet, Users, List, Calculator, CalendarClock, Settings2} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
@@ -25,7 +26,11 @@ export default function Sidebar() {
 
   return (
     <div className="bg-white border-end d-flex flex-column h-100" style={{ width: '260px', zIndex: 1000 }}>
-      <div className="d-flex align-items-center gap-2 justify-content-center border-bottom py-4 flex-shrink-0" style={{ height: '70px' }}>
+      <Link 
+        to="/dashboard" 
+        className="d-flex align-items-center gap-2 justify-content-center border-bottom py-4 flex-shrink-0 text-decoration-none" 
+        style={{ height: '70px' }}
+      >
         <div
           className="d-flex align-items-center justify-content-center rounded-3"
           style={{ width: 34, height: 34, backgroundColor: 'var(--color-primary-light)' }}
@@ -33,7 +38,7 @@ export default function Sidebar() {
           <Wallet size={18} color="var(--color-primary)" />
         </div>
         <h3 className="fw-bolder mb-0" style={{ color: 'var(--color-primary-darker)' }}>FinManage</h3>
-      </div>
+      </Link>
 
       <div className="flex-grow-1 overflow-auto py-3">
         {user?.role === 'ADMIN' ? (

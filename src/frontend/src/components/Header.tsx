@@ -16,8 +16,10 @@ export default function Header({ title = "Tổng quan về tài chính" }: Heade
     try {
       setLoading(true);
       const res = await notificationService.getMyNotifications({ page: 0, size: 10 });
+      const unread = res.data.content.filter((noti: any) => !noti.read).length;
       setNotifications(res.content || []);
-      setUnreadCount(res.content?.filter((n: any) => !n.read).length || 0);
+      setUnreadCount(unread);
+      
     } catch (error) {
       console.error("Lỗi lấy thông báo:", error);
     } finally {

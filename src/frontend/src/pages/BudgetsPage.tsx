@@ -9,7 +9,7 @@ import reportService from '../services/reportService';
 import MySpinner from '../components/MySpinner';
 import BudgetCard from '../components/budgets/BudgetCard';
 import BudgetModal from '../components/budgets/BudgetModal';
-import BudgetHistoryModal from '../components/budgets/BudgetHistoryModal'; // Import Component Mới
+import BudgetHistoryModal from '../components/budgets/BudgetHistoryModal'; 
 
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<any[]>([]);
@@ -32,7 +32,8 @@ export default function BudgetsPage() {
       const [budgetsRes, catRes, reportRes] = await Promise.all([
         budgetService.getBudgets({ page: 0, size: 50 }),
         categoryService.getMyCategories(),
-        reportService.getOverview(firstDay, lastDay)
+        // THÊM THAM SỐ THỨ 3 VÀO ĐÂY ĐỂ TRÁNH LỖI TYPESCRIPT
+        reportService.getOverview(firstDay, lastDay, 'MONTH') 
       ]);
 
       setBudgets(budgetsRes.content);

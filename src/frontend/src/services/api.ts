@@ -20,11 +20,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn("Phiên đăng nhập hết hạn!");
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      console.warn("Phiên đăng nhập hết hạn hoặc bạn không có quyền truy cập!");
+      
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
-      window.location.href = '/login'; 
+      
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login' && currentPath !== '/register') {
+        window.location.href = '/login'; 
+      }
     }
     return Promise.reject(error);
   }

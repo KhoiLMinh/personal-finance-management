@@ -20,12 +20,39 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const isValidToken = (token: string | null) => {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 > Date.now();
+  } catch (e) {
+    return false;
+  }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  
   const [user, setUser] = useState<User | null>(() => {
+    const savedToken = localStorage.getItem('access_token');
     const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    
+    if (savedUser && isValidToken(savedToken)) {
+      return JSON.parse(savedUser);
+    }
+    return null;
   });
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
+
+  const [token, setToken] = useState<string | null>(() => {
+    const savedToken = localStorage.getItem('access_token');
+    
+    if (isValidToken(savedToken)) {
+      return savedToken;
+    }
+    
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    return null;
+  });
 
   const login = useCallback((userData: User, newToken: string) => {
     setUser(userData);

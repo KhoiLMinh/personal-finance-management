@@ -27,7 +27,7 @@ export default function Sidebar() {
   return (
     <div className="bg-white border-end d-flex flex-column h-100" style={{ width: '260px', zIndex: 1000 }}>
       <Link 
-        to="/dashboard" 
+        to={user?.role === 'ADMIN' ? '/admin/users' : '/dashboard'} 
         className="d-flex align-items-center gap-2 justify-content-center border-bottom py-4 flex-shrink-0 text-decoration-none" 
         style={{ height: '70px' }}
       >

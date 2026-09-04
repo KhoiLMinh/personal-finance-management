@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -67,5 +68,15 @@ class UserControllerTest {
                         .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").value("Cập nhật thông tin thành công!"));
+    }
+
+    @Test
+    void toggleUserStatus_ValidRequest_ReturnsStatus200() throws Exception {
+        doNothing().when(userService).toggleUserStatus("mock-uuid-1234");
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/users/mock-uuid-1234/toggle-status")
+                        .requestAttr("userId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value("Cập nhật trạng thái người dùng thành công!"));
     }
 }

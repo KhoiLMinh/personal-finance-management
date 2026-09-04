@@ -46,11 +46,27 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("Không tìm thấy người dùng!");
+    public void deleteUser(String userCode) {
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+
+        if (user.getId() == 1L) {
+            throw new RuntimeException("Không thể xóa tài khoản Quản trị viên gốc!");
         }
-        userRepository.deleteById(id);
+        userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public void toggleUserStatus(String userCode) {
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+
+        if (user.getId() == 1L) {
+            throw new RuntimeException("Không thể khóa tài khoản Quản trị viên gốc!");
+        }
+        user.setActive(!user.isActive());
+        userRepository.save(user);
     }
 
     @Override

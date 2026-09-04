@@ -130,4 +130,34 @@ class UserServiceImplTest {
         verify(cloudinaryService, never()).uploadImage(any());
         verify(userRepository, times(1)).save(mockUser);
     }
+
+    @Test
+    void toggleUserStatus_ValidUserCode_TogglesSuccessfully() {
+        User targetUser = new User();
+        targetUser.setId(2L);
+        targetUser.setUserCode("mock-uuid-1234");
+        targetUser.setActive(true);
+
+        when(userRepository.findByUserCode("mock-uuid-1234")).thenReturn(Optional.of(targetUser));
+
+        userService.toggleUserStatus("mock-uuid-1234");
+
+        assertFalse(targetUser.isActive());
+        verify(userRepository, times(1)).save(targetUser);
+    }
+
+    @Test
+    void toggleUserStatus_RootAdmin_ThrowsException() {
+        User rootAdmin = new User();
+        rootAdmin.setId(1L); // ID = 1 là cấm khóa
+        rootAdmin.setUserCode("root-uuid");
+
+        when(userRepository.findByUserCode("root-uuid")).thenReturn(Optional.of(rootAdmin));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            userService.toggleUserStatus("root-uuid");
+        });
+
+        assertEquals("Không thể khóa tài khoản Quản trị viên gốc!", exception.getMessage());
+    }
 }

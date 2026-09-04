@@ -30,8 +30,13 @@ const userService = {
     return response.data;
   },
 
-  deleteUser: async (id: number) => {
-    const response = await api.delete(`/users/${id}`);
+  deleteUser: async (userCode: string) => {
+    const response = await api.delete(`/users/${userCode}`);
+    return response.data;
+  },
+
+  toggleUserStatus: async (userCode: string) => {
+    const response = await api.patch(`/users/${userCode}/toggle-status`);
     return response.data;
   },
 };

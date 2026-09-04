@@ -25,6 +25,8 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 public class User extends Base {
+    @Column(name = "user_code", unique = true, updatable = false, length = 36)
+    private String userCode = java.util.UUID.randomUUID().toString();
 
     @NotBlank
     @Column(nullable = false, unique = true, length = 50)

@@ -185,6 +185,7 @@ CREATE TABLE IF NOT EXISTS notification (
                                             update_at DATETIME NOT NULL,
                                             content TEXT,
                                             is_read BIT NOT NULL,
+                                            priority INT NOT NULL DEFAULT 2,
                                             title VARCHAR(150) NOT NULL,
     user_id BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -200,6 +201,7 @@ CREATE TABLE IF NOT EXISTS recurring_bill (
     execution_day INT,
     notification_time TIME,
     last_executed DATE,
+    last_warning DATE,
     title VARCHAR(100) NOT NULL,
     user_id BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)

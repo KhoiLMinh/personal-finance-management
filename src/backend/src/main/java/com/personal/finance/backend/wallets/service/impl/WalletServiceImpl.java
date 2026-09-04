@@ -170,7 +170,7 @@ public class WalletServiceImpl implements WalletService {
 
         String notifContent = String.format("Bạn vừa được %s mời tham gia quản lý ví '%s' với quyền %s.",
                 wallet.getOwner().getFullName(), wallet.getName(), roleName);
-        notificationService.createSystemNotification(targetUser.getId(), "🤝 Lời mời tham gia ví", notifContent);
+        notificationService.createSystemNotification(targetUser.getId(), "Lời mời tham gia ví", notifContent, 2);
 
         return walletMapper.toMemberDTO(savedMember);
     }

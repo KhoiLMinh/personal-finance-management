@@ -45,6 +45,9 @@ public class RecurringBill extends Base {
     @Column(name = "last_executed")
     private LocalDate lastExecuted;
 
+    @Column(name = "last_warning")
+    private LocalDate lastWarning;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore

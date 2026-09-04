@@ -167,7 +167,7 @@ public class BudgetServiceImpl implements BudgetService {
                         String msg = String.format("Bạn đã chi tiêu %s, VƯỢT QUÁ ngân sách %s cho danh mục '%s' trong tháng %d/%d.",
                                 totalSpent, budget.getLimitAmount(), budget.getCategory().getName(), month, year);
 
-                        notificationService.createSystemNotification(userId, "Vượt ngân sách chi tiêu!", msg);
+                        notificationService.createSystemNotification(userId, "Vượt ngân sách chi tiêu!", msg, 1);
                         emailService.sendEmail(user.getEmail(), "Cảnh báo vượt ngân sách - Personal Finance", msg);
                     }
 
@@ -178,7 +178,7 @@ public class BudgetServiceImpl implements BudgetService {
                         String msg = String.format("Bạn đã chi tiêu %s, đạt mức cảnh báo %.0f%% ngân sách (%s) cho danh mục '%s' trong tháng %d/%d. Hãy chú ý chi tiêu nhé!",
                                 totalSpent, budget.getWarningPercent(), budget.getLimitAmount(), budget.getCategory().getName(), month, year);
 
-                        notificationService.createSystemNotification(userId, "⚠️ Sắp vượt ngân sách!", msg);
+                        notificationService.createSystemNotification(userId, "⚠️ Sắp vượt ngân sách!", msg, 2);
                         emailService.sendEmail(user.getEmail(), "Cảnh báo ngân sách - Personal Finance", msg);
                     }
                 });

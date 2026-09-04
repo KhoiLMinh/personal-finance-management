@@ -46,7 +46,6 @@ public class RecurringBillServiceImpl implements RecurringBillService {
                 .map(recurringBillMapper::toDTO);
     }
 
-    // THÊM TRIỂN KHAI LOGIC CẬP NHẬT Ở ĐÂY
     @Override
     @Transactional
     public RecurringBillDTO updateBill(Long id, Long userId, UpdateRecurringBillRequest request) {

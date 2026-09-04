@@ -3,11 +3,13 @@ package com.personal.finance.backend.users.controller;
 import com.personal.finance.backend.security.JwtUtil;
 import com.personal.finance.backend.users.dto.request.UpdateProfileRequest;
 import com.personal.finance.backend.users.dto.response.UserDTO;
+import com.personal.finance.backend.users.repository.UserRepository;
 import com.personal.finance.backend.users.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpMethod;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,6 +36,9 @@ class UserControllerTest {
     @MockitoBean
     private JwtUtil jwtUtil;
 
+    @MockitoBean
+    private UserRepository userRepository;
+
     @Test
     void getProfile_ReturnsUserDTOAndStatus200() throws Exception {
         UserDTO mockDTO = new UserDTO();
@@ -58,12 +63,8 @@ class UserControllerTest {
 
         when(userService.updateUser(eq(1L), any(UpdateProfileRequest.class))).thenReturn(updatedDTO);
 
-        mockMvc.perform(MockMvcRequestBuilders.multipart("/api/v1/users/profile")
+        mockMvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/api/v1/users/profile")
                         .param("fullName", "New Name")
-                        .with(request -> {
-                            request.setMethod("PATCH");
-                            return request;
-                        })
                         .requestAttr("userId", 1L)
                         .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
                 .andExpect(status().isOk())

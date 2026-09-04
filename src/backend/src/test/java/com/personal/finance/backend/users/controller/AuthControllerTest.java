@@ -7,6 +7,7 @@ import com.personal.finance.backend.users.dto.request.LoginRequest;
 import com.personal.finance.backend.users.dto.request.RegisterRequest;
 import com.personal.finance.backend.users.dto.response.AuthResponse;
 import com.personal.finance.backend.users.dto.response.UserDTO;
+import com.personal.finance.backend.users.repository.UserRepository;
 import com.personal.finance.backend.users.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,20 +39,20 @@ class AuthControllerTest {
     @MockitoBean
     private JwtUtil jwtUtil;
 
+    @MockitoBean
+    private UserRepository userRepository;
+
     @Autowired
     private ObjectMapper objectMapper;
 
     @Test
     void register_ValidRequest_ReturnsStatus201() throws Exception {
-
         RegisterRequest request = new RegisterRequest();
         request.setUsername("testuser");
         request.setEmail("test@example.com");
         request.setPassword("123456");
 
-
         doNothing().when(authService).register(any(RegisterRequest.class));
-
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -62,7 +63,6 @@ class AuthControllerTest {
 
     @Test
     void login_ValidRequest_ReturnsStatus200() throws Exception {
-
         LoginRequest request = new LoginRequest();
         request.setUsername("testuser");
         request.setPassword("123456");
@@ -73,7 +73,6 @@ class AuthControllerTest {
         AuthResponse authResponse = new AuthResponse("mock_token", mockDTO);
 
         when(authService.login(any(LoginRequest.class))).thenReturn(authResponse);
-
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

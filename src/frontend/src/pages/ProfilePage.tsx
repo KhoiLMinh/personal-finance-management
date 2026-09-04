@@ -147,7 +147,6 @@ export default function ProfilePage() {
           <Card className="border-0 shadow-sm rounded-4 overflow-hidden h-100">
             <div className="pt-5 pb-4 px-4 text-center" style={{ backgroundColor: 'var(--color-primary)' }}>
               
-              {/* KHU VỰC AVATAR UPLOAD */}
               <div className="position-relative mx-auto mb-3" style={{ width: '100px', height: '100px' }}>
                 <div 
                   className="rounded-circle d-flex align-items-center justify-content-center bg-white shadow overflow-hidden"
@@ -162,7 +161,6 @@ export default function ProfilePage() {
                   )}
                 </div>
                 
-                {/* Nút Chọn Ảnh Đè Lên */}
                 <label 
                   htmlFor="avatar-upload" 
                   className="position-absolute bottom-0 end-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center border"
@@ -277,7 +275,6 @@ export default function ProfilePage() {
             </Card>
           )}
 
-          {/* COMPONENT SAO LƯU & PHỤC HỒI DỮ LIỆU */}
           <Card className="border-0 shadow-sm rounded-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-center mb-3">

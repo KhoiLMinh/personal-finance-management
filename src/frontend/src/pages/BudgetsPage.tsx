@@ -32,7 +32,6 @@ export default function BudgetsPage() {
       const [budgetsRes, catRes, reportRes] = await Promise.all([
         budgetService.getBudgets({ page: 0, size: 50 }),
         categoryService.getMyCategories(),
-        // THÊM THAM SỐ THỨ 3 VÀO ĐÂY ĐỂ TRÁNH LỖI TYPESCRIPT
         reportService.getOverview(firstDay, lastDay, 'MONTH') 
       ]);
 

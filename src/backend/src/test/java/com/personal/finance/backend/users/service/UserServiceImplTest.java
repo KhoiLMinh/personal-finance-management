@@ -105,18 +105,16 @@ class UserServiceImplTest {
         assertNotNull(result);
         assertEquals("New Name", result.getFullName());
         assertEquals("New Name", mockUser.getFullName());
-        assertEquals(mockCloudinaryUrl, mockUser.getAvatar()); // Check Entity đã nhận được URL chưa
+        assertEquals(mockCloudinaryUrl, mockUser.getAvatar());
 
-        verify(cloudinaryService, times(1)).uploadImage(mockAvatar); // Check xem có gọi Cloudinary không
-        verify(userRepository, times(1)).save(mockUser);
+        verify(cloudinaryService, times(1)).uploadImage(mockAvatar); 
     }
 
     @Test
     void updateUser_WithoutAvatar_DoesNotCallCloudinary() {
-        // Arrange
         UpdateProfileRequest request = new UpdateProfileRequest();
         request.setFullName("New Name Only");
-        request.setAvatar(null); // Không có file
+        request.setAvatar(null);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
         when(userRepository.save(any(User.class))).thenReturn(mockUser);

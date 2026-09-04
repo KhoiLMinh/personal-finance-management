@@ -85,16 +85,16 @@ export default function LoginPage() {
     <Container fluid className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
       <Card className="border-0 shadow-lg rounded-4 overflow-hidden" style={{ maxWidth: '900px', width: '100%' }}>
         <Row className="g-0">
-          <Col md={6} className="d-none d-md-flex flex-column align-items-center justify-content-center p-5 position-relative" style={{ backgroundColor: '#e9f2ff' }}>
-            <div className="position-absolute top-0 start-0 m-4 fw-bold fs-4 text-primary d-flex align-items-center">
-              <Wallet className="me-2" size={28} strokeWidth={2.5} />
-              FinManager
-            </div>
-            <Image 
-              src="https://raw.githubusercontent.com/creativetimofficial/public-assets/master/argon-dashboard-pro/assets/img/signup-ill.jpg" 
+          <Col
+            md={6}
+            className="d-none d-md-flex p-0"
+            style={{ backgroundColor: '#e9f2ff' }}
+          >
+            <Image
+              src="https://res.cloudinary.com/drtp2ufx2/image/upload/v1788519739/Gemini_Generated_Image_vjmmw0vjmmw0vjmm_plqgod.png"
               alt="Finance Illustration"
-              fluid 
-              style={{ maxHeight: '300px', borderRadius: '15px' }} 
+              className="w-100 h-100"
+              style={{ objectFit: 'cover' }}
             />
           </Col>
 
@@ -155,7 +155,6 @@ export default function LoginPage() {
                 )}
               </Button>
 
-              {/* NÚT ĐĂNG NHẬP BẰNG GOOGLE NẰM Ở ĐÂY */}
               <div className="d-flex align-items-center my-4">
                 <div className="border-bottom flex-grow-1"></div>
                 <span className="px-3 text-muted small fw-medium">HOẶC</span>

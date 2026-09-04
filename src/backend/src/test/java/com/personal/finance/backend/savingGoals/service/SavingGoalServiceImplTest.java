@@ -168,7 +168,7 @@ class SavingGoalServiceImplTest {
         request.setAmount(BigDecimal.valueOf(1000000.0));
         request.setWalletId(100L);
 
-        when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(false); // Bị từ chối quyền
+        when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(false);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             savingGoalService.addFunds(10L, 1L, request);

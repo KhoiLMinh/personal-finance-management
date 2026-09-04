@@ -172,7 +172,7 @@ class BudgetServiceImplTest {
         assertEquals(BigDecimal.valueOf(6000000.0), mockBudget.getLimitAmount());
         assertEquals(90.0, mockBudget.getWarningPercent());
         verify(budgetRepository, times(1)).save(mockBudget);
-        verify(budgetHistoryRepository, times(1)).save(any()); // Xác nhận có lưu lịch sử
+        verify(budgetHistoryRepository, times(1)).save(any());
     }
 
     @Test

@@ -6,7 +6,7 @@ interface Props {
   show: boolean;
   onHide: () => void;
   onSuccess: () => void;
-  editData?: any; // Nếu có truyền editData vào thì là chế độ Sửa
+  editData?: any;
 }
 
 export default function CreateGoalModal({ show, onHide, onSuccess, editData }: Props) {

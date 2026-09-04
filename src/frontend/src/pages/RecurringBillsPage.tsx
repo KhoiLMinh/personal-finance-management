@@ -6,25 +6,23 @@ import recurringBillService from '../services/recurringBillService';
 import { formatCurrency } from '../utils/format';
 import MySpinner from '../components/MySpinner';
 
-// Hàm xử lý an toàn để đọc chính xác giờ từ Backend trả về
 const formatTime = (timeData: any) => {
-  if (!timeData) return '08:00';
+  if (!timeData) return '00:00';
   if (typeof timeData === 'string') {
-    return timeData.substring(0, 5); // VD: "08:30:00" -> "08:30"
+    return timeData.substring(0, 5);
   }
   if (Array.isArray(timeData) && timeData.length >= 2) {
     const h = String(timeData[0]).padStart(2, '0');
     const m = String(timeData[1]).padStart(2, '0');
-    return `${h}:${m}`; // VD: [8, 30] -> "08:30"
+    return `${h}:${m}`; 
   }
-  return '08:00';
+  return '00:00';
 };
 
 export default function RecurringBillsPage() {
   const [bills, setBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // State Modal Form
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -70,7 +68,7 @@ export default function RecurringBillsPage() {
       amount: bill.amount,
       frequency: bill.frequency,
       executionDay: bill.executionDay || 1,
-      notificationTime: formatTime(bill.notificationTime) // Truy xuất chuẩn xác giờ lên Form
+      notificationTime: formatTime(bill.notificationTime)
     });
     setShowModal(true);
   };
@@ -166,7 +164,6 @@ export default function RecurringBillsPage() {
                            bill.frequency === 'WEEKLY' ? `Thứ ${bill.executionDay} hằng tuần` : 'Hằng ngày'}
                         </Badge>
                         <span className="small text-muted fw-medium d-flex align-items-center mt-1">
-                          {/* Đã áp dụng hàm formatTime để không bị sập UI */}
                           <CalendarClock size={14} className="me-1 text-warning"/> Thông báo lúc {formatTime(bill.notificationTime)}
                         </span>
                       </div>

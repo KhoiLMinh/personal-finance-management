@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Button } from 'react-bootstrap';
-import { Plus, Tags } from 'lucide-react'; // Import thêm icon Tags
-import { Link } from 'react-router-dom'; // Import Link để chuyển trang
+import { Plus, Tags } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import walletService from '../services/walletService';
 import savingGoalService from '../services/savingGoalService';

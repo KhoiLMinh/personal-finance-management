@@ -56,7 +56,6 @@ class CategoryServiceImplTest {
         mockCategory.setName("Ăn uống");
         mockCategory.setType(Category.CategoryType.EXPENSE);
         mockCategory.setUser(mockUser);
-
         mockCategory.setTransactions(new ArrayList<>());
         mockCategory.setBudgets(new ArrayList<>());
 
@@ -68,7 +67,6 @@ class CategoryServiceImplTest {
 
     @Test
     void createCategory_ValidRequest_Success() {
-
         CreateCategoryRequest request = new CreateCategoryRequest();
         request.setName("Lương");
         request.setType(Category.CategoryType.INCOME);
@@ -77,24 +75,21 @@ class CategoryServiceImplTest {
         when(categoryRepository.save(any(Category.class))).thenReturn(mockCategory);
         when(categoryMapper.toDTO(any(Category.class))).thenReturn(mockCategoryDTO);
 
-
         CategoryDTO result = categoryService.createCategory(1L, request);
 
         assertNotNull(result);
         verify(categoryRepository, times(1)).save(any(Category.class));
     }
 
-
     @Test
     void createCategory_ParentTypeMismatch_ThrowsException() {
-
         CreateCategoryRequest request = new CreateCategoryRequest();
         request.setName("Tiền thưởng");
         request.setType(Category.CategoryType.INCOME);
         request.setParentId(10L);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
-        when(categoryRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockCategory));
+        when(categoryRepository.findByIdAndAccessibleByUser(10L, 1L)).thenReturn(Optional.of(mockCategory));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             categoryService.createCategory(1L, request);
@@ -104,32 +99,23 @@ class CategoryServiceImplTest {
         verify(categoryRepository, never()).save(any(Category.class));
     }
 
-
     @Test
     void deleteCategory_NoTransactionsOrBudgets_Success() {
-
         Long userId = 1L;
         Long categoryId = 10L;
         when(categoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.of(mockCategory));
 
-
         categoryService.deleteCategory(categoryId, userId);
-
 
         verify(categoryRepository, times(1)).delete(mockCategory);
     }
 
-
     @Test
     void deleteCategory_HasTransactions_ThrowsException() {
-
         Long userId = 1L;
         Long categoryId = 10L;
-
         mockCategory.getTransactions().add(new Transaction());
-
         when(categoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.of(mockCategory));
-
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             categoryService.deleteCategory(categoryId, userId);
@@ -151,20 +137,6 @@ class CategoryServiceImplTest {
         verify(categoryRepository, times(1)).save(mockCategory);
     }
 
-
-    @Test
-    void getCategoryById_NoAccess_ThrowsException() {
-        Long hackerId = 99L;
-        Long categoryId = 10L;
-        when(categoryRepository.findByIdAndUserId(categoryId, hackerId)).thenReturn(Optional.empty());
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            categoryService.getCategoryById(categoryId, hackerId);
-        });
-
-        assertEquals("Không tìm thấy danh mục!", exception.getMessage());
-    }
-
     @Test
     void addRule_ValidRequest_Success() {
         com.personal.finance.backend.categories.dto.request.CreateCategoryRuleRequest request =
@@ -181,9 +153,7 @@ class CategoryServiceImplTest {
         ruleDTO.setKeyword("Highlands");
         when(categoryMapper.toDTO(any(com.personal.finance.backend.categories.entity.CategoryRule.class))).thenReturn(ruleDTO);
 
-
         com.personal.finance.backend.categories.dto.response.CategoryRuleDTO result = categoryService.addRule(10L, 1L, request);
-
 
         assertNotNull(result);
         assertEquals("Highlands", result.getKeyword());

@@ -42,9 +42,8 @@ public class ReportServiceImpl implements ReportService {
 
     //FR-03, FR-12
     @Override
-    public DashboardOverviewDTO getDashboardOverview(Long userId, LocalDate startDate, LocalDate endDate) {
+    public DashboardOverviewDTO getDashboardOverview(Long userId, LocalDate startDate, LocalDate endDate, String timeUnit) {
         DashboardOverviewDTO overview = new DashboardOverviewDTO();
-
 
         BigDecimal totalBalance = walletRepository.getTotalBalanceAccessibleByUser(userId);
         overview.setTotalBalance(totalBalance);
@@ -70,7 +69,8 @@ public class ReportServiceImpl implements ReportService {
         overview.setExpenseByCategory(expenseByCategory);
 
         List<Object[]> rawTrendData = transactionRepository.getTrendData(userId, startDate, endDate);
-        overview.setTrendData(formatTrendData(rawTrendData));
+
+        overview.setTrendData(formatTrendData(rawTrendData, timeUnit));
 
         return overview;
     }
@@ -84,21 +84,44 @@ public class ReportServiceImpl implements ReportService {
         return ((curr - prev) / prev) * 100.0;
     }
 
-    private List<TrendDataDTO> formatTrendData(List<Object[]> rawData) {
+    private List<TrendDataDTO> formatTrendData(List<Object[]> rawData, String timeUnit) {
         Map<String, TrendDataDTO> trendMap = new LinkedHashMap<>();
+        if ("WEEK".equalsIgnoreCase(timeUnit)) {
+            for (int i = 1; i <= 5; i++) {
+                trendMap.put("Tuần " + i, new TrendDataDTO("Tuần " + i, BigDecimal.ZERO, BigDecimal.ZERO));
+            }
+        } else if ("MONTH".equalsIgnoreCase(timeUnit)) {
+            for (int i = 1; i <= 12; i++) {
+                trendMap.put("Tháng " + i, new TrendDataDTO("Tháng " + i, BigDecimal.ZERO, BigDecimal.ZERO));
+            }
+        }
 
         for (Object[] row : rawData) {
             String dateStr = row[0].toString();
+            LocalDate txDate = LocalDate.parse(dateStr);
             Transaction.TransactionType type = (Transaction.TransactionType) row[1];
             BigDecimal amount = (BigDecimal) row[2];
 
-            trendMap.putIfAbsent(dateStr, new TrendDataDTO(dateStr, BigDecimal.ZERO, BigDecimal.ZERO));
-            TrendDataDTO dto = trendMap.get(dateStr);
+            String key = dateStr;
+
+            if ("WEEK".equalsIgnoreCase(timeUnit)) {
+                int dayOfMonth = txDate.getDayOfMonth();
+                if (dayOfMonth <= 7) key = "Tuần 1";
+                else if (dayOfMonth <= 14) key = "Tuần 2";
+                else if (dayOfMonth <= 21) key = "Tuần 3";
+                else if (dayOfMonth <= 28) key = "Tuần 4";
+                else key = "Tuần 5";
+            } else if ("MONTH".equalsIgnoreCase(timeUnit)) {
+                key = "Tháng " + txDate.getMonthValue();
+            }
+
+            trendMap.putIfAbsent(key, new TrendDataDTO(key, BigDecimal.ZERO, BigDecimal.ZERO));
+            TrendDataDTO dto = trendMap.get(key);
 
             if (type == Transaction.TransactionType.INCOME) {
-                dto.setIncome(amount);
+                dto.setIncome(dto.getIncome().add(amount));
             } else {
-                dto.setExpense(amount);
+                dto.setExpense(dto.getExpense().add(amount));
             }
         }
         return new ArrayList<>(trendMap.values());
@@ -151,14 +174,14 @@ public class ReportServiceImpl implements ReportService {
             document.open();
 
             Font titleFont = new Font(Font.HELVETICA, 18, Font.BOLD);
-            Paragraph title = new Paragraph("Sao ke Giao Dich", titleFont);
+            Paragraph title = new Paragraph("SAO KÊ GIAO DỊCH", titleFont);
             title.setAlignment(Paragraph.ALIGN_CENTER);
             title.setSpacingAfter(20);
             document.add(title);
 
             PdfPTable table = new PdfPTable(5);
             table.setWidthPercentage(100);
-            String[] headers = {"Ngay", "Loai", "Danh muc", "So tien", "Ghi chu"};
+            String[] headers = {"Ngày", "Loại", "Danh mục", "Số tiền", "Ghi chú"};
             for (String header : headers) {
                 PdfPCell cell = new PdfPCell(new Phrase(header, new Font(Font.HELVETICA, 12, Font.BOLD)));
                 cell.setBackgroundColor(Color.LIGHT_GRAY);
@@ -166,7 +189,7 @@ public class ReportServiceImpl implements ReportService {
             }
             for (Transaction t : transactions) {
                 table.addCell(t.getDate().toString());
-                table.addCell(t.getType() == Transaction.TransactionType.INCOME ? "Thu nhap" : "Chi tieu");
+                table.addCell(t.getType() == Transaction.TransactionType.INCOME ? "Thu nhập" : "Chi tiêu");
                 table.addCell(t.getCategory().getName());
                 table.addCell(String.format("%,.0f", t.getAmount()));
                 table.addCell(t.getDescription() != null ? t.getDescription() : "");

@@ -38,7 +38,6 @@ export default function WalletModal({ show, onHide, onSuccess, editData }: Props
     setLoading(true);
     try {
       if (editData) {
-        // Cập nhật: Theo Backend, UpdateWalletRequest không cho sửa balance
         await walletService.updateWallet(editData.id, {
           name: formData.name,
           icon: formData.icon,

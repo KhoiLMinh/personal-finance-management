@@ -1,0 +1,145 @@
+{
+  "info": {
+    "name": "2. Financial API - USER",
+    "description": "API quản lý tài chính cá nhân",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "token", "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyX2RlbW8iLCJ1c2VySWQiOjMsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzg4NTgwMzk0LCJleHAiOjE3ODg1ODM5OTR9.-505GwurtyLRryVD7dC574M-Q2v2cIfRqX_ZHDR01RE", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+  },
+  "item": [
+    {
+      "name": "1. Auth & Profile",
+      "item": [
+        {
+          "name": "Login",
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"username\": \"user_demo\",\n    \"password\": \"123\"\n}" }, "url": { "raw": "{{baseUrl}}/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "auth", "login" ] } }
+        },
+        {
+          "name": "Register",
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"username\": \"user_03\",\n    \"email\": \"user03@gmail.com\",\n    \"password\": \"123\",\n    \"fullName\": \"User 03\"\n}" }, "url": { "raw": "{{baseUrl}}/auth/register", "host": [ "{{baseUrl}}" ], "path": [ "auth", "register" ] } }
+        },
+        {
+          "name": "Change Password",
+          "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"oldPassword\": \"123\",\n    \"newPassword\": \"456\"\n}" }, "url": { "raw": "{{baseUrl}}/auth/change-password", "host": [ "{{baseUrl}}" ], "path": [ "auth", "change-password" ] } }
+        },
+        {
+          "name": "Google Login",
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"googleToken\": \"Mã_Token_Từ_Google_\"\n}" }, "url": { "raw": "{{baseUrl}}/auth/google", "host": [ "{{baseUrl}}" ], "path": [ "auth", "google" ] } }
+        },
+        {
+          "name": "Get Profile",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/profile", "host": [ "{{baseUrl}}" ], "path": [ "users", "profile" ] } }
+        },
+        {
+          "name": "Update Profile",
+          "request": { "method": "PATCH", "body": { "mode": "formdata", "formdata": [ { "key": "fullName", "value": "Tên Mới", "type": "text" }, { "key": "avatar", "type": "file", "src": "" } ] }, "url": { "raw": "{{baseUrl}}/users/profile", "host": [ "{{baseUrl}}" ], "path": [ "users", "profile" ] } }
+        }
+      ]
+    },
+    {
+      "name": "2. Wallets",
+      "item": [
+        { "name": "Get Wallets", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/wallets", "host": [ "{{baseUrl}}" ], "path": [ "wallets" ] } } },
+        { "name": "Create Wallet", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"name\": \"Ví Trả Sau\",\n    \"balance\": 1000000.0,\n    \"icon\": \"CreditCard\",\n    \"color\": \"#f59e0b\"\n}" }, "url": { "raw": "{{baseUrl}}/wallets", "host": [ "{{baseUrl}}" ], "path": [ "wallets" ] } } },
+        { "name": "Update Wallet", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"name\": \"Ví Tiền Mặt (Sửa)\",\n    \"icon\": \"Wallet\",\n    \"color\": \"#10b981\"\n}" }, "url": { "raw": "{{baseUrl}}/wallets/1", "host": [ "{{baseUrl}}" ], "path": [ "wallets", "1" ] } } },
+        { "name": "Delete Wallet", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/wallets/1", "host": [ "{{baseUrl}}" ], "path": [ "wallets", "1" ] } } },
+        { "name": "Get Wallet Members", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/wallets/1/members", "host": [ "{{baseUrl}}" ], "path": [ "wallets", "1", "members" ] } } },
+        { "name": "Share Wallet", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"email\": \"user_1@example.com\",\n    \"permission\": \"VIEW\"\n}" }, "url": { "raw": "{{baseUrl}}/wallets/1/members/share", "host": [ "{{baseUrl}}" ], "path": [ "wallets", "1", "members", "share" ] } } }
+      ]
+    },
+    {
+      "name": "3. Categories",
+      "item": [
+        { "name": "Get Categories", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/categories", "host": [ "{{baseUrl}}" ], "path": [ "categories" ] } } },
+        { "name": "Create Category", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"name\": \"Đầu tư Chứng Khoán\",\n    \"type\": \"EXPENSE\",\n    \"color\": \"#000000\",\n    \"icon\": \"TrendingUp\"\n}" }, "url": { "raw": "{{baseUrl}}/categories", "host": [ "{{baseUrl}}" ], "path": [ "categories" ] } } },
+        { "name": "Update Category", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"name\": \"Đầu tư (Sửa)\",\n    \"color\": \"#ffffff\",\n    \"icon\": \"TrendingUp\"\n}" }, "url": { "raw": "{{baseUrl}}/categories/1", "host": [ "{{baseUrl}}" ], "path": [ "categories", "1" ] } } },
+        { "name": "Hide Category", "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/categories/1/hide", "host": [ "{{baseUrl}}" ], "path": [ "categories", "1", "hide" ] } } },
+        { "name": "Unhide Category", "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/categories/1/unhide", "host": [ "{{baseUrl}}" ], "path": [ "categories", "1", "unhide" ] } } },
+        { "name": "Delete Category", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/categories/1", "host": [ "{{baseUrl}}" ], "path": [ "categories", "1" ] } } },
+        { "name": "Get Category Rules", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/categories/1/rules", "host": [ "{{baseUrl}}" ], "path": [ "categories", "1", "rules" ] } } },
+        { "name": "Create Category Rule", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"keyword\": \"Shopee\",\n    \"priority\": 1\n}" }, "url": { "raw": "{{baseUrl}}/categories/1/rules", "host": [ "{{baseUrl}}" ], "path": [ "categories", "1", "rules" ] } } },
+        { "name": "Delete Category Rule", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/categories/1/rules/1", "host": [ "{{baseUrl}}" ], "path": [ "categories", "1", "rules", "1" ] } } }
+      ]
+    },
+    {
+      "name": "4. Transactions",
+      "item": [
+        { "name": "Get Transactions", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/transactions?page=0&size=10&startDate=2026-08-01&endDate=2026-09-30", "host": [ "{{baseUrl}}" ], "path": [ "transactions" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "10" }, { "key": "startDate", "value": "2026-08-01" }, { "key": "endDate", "value": "2026-09-30" } ] } } },
+        { "name": "Create Transaction", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"walletId\": 1,\n    \"categoryId\": 1,\n    \"amount\": 75000.0,\n    \"type\": \"EXPENSE\",\n    \"date\": \"2026-09-05\",\n    \"description\": \"Test Giao Dịch\"\n}" }, "url": { "raw": "{{baseUrl}}/transactions", "host": [ "{{baseUrl}}" ], "path": [ "transactions" ] } } },
+        { "name": "Update Transaction", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"walletId\": 1,\n    \"categoryId\": 1,\n    \"amount\": 80000.0,\n    \"type\": \"EXPENSE\",\n    \"date\": \"2026-09-05\",\n    \"description\": \"Sửa Giao Dịch\"\n}" }, "url": { "raw": "{{baseUrl}}/transactions/1", "host": [ "{{baseUrl}}" ], "path": [ "transactions", "1" ] } } },
+        { "name": "Get Transaction History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/transactions/1/history", "host": [ "{{baseUrl}}" ], "path": [ "transactions", "1", "history" ] } } },
+        { "name": "Delete Transaction", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/transactions/1", "host": [ "{{baseUrl}}" ], "path": [ "transactions", "1" ] } } }
+      ]
+    },
+    {
+      "name": "5. Budgets",
+      "item": [
+        { "name": "Get Budgets", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/budgets?month=9&year=2026", "host": [ "{{baseUrl}}" ], "path": [ "budgets" ], "query": [ { "key": "month", "value": "9" }, { "key": "year", "value": "2026" } ] } } },
+        { "name": "Create Budget", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"categoryId\": 1,\n    \"month\": 9,\n    \"year\": 2026,\n    \"limitAmount\": 5000000.0,\n    \"warningPercent\": 80.0\n}" }, "url": { "raw": "{{baseUrl}}/budgets", "host": [ "{{baseUrl}}" ], "path": [ "budgets" ] } } },
+        { "name": "Update Budget", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"limitAmount\": 7000000.0,\n    \"warningPercent\": 90.0\n}" }, "url": { "raw": "{{baseUrl}}/budgets/1", "host": [ "{{baseUrl}}" ], "path": [ "budgets", "1" ] } } },
+        { "name": "Get Budget History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/budgets/1/history", "host": [ "{{baseUrl}}" ], "path": [ "budgets", "1", "history" ] } } },
+        { "name": "Delete Budget", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/budgets/1", "host": [ "{{baseUrl}}" ], "path": [ "budgets", "1" ] } } }
+      ]
+    },
+    {
+      "name": "6. Saving Goals",
+      "item": [
+        { "name": "Get Saving Goals", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/saving-goals", "host": [ "{{baseUrl}}" ], "path": [ "saving-goals" ] } } },
+        { "name": "Create Goal", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"title\": \"Mua Laptop\",\n    \"targetAmount\": 25000000.0,\n    \"deadline\": \"2027-01-01\"\n}" }, "url": { "raw": "{{baseUrl}}/saving-goals", "host": [ "{{baseUrl}}" ], "path": [ "saving-goals" ] } } },
+        { "name": "Update Goal", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"title\": \"Mua Laptop (Sửa)\",\n    \"targetAmount\": 30000000.0,\n    \"deadline\": \"2027-06-01\"\n}" }, "url": { "raw": "{{baseUrl}}/saving-goals/1", "host": [ "{{baseUrl}}" ], "path": [ "saving-goals", "1" ] } } },
+        { "name": "Add Funds", "request": { "method": "PATCH", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"amount\": 2000000.0,\n    \"walletId\": 1\n}" }, "url": { "raw": "{{baseUrl}}/saving-goals/1/add-funds", "host": [ "{{baseUrl}}" ], "path": [ "saving-goals", "1", "add-funds" ] } } },
+        { "name": "Delete Goal", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/saving-goals/1", "host": [ "{{baseUrl}}" ], "path": [ "saving-goals", "1" ] } } }
+      ]
+    },
+    {
+      "name": "7. Recurring Bills",
+      "item": [
+        { "name": "Get Bills", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/recurring-bills", "host": [ "{{baseUrl}}" ], "path": [ "recurring-bills" ] } } },
+        { "name": "Create Bill", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"title\": \"Tiền mạng Internet\",\n    \"amount\": 250000.0,\n    \"description\": \"VNPT\",\n    \"frequency\": \"MONTHLY\",\n    \"executionDay\": 15,\n    \"notificationTime\": \"08:00:00\"\n}" }, "url": { "raw": "{{baseUrl}}/recurring-bills", "host": [ "{{baseUrl}}" ], "path": [ "recurring-bills" ] } } },
+        { "name": "Update Bill", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"title\": \"Tiền mạng (Sửa)\",\n    \"amount\": 300000.0,\n    \"description\": \"Gói cao hơn\",\n    \"frequency\": \"MONTHLY\",\n    \"executionDay\": 15,\n    \"notificationTime\": \"08:00:00\"\n}" }, "url": { "raw": "{{baseUrl}}/recurring-bills/1", "host": [ "{{baseUrl}}" ], "path": [ "recurring-bills", "1" ] } } },
+        { "name": "Delete Bill", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/recurring-bills/1", "host": [ "{{baseUrl}}" ], "path": [ "recurring-bills", "1" ] } } }
+      ]
+    },
+    {
+      "name": "8. Reports & AI",
+      "item": [
+        { "name": "Get Overview", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/report/overview?startDate=2026-08-01&endDate=2026-09-30&timeUnit=DAY", "host": [ "{{baseUrl}}" ], "path": [ "report", "overview" ], "query": [ { "key": "startDate", "value": "2026-08-01" }, { "key": "endDate", "value": "2026-09-30" }, { "key": "timeUnit", "value": "DAY" } ] } } },
+        { "name": "Export Excel", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/report/excel?startDate=2026-08-01&endDate=2026-09-30", "host": [ "{{baseUrl}}" ], "path": [ "report", "excel" ], "query": [ { "key": "startDate", "value": "2026-08-01" }, { "key": "endDate", "value": "2026-09-30" } ] } } },
+        { "name": "Export PDF", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/report/pdf?startDate=2026-08-01&endDate=2026-09-30", "host": [ "{{baseUrl}}" ], "path": [ "report", "pdf" ], "query": [ { "key": "startDate", "value": "2026-08-01" }, { "key": "endDate", "value": "2026-09-30" } ] } } },
+        { "name": "AI Analyze", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/ai/analyze-report?startDate=2026-08-01&endDate=2026-09-30", "host": [ "{{baseUrl}}" ], "path": [ "ai", "analyze-report" ], "query": [ { "key": "startDate", "value": "2026-08-01" }, { "key": "endDate", "value": "2026-09-30" } ] } } },
+        { "name": "AI Chat", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"message\": \"Tháng này tôi tiêu bao nhiêu?\"\n}" }, "url": { "raw": "{{baseUrl}}/ai/chat", "host": [ "{{baseUrl}}" ], "path": [ "ai", "chat" ] } } },
+        { "name": "Import CSV Preview", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [ { "key": "file", "type": "file", "src": "" } ] }, "url": { "raw": "{{baseUrl}}/import-batches/preview", "host": [ "{{baseUrl}}" ], "path": [ "import-batches", "preview" ] } } },
+        { "name": "Import CSV Upload", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [ { "key": "walletId", "value": "1", "type": "text" }, { "key": "dateCol", "value": "0", "type": "text" }, { "key": "amountCol", "value": "1", "type": "text" }, { "key": "descCol", "value": "2", "type": "text" }, { "key": "file", "type": "file", "src": "" } ] }, "url": { "raw": "{{baseUrl}}/import-batches/upload", "host": [ "{{baseUrl}}" ], "path": [ "import-batches", "upload" ] } } }
+      ]
+    },
+    {
+      "name": "9. Families",
+      "item": [
+        { "name": "Get My Family", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/families/me", "host": [ "{{baseUrl}}" ], "path": [ "families", "me" ] } } },
+        { "name": "Create Family", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"name\": \"Gia đình Khôi\"\n}" }, "url": { "raw": "{{baseUrl}}/families", "host": [ "{{baseUrl}}" ], "path": [ "families" ] } } },
+        { "name": "Join Family", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"inviteCode\": \"NHAP_CODE_VAO_DAY\"\n}" }, "url": { "raw": "{{baseUrl}}/families/join", "host": [ "{{baseUrl}}" ], "path": [ "families", "join" ] } } },
+        { "name": "Get Family Members", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/families/1/members", "host": [ "{{baseUrl}}" ], "path": [ "families", "1", "members" ] } } },
+        { "name": "Update Member Role", "request": { "method": "PATCH", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n    \"role\": \"MANAGER\"\n}" }, "url": { "raw": "{{baseUrl}}/families/1/members/2/role", "host": [ "{{baseUrl}}" ], "path": [ "families", "1", "members", "2", "role" ] } } },
+        { "name": "Remove Member", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/families/1/members/2", "host": [ "{{baseUrl}}" ], "path": [ "families", "1", "members", "2" ] } } },
+        { "name": "Regenerate Invite Code", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/families/1/invite-code/regenerate", "host": [ "{{baseUrl}}" ], "path": [ "families", "1", "invite-code", "regenerate" ] } } },
+        { "name": "Leave Family", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/families/leave", "host": [ "{{baseUrl}}" ], "path": [ "families", "leave" ] } } },
+        { "name": "Delete Family", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/families/1", "host": [ "{{baseUrl}}" ], "path": [ "families", "1" ] } } }
+      ]
+    },
+    {
+      "name": "10. Notifications",
+      "item": [
+        { "name": "Get Notifications", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/notifications", "host": [ "{{baseUrl}}" ], "path": [ "notifications" ] } } },
+        { "name": "Mark 1 As Read", "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/notifications/1/read", "host": [ "{{baseUrl}}" ], "path": [ "notifications", "1", "read" ] } } },
+        { "name": "Mark All As Read", "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/notifications/read-all", "host": [ "{{baseUrl}}" ], "path": [ "notifications", "read-all" ] } } },
+        { "name": "Delete Notification", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/notifications/1", "host": [ "{{baseUrl}}" ], "path": [ "notifications", "1" ] } } }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import com.personal.finance.backend.budgets.dto.request.UpdateBudgetRequest;
 import com.personal.finance.backend.budgets.dto.response.BudgetDTO;
 import com.personal.finance.backend.budgets.entity.Budget;
 import com.personal.finance.backend.budgets.mapper.BudgetMapper;
+import com.personal.finance.backend.budgets.repository.BudgetHistoryRepository;
 import com.personal.finance.backend.budgets.repository.BudgetRepository;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
@@ -43,13 +44,15 @@ class BudgetServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private BudgetMapper budgetMapper;
-
     @Mock
     private TransactionRepository transactionRepository;
     @Mock
     private NotificationService notificationService;
     @Mock
     private EmailService emailService;
+
+    @Mock
+    private BudgetHistoryRepository budgetHistoryRepository;
 
     @InjectMocks
     private BudgetServiceImpl budgetService;
@@ -77,7 +80,7 @@ class BudgetServiceImplTest {
         mockBudget.setMonth(8);
         mockBudget.setYear(2026);
         mockBudget.setLimitAmount(BigDecimal.valueOf(5000000.0));
-        mockBudget.setWarningPercent(80.0); 
+        mockBudget.setWarningPercent(80.0);
         mockBudget.setStatus(Budget.BudgetStatus.ACTIVE);
         mockBudget.setWarningSent(false);
 
@@ -133,25 +136,6 @@ class BudgetServiceImplTest {
     }
 
     @Test
-    void getBudgetById_HasAccess_Success() {
-        when(budgetRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(mockBudget));
-        when(budgetMapper.toDTO(mockBudget)).thenReturn(mockBudgetDTO);
-
-        BudgetDTO result = budgetService.getBudgetById(100L, 1L);
-
-        assertNotNull(result);
-        assertEquals(100L, result.getId());
-    }
-
-    @Test
-    void getBudgetById_NotOwner_ThrowsException() {
-        when(budgetRepository.findByIdAndUserId(100L, 99L)).thenReturn(Optional.empty());
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> budgetService.getBudgetById(100L, 99L));
-        assertEquals("Không tìm thấy ngân sách hoặc bạn không có quyền truy cập!", exception.getMessage());
-    }
-
-    @Test
     void updateBudget_ValidRequest_Success() {
         UpdateBudgetRequest request = new UpdateBudgetRequest();
         request.setLimitAmount(BigDecimal.valueOf(6000000.0));
@@ -159,7 +143,7 @@ class BudgetServiceImplTest {
 
         when(budgetRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(mockBudget));
         when(budgetRepository.save(any(Budget.class))).thenReturn(mockBudget);
-        
+
         BudgetDTO updatedDTO = new BudgetDTO();
         updatedDTO.setLimitAmount(BigDecimal.valueOf(6000000.0));
         when(budgetMapper.toDTO(any(Budget.class))).thenReturn(updatedDTO);
@@ -169,69 +153,56 @@ class BudgetServiceImplTest {
         assertEquals(BigDecimal.valueOf(6000000.0), mockBudget.getLimitAmount());
         assertEquals(90.0, mockBudget.getWarningPercent());
         verify(budgetRepository, times(1)).save(mockBudget);
+        verify(budgetHistoryRepository, times(1)).save(any());
     }
 
     @Test
     void deleteBudget_IsOwner_Success() {
         when(budgetRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(mockBudget));
-
         budgetService.deleteBudget(100L, 1L);
-
         verify(budgetRepository, times(1)).delete(mockBudget);
     }
 
     @Test
     void checkAndAlertBudget_ExceedLimit_UpdatesStatusAndSendsAlert() {
-
         Page<Budget> budgetPage = new PageImpl<>(List.of(mockBudget));
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
-
-
         when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.valueOf(5500000.0));
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);
 
-
         assertEquals(Budget.BudgetStatus.EXCEED, mockBudget.getStatus());
         verify(budgetRepository, times(1)).save(mockBudget);
-        verify(notificationService, times(1)).createSystemNotification(eq(1L), anyString(), anyString());
+        verify(notificationService, times(1)).createSystemNotification(eq(1L), anyString(), anyString(), eq(1));
         verify(emailService, times(1)).sendEmail(eq("test@gmail.com"), anyString(), anyString());
     }
 
     @Test
     void checkAndAlertBudget_ReachWarningLimit_SendsWarningOnce() {
-
         Page<Budget> budgetPage = new PageImpl<>(List.of(mockBudget));
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
-
         when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.valueOf(4500000.0));
-
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);
 
-
-        assertTrue(mockBudget.isWarningSent()); 
-        assertEquals(Budget.BudgetStatus.ACTIVE, mockBudget.getStatus()); 
+        assertTrue(mockBudget.isWarningSent());
+        assertEquals(Budget.BudgetStatus.ACTIVE, mockBudget.getStatus());
         verify(budgetRepository, times(1)).save(mockBudget);
-        verify(notificationService, times(1)).createSystemNotification(eq(1L), anyString(), anyString());
+        verify(notificationService, times(1)).createSystemNotification(eq(1L), anyString(), anyString(), eq(2));
         verify(emailService, times(1)).sendEmail(eq("test@gmail.com"), anyString(), anyString());
     }
 
     @Test
     void checkAndAlertBudget_BelowWarningLimit_DoesNothing() {
-
         Page<Budget> budgetPage = new PageImpl<>(List.of(mockBudget));
         when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
-
-
         when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.valueOf(2000000.0));
-
 
         budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);
 
-        assertFalse(mockBudget.isWarningSent()); 
-        verify(budgetRepository, never()).save(any()); 
-        verify(notificationService, never()).createSystemNotification(anyLong(), anyString(), anyString());
+        assertFalse(mockBudget.isWarningSent());
+        verify(budgetRepository, never()).save(any());
+        verify(notificationService, never()).createSystemNotification(anyLong(), anyString(), anyString(), anyInt());
         verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());
     }
 }

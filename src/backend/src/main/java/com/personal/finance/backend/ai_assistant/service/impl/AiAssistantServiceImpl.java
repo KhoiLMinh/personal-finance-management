@@ -43,7 +43,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
     @Override
     public String analyzeReport(Long userId, LocalDate startDate, LocalDate endDate) {
-        DashboardOverviewDTO overview = reportService.getDashboardOverview(userId, startDate, endDate);
+        DashboardOverviewDTO overview = reportService.getDashboardOverview(userId, startDate, endDate, "DAY");
 
         StringBuilder prompt = new StringBuilder();
         prompt.append(String.format("Dữ liệu tài chính từ %s đến %s:\n", startDate, endDate));

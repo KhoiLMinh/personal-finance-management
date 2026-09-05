@@ -1,9 +1,21 @@
-import React from 'react';
-import { Card } from 'react-bootstrap';
-import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
-import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
-import type { TrendData } from '../../types/dashboard';
-import { formatCurrency } from '../../utils/format';
+import React from "react";
+import { Card } from "react-bootstrap";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import type {
+  ValueType,
+  NameType,
+} from "recharts/types/component/DefaultTooltipContent";
+import type { TrendData } from "../../types/dashboard";
+import { formatCurrency } from "../../utils/format";
 
 interface Props {
   data: TrendData[];
@@ -21,13 +33,20 @@ export default function TrendChart({ data }: Props) {
   }
 
   const handleTooltipFormatter = (value: ValueType, name: NameType) => {
-    const numericValue = Array.isArray(value) ? Number(value[0]) : Number(value);
-    return [formatCurrency(Number.isFinite(numericValue) ? numericValue : 0), name];
+    const numericValue = Array.isArray(value)
+      ? Number(value[0])
+      : Number(value);
+    return [
+      formatCurrency(Number.isFinite(numericValue) ? numericValue : 0),
+      name,
+    ];
   };
 
   const handleYAxisFormatter = (value: number | string) => {
     const numericValue = Number(value);
-    return Number.isFinite(numericValue) ? `${numericValue / 1000000}tr` : String(value);
+    return Number.isFinite(numericValue)
+      ? `${numericValue / 1000000}tr`
+      : String(value);
   };
 
   return (
@@ -38,11 +57,28 @@ export default function TrendChart({ data }: Props) {
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
             <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} tickFormatter={handleYAxisFormatter} />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              tickFormatter={handleYAxisFormatter}
+            />
             <Tooltip formatter={handleTooltipFormatter} />
             <Legend />
-            <Line type="monotone" dataKey="income" name="Thu nhập" stroke="#16a34a" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="expense" name="Chi tiêu" stroke="#dc2626" strokeWidth={2} dot={false} />
+            <Line
+              type="monotone"
+              dataKey="income"
+              name="Thu nhập"
+              stroke="#16a34a"
+              strokeWidth={2}
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="expense"
+              name="Chi tiêu"
+              stroke="#dc2626"
+              strokeWidth={2}
+              dot={false}
+            />
           </LineChart>
         </ResponsiveContainer>
       </Card.Body>

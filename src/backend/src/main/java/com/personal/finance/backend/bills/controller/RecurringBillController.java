@@ -1,6 +1,7 @@
 package com.personal.finance.backend.bills.controller;
 
 import com.personal.finance.backend.bills.dto.request.CreateRecurringBillRequest;
+import com.personal.finance.backend.bills.dto.request.UpdateRecurringBillRequest;
 import com.personal.finance.backend.bills.dto.response.RecurringBillDTO;
 import com.personal.finance.backend.bills.service.RecurringBillService;
 import jakarta.validation.Valid;
@@ -29,6 +30,14 @@ public class RecurringBillController {
             @RequestAttribute("userId") Long userId,
             Pageable pageable) {
         return ResponseEntity.ok(recurringBillService.getMyBills(userId, pageable));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<RecurringBillDTO> updateBill(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateRecurringBillRequest request) {
+        return ResponseEntity.ok(recurringBillService.updateBill(id, userId, request));
     }
 
     @DeleteMapping("/{id}")

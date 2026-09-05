@@ -88,11 +88,6 @@ public class SavingGoalServiceImpl implements SavingGoalService {
     }
 
     @Override
-    public SavingGoalDTO getSavingGoalById(Long id, Long userId) {
-        return savingGoalMapper.toDTO(getOwnedSavingGoal(id, userId));
-    }
-
-    @Override
     @Transactional
     public SavingGoalDTO updateSavingGoal(Long id, Long userId, UpdateSavingGoalRequest request) {
         SavingGoal goal = getOwnedSavingGoal(id, userId);

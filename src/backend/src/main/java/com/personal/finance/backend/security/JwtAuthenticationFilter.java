@@ -1,5 +1,7 @@
 package com.personal.finance.backend.security;
 
+import com.personal.finance.backend.users.entity.User;
+import com.personal.finance.backend.users.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,9 +21,10 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
+//FR14
     private final JwtUtil jwtUtil;
-    //FR-14
+    private final UserRepository userRepository;
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
@@ -38,6 +41,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId = claims.get("userId", Long.class);
                 String role = claims.get("role", String.class);
 
+                User user = userRepository.findById(userId).orElse(null);
+                if (user == null || !user.isActive()) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"error\": {\"code\": \"FORBIDDEN\", \"message\": \"Tài khoản của bạn đã bị quản trị viên khóa!\"}}");
+                    return;
+                }
 
                 request.setAttribute("userId", userId);
 

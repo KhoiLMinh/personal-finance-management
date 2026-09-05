@@ -4,6 +4,7 @@ import com.personal.finance.backend.categories.dto.response.CategoryDTO;
 import com.personal.finance.backend.categories.dto.response.CategoryRuleDTO;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.entity.CategoryRule;
+import com.personal.finance.backend.users.entity.User;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,6 +20,10 @@ public class CategoryMapper {
         dto.setColor(category.getColor());
         dto.setHidden(category.isHidden());
         dto.setParentId(category.getParent() != null ? category.getParent().getId() : null);
+
+        if (category.getUser() != null) {
+            dto.setSystem(category.getUser().getRole() == User.Role.ADMIN);
+        }
         return dto;
     }
 

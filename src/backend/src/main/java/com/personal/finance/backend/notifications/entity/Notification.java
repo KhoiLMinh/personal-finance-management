@@ -29,6 +29,9 @@ public class Notification extends Base {
     @Column(name = "is_read", nullable = false)
     private boolean read = false;
 
+    @Column(name = "priority", nullable = false)
+    private Integer priority = 2;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore

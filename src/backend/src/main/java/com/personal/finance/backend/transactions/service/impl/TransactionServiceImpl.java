@@ -86,13 +86,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public TransactionDTO getTransactionById(Long id, Long userId) {
-        Transaction transaction = transactionRepository.findByIdAndAccessibleByUser(id, userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch hoặc truy cập trái phép!"));
-        return transactionMapper.toDTO(transaction);
-    }
-
-    @Override
     @Transactional
     public void deleteTransaction(Long id, Long userId) {
         Transaction transaction = transactionRepository.findByIdAndAccessibleByUser(id, userId)

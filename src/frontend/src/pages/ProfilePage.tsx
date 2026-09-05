@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Image, Spinner, Badge } from 'react-bootstrap';
-import { User, ShieldCheck, Mail, ShieldAlert, KeyRound, Save, Download, Upload, Database } from 'lucide-react';
+import { User, ShieldCheck, Mail, ShieldAlert, KeyRound, Save, Download, Upload, Database, ImagePlus } from 'lucide-react';
 
 import userService from '../services/userService';
 import authService from '../services/authService';
@@ -13,7 +13,11 @@ export default function ProfilePage() {
   const { user, login, token } = useAuth(); 
   const [loading, setLoading] = useState(true);
 
-  const [profileData, setProfileData] = useState({ username: '', email: '', fullName: '', role: '' });
+  const [profileData, setProfileData] = useState({ username: '', email: '', fullName: '', role: '', avatar: '' });
+  
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState({ type: '', text: '' });
 
@@ -35,12 +39,22 @@ export default function ProfilePage() {
         username: data.username,
         email: data.email,
         fullName: data.fullName || '',
-        role: data.role
+        role: data.role,
+        avatar: data.avatar || ''
       });
+      setAvatarPreview(data.avatar || null);
     } catch (error) {
       console.error("Lỗi lấy thông tin cá nhân:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
     }
   };
 
@@ -49,14 +63,17 @@ export default function ProfilePage() {
     setProfileSaving(true);
     setProfileMsg({ type: '', text: '' });
     try {
-      await userService.updateProfile({ fullName: profileData.fullName });
+      await userService.updateProfile({ 
+        fullName: profileData.fullName,
+        avatarFile: avatarFile
+      });
       
       if (token) {
         const newData = await userService.getProfile();
         login(newData, token);
       }
       
-      setProfileMsg({ type: 'success', text: 'Cập nhật hồ sơ thành công! 🎉' });
+      setProfileMsg({ type: 'success', text: 'Cập nhật hồ sơ thành công!' });
     } catch (error: any) {
       setProfileMsg({ type: 'danger', text: error.response?.data?.error?.message || 'Cập nhật thất bại!' });
     } finally {
@@ -129,14 +146,37 @@ export default function ProfilePage() {
         <Col lg={5} xl={4}>
           <Card className="border-0 shadow-sm rounded-4 overflow-hidden h-100">
             <div className="pt-5 pb-4 px-4 text-center" style={{ backgroundColor: 'var(--color-primary)' }}>
-              <div 
-                className="mx-auto rounded-circle d-flex align-items-center justify-content-center bg-white shadow mb-3"
-                style={{ width: '100px', height: '100px', border: '4px solid rgba(255,255,255,0.8)' }}
-              >
-                <span className="fw-bold text-primary" style={{ fontSize: '2.5rem' }}>
-                  {profileData.fullName ? profileData.fullName.charAt(0).toUpperCase() : 'U'}
-                </span>
+              
+              <div className="position-relative mx-auto mb-3" style={{ width: '100px', height: '100px' }}>
+                <div 
+                  className="rounded-circle d-flex align-items-center justify-content-center bg-white shadow overflow-hidden"
+                  style={{ width: '100%', height: '100%', border: '4px solid rgba(255,255,255,0.8)' }}
+                >
+                  {avatarPreview ? (
+                    <Image src={avatarPreview} alt="Avatar" className="w-100 h-100" style={{ objectFit: 'cover' }} />
+                  ) : (
+                    <span className="fw-bold text-primary" style={{ fontSize: '2.5rem' }}>
+                      {profileData.fullName ? profileData.fullName.charAt(0).toUpperCase() : 'U'}
+                    </span>
+                  )}
+                </div>
+                
+                <label 
+                  htmlFor="avatar-upload" 
+                  className="position-absolute bottom-0 end-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center border"
+                  style={{ width: '32px', height: '32px', cursor: 'pointer', color: 'var(--color-primary)' }}
+                >
+                  <ImagePlus size={16} />
+                </label>
+                <input 
+                  id="avatar-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  className="d-none" 
+                  onChange={handleFileChange} 
+                />
               </div>
+
               <h5 className="fw-bold text-white mb-1">{profileData.fullName || profileData.username}</h5>
               <Badge bg="light" text="primary" className="fw-medium px-3 py-1 rounded-pill">
                 {profileData.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên tài khoản'}
@@ -182,7 +222,6 @@ export default function ProfilePage() {
         </Col>
 
         <Col lg={7} xl={8}>
-          
           <Card className="border-0 shadow-sm rounded-4 mb-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-center mb-4">
@@ -217,24 +256,25 @@ export default function ProfilePage() {
             </Card.Body>
           </Card>
 
-          <Card className="border-0 shadow-sm rounded-4 mb-4">
-            <Card.Body className="p-4 d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center">
-                <div className="p-2 rounded-circle me-3" style={{ backgroundColor: '#fee2e2' }}>
-                  <KeyRound size={24} className="text-danger" />
+          {user?.provider !== 'GOOGLE' && (
+            <Card className="border-0 shadow-sm rounded-4 mb-4">
+              <Card.Body className="p-4 d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center">
+                  <div className="p-2 rounded-circle me-3" style={{ backgroundColor: '#fee2e2' }}>
+                    <KeyRound size={24} className="text-danger" />
+                  </div>
+                  <div>
+                    <h5 className="fw-bold mb-0 text-dark">Mật khẩu và bảo mật</h5>
+                    <small className="text-muted">Cập nhật mật khẩu để bảo vệ tài khoản</small>
+                  </div>
                 </div>
-                <div>
-                  <h5 className="fw-bold mb-0 text-dark">Mật khẩu và bảo mật</h5>
-                  <small className="text-muted">Cập nhật mật khẩu để bảo vệ tài khoản</small>
-                </div>
-              </div>
-              <Link to="/change-password" className="btn btn-danger fw-bold rounded-pill px-4">
-                Đổi mật khẩu
-              </Link>
-            </Card.Body>
-          </Card>
+                <Link to="/change-password" className="btn btn-danger fw-bold rounded-pill px-4">
+                  Đổi mật khẩu
+                </Link>
+              </Card.Body>
+            </Card>
+          )}
 
-          {/* COMPONENT SAO LƯU & PHỤC HỒI DỮ LIỆU */}
           <Card className="border-0 shadow-sm rounded-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-center mb-3">

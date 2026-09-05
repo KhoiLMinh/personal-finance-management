@@ -1,6 +1,7 @@
 package com.personal.finance.backend.bills.service.impl;
 
 import com.personal.finance.backend.bills.dto.request.CreateRecurringBillRequest;
+import com.personal.finance.backend.bills.dto.request.UpdateRecurringBillRequest;
 import com.personal.finance.backend.bills.dto.response.RecurringBillDTO;
 import com.personal.finance.backend.bills.entity.RecurringBill;
 import com.personal.finance.backend.bills.mapper.RecurringBillMapper;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ public class RecurringBillServiceImpl implements RecurringBillService {
     private final RecurringBillMapper recurringBillMapper;
 
     @Override
+    @Transactional
     public RecurringBillDTO createBill(Long userId, CreateRecurringBillRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
@@ -30,8 +33,8 @@ public class RecurringBillServiceImpl implements RecurringBillService {
         bill.setTitle(request.getTitle());
         bill.setAmount(request.getAmount());
         bill.setFrequency(request.getFrequency());
-        bill.setNextDueDate(request.getNextDueDate());
-        bill.setDescription(request.getDescription());
+        bill.setExecutionDay(request.getExecutionDay());
+        bill.setNotificationTime(request.getNotificationTime());
         bill.setUser(user);
 
         return recurringBillMapper.toDTO(recurringBillRepository.save(bill));
@@ -44,6 +47,22 @@ public class RecurringBillServiceImpl implements RecurringBillService {
     }
 
     @Override
+    @Transactional
+    public RecurringBillDTO updateBill(Long id, Long userId, UpdateRecurringBillRequest request) {
+        RecurringBill bill = recurringBillRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn định kỳ hoặc bạn không có quyền truy cập!"));
+
+        bill.setTitle(request.getTitle());
+        bill.setAmount(request.getAmount());
+        bill.setFrequency(request.getFrequency());
+        bill.setExecutionDay(request.getExecutionDay());
+        bill.setNotificationTime(request.getNotificationTime());
+
+        return recurringBillMapper.toDTO(recurringBillRepository.save(bill));
+    }
+
+    @Override
+    @Transactional
     public void deleteBill(Long id, Long userId) {
         RecurringBill bill = recurringBillRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn định kỳ!"));

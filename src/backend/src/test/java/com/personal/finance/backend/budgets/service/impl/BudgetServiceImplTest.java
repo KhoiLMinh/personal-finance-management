@@ -136,25 +136,6 @@ class BudgetServiceImplTest {
     }
 
     @Test
-    void getBudgetById_HasAccess_Success() {
-        when(budgetRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(mockBudget));
-        when(budgetMapper.toDTO(mockBudget)).thenReturn(mockBudgetDTO);
-
-        BudgetDTO result = budgetService.getBudgetById(100L, 1L);
-
-        assertNotNull(result);
-        assertEquals(100L, result.getId());
-    }
-
-    @Test
-    void getBudgetById_NotOwner_ThrowsException() {
-        when(budgetRepository.findByIdAndUserId(100L, 99L)).thenReturn(Optional.empty());
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> budgetService.getBudgetById(100L, 99L));
-        assertEquals("Không tìm thấy ngân sách hoặc bạn không có quyền truy cập!", exception.getMessage());
-    }
-
-    @Test
     void updateBudget_ValidRequest_Success() {
         UpdateBudgetRequest request = new UpdateBudgetRequest();
         request.setLimitAmount(BigDecimal.valueOf(6000000.0));

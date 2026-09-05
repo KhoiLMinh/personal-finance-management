@@ -13,10 +13,7 @@ import java.util.List;
 public interface TransactionService {
     TransactionDTO createTransaction(Long userId, CreateTransactionRequest request);
     Page<TransactionDTO> filterTransactions(Long userId, Long walletId, Long categoryId, LocalDate startDate, LocalDate endDate, String keyword, Pageable pageable);
-    TransactionDTO getTransactionById(Long id, Long userId);
     void deleteTransaction(Long id, Long userId);
-
     TransactionDTO updateTransaction(Long id, Long userId, UpdateTransactionRequest request);
-
     List<TransactionHistoryDTO> getTransactionHistory(Long id, Long userId);
 }

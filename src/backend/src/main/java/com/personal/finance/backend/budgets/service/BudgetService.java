@@ -12,10 +12,8 @@ import java.util.List;
 public interface BudgetService {
     BudgetDTO createBudget(Long userId, CreateBudgetRequest request);
     Page<BudgetDTO> getBudgets(Long userId, Pageable pageable);
-    BudgetDTO getBudgetById(Long id, Long userId);
     BudgetDTO updateBudget(Long id, Long userId, UpdateBudgetRequest request);
     void deleteBudget(Long id, Long userId);
-
     void checkAndAlertBudget(Long userId, Long categoryId, int month, int year);
     List<BudgetHistoryDTO> getBudgetHistory(Long id, Long userId);
 }

@@ -35,13 +35,6 @@ public class BudgetController {
         return ResponseEntity.ok(budgetService.getBudgets(userId, pageable));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<BudgetDTO> getBudgetById(
-            @RequestAttribute("userId") Long userId,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(budgetService.getBudgetById(id, userId));
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<BudgetDTO> updateBudget(
             @RequestAttribute("userId") Long userId,

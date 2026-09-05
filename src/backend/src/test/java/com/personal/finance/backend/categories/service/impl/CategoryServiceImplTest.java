@@ -138,19 +138,6 @@ class CategoryServiceImplTest {
     }
 
     @Test
-    void getCategoryById_NoAccess_ThrowsException() {
-        Long hackerId = 99L;
-        Long categoryId = 10L;
-        when(categoryRepository.findByIdAndUserId(categoryId, hackerId)).thenReturn(Optional.empty());
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            categoryService.getCategoryById(categoryId, hackerId);
-        });
-
-        assertEquals("Không tìm thấy danh mục!", exception.getMessage());
-    }
-
-    @Test
     void addRule_ValidRequest_Success() {
         com.personal.finance.backend.categories.dto.request.CreateCategoryRuleRequest request =
                 new com.personal.finance.backend.categories.dto.request.CreateCategoryRuleRequest();

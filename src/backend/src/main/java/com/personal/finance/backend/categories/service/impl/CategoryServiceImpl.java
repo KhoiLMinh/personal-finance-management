@@ -95,11 +95,6 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryDTO getCategoryById(Long id, Long userId) {
-        return categoryMapper.toDTO(getOwnedCategory(id, userId));
-    }
-
-    @Override
     @Transactional
     public CategoryDTO updateCategory(Long id, Long userId, UpdateCategoryRequest request) {
         Category category = getOwnedCategory(id, userId);

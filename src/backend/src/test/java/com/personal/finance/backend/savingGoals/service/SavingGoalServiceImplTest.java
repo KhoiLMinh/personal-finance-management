@@ -92,17 +92,6 @@ class SavingGoalServiceImplTest {
     }
 
     @Test
-    void getSavingGoalById_NotOwner_ThrowsException() {
-        when(savingGoalRepository.findByIdAndUserId(10L, 99L)).thenReturn(Optional.empty());
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            savingGoalService.getSavingGoalById(10L, 99L);
-        });
-
-        assertEquals("Không tìm thấy mục tiêu tiết kiệm hoặc bạn không có quyền truy cập!", exception.getMessage());
-    }
-
-    @Test
     void updateSavingGoal_ReachTarget_ChangesStatusToComplete() {
         UpdateSavingGoalRequest request = new UpdateSavingGoalRequest();
         request.setTitle("Mua Laptop mới");

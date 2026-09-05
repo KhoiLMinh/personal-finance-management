@@ -101,12 +101,6 @@ public class BudgetServiceImpl implements BudgetService {
     }
 
     @Override
-    public BudgetDTO getBudgetById(Long id, Long userId) {
-        return budgetMapper.toDTO(getOwnedBudget(id, userId));
-    }
-
-
-    @Override
     @Transactional
     public BudgetDTO updateBudget(Long id, Long userId, UpdateBudgetRequest request) {
         Budget budget = getOwnedBudget(id, userId);

@@ -112,33 +112,6 @@ class WalletServiceImplTest {
     }
 
     @Test
-    void getWalletById_HasAccess_ReturnsWalletDTO() {
-        Long requesterId = 1L;
-        when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
-        when(walletRepository.existsAccessibleByUser(10L, requesterId)).thenReturn(true);
-        when(walletMapper.toDTO(mockWallet)).thenReturn(mockWalletDTO);
-
-        WalletDTO result = walletService.getWalletById(10L, requesterId);
-
-        assertNotNull(result);
-        assertEquals(10L, result.getId());
-    }
-
-    @Test
-    void getWalletById_NoAccess_ThrowsAccessDeniedException() {
-        Long hackerId = 99L;
-        when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
-        when(walletRepository.existsAccessibleByUser(10L, hackerId)).thenReturn(false);
-
-        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
-            walletService.getWalletById(10L, hackerId);
-        });
-
-        assertEquals("Bạn không có quyền truy cập ví này!", exception.getMessage());
-        verify(walletMapper, never()).toDTO(any());
-    }
-
-    @Test
     void updateWallet_IsOwner_Success() {
         Long requesterId = 1L;
         UpdateWalletRequest request = new UpdateWalletRequest();

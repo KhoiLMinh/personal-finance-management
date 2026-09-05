@@ -83,13 +83,6 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    public WalletDTO getWalletById(Long walletId, Long requesterId) {
-        Wallet wallet = getWalletEntity(walletId);
-        requireAccess(wallet, requesterId);
-        return walletMapper.toDTO(wallet);
-    }
-
-    @Override
     @Transactional
     public WalletDTO updateWallet(Long walletId, Long requesterId, UpdateWalletRequest request) {
         Wallet wallet = getWalletEntity(walletId);

@@ -44,13 +44,6 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.filterTransactions(userId, walletId, categoryId, startDate, endDate, keyword, pageable));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<TransactionDTO> getTransactionById(
-            @RequestAttribute("userId") Long userId,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(transactionService.getTransactionById(id, userId));
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTransaction(
             @RequestAttribute("userId") Long userId,

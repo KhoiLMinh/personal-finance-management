@@ -12,7 +12,6 @@ import java.util.List;
 public interface CategoryService {
     CategoryDTO createCategory(Long userId, CreateCategoryRequest request);
     List<CategoryDTO> getCategoriesForUser(Long userId);
-    CategoryDTO getCategoryById(Long id, Long userId);
     CategoryDTO updateCategory(Long id, Long userId, UpdateCategoryRequest request);
     void hideCategory(Long id, Long userId);
     void unhideCategory(Long id, Long userId);

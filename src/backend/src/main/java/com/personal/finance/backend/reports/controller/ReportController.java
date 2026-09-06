@@ -21,22 +21,19 @@ public class ReportController {
     public ResponseEntity<DashboardOverviewDTO> getOverview(
             @RequestAttribute("userId") Long userId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false, defaultValue = "DAY") String timeUnit) {
         LocalDate today = LocalDate.now();
         if (endDate == null) {
             endDate = today;
         }
-
         if (startDate == null) {
             startDate = today.withDayOfMonth(1);
         }
-
         if (startDate.isAfter(endDate)) {
             throw new RuntimeException("Ngày bắt đầu không được lớn hơn ngày kết thúc!");
         }
-
-        return ResponseEntity.ok(reportService.getDashboardOverview(userId, startDate, endDate));
+        return ResponseEntity.ok(reportService.getDashboardOverview(userId, startDate, endDate, timeUnit));
     }
 
     @GetMapping("/excel")

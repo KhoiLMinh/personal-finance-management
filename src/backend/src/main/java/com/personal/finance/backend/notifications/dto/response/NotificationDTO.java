@@ -12,5 +12,6 @@ public class NotificationDTO {
     private String title;
     private String content;
     private boolean isRead;
+    private Integer priority;
     private LocalDateTime createAt;
 }

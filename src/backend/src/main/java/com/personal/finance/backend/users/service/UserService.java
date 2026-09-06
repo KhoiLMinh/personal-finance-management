@@ -10,7 +10,7 @@ public interface UserService {
     List<UserDTO> getAllUsers();
     UserDTO getUserById(Long id);
     UserDTO updateUser(Long id, UpdateProfileRequest request);
-    void deleteUser(Long id);
-
+    void deleteUser(String userCode);
+    void toggleUserStatus(String userCode);
     User findUserByUserName(String username);
 }

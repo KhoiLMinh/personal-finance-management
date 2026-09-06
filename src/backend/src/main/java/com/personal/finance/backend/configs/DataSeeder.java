@@ -8,6 +8,7 @@ import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.entity.CategoryRule;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
 import com.personal.finance.backend.categories.repository.CategoryRuleRepository;
+import com.personal.finance.backend.categories.service.CategoryService;
 import com.personal.finance.backend.savingGoals.entity.SavingGoal;
 import com.personal.finance.backend.savingGoals.repository.SavingGoalRepository;
 import com.personal.finance.backend.settings.entity.SystemSetting;
@@ -27,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Random;
 
@@ -46,6 +47,7 @@ public class DataSeeder implements CommandLineRunner {
     private final SavingGoalRepository savingGoalRepository;
     private final RecurringBillRepository recurringBillRepository;
     private final SystemSettingRepository systemSettingRepository;
+    private final CategoryService categoryService;
 
     @Override
     @Transactional
@@ -55,62 +57,66 @@ public class DataSeeder implements CommandLineRunner {
             systemSettingRepository.save(new SystemSetting("DEFAULT_BUDGET_WARNING_PERCENT", "80", "Ngưỡng cảnh báo ngân sách mặc định (%)"));
         }
 
-        User admin;
-        if (!userRepository.existsByUsername("admin")) {
-            admin = new User();
-            admin.setUsername("admin");
-            admin.setEmail("admin@example.com");
-            admin.setPassword(passwordEncoder.encode("123"));
-            admin.setFullName("Quản Trị Viên");
-            admin.setRole(User.Role.ADMIN);
-            admin = userRepository.save(admin);
+        User admin1 = createOrGetUser("admin", "admin@example.com", "Admin Tối Cao", User.Role.ADMIN);
+        if (categoryRepository.findAllByUserIdOrderByCreateAtDesc(admin1.getId()).isEmpty()) {
+            seedSystemCategories(admin1);
+        }
+        createOrGetUser("admin2", "admin2@example.com", "Quản lý Hệ thống", User.Role.ADMIN);
+
+        User demoUser = createOrGetUser("user_demo", "user_demo@example.com", "Khách Hàng VIP", User.Role.USER);
+        createOrGetUser("user_01", "user_1@example.com", "Nguyễn Văn A", User.Role.USER);
+        createOrGetUser("user_02", "user_2@example.com", "Trần Thị B", User.Role.USER);
+
+        if (walletRepository.findAllWalletAccessByUser(demoUser.getId()).isEmpty()) {
+            seedFinancialDataForUser(demoUser);
         } else {
-            admin = userRepository.findByUsername("admin").get();
+            log.info("Dữ liệu tài chính mẫu đã tồn tại, bỏ qua Seed Data.");
         }
+    }
 
-        if (categoryRepository.findAllByUserIdOrderByCreateAtDesc(admin.getId()).isEmpty()) {
-            Category foodCat = createCat(admin, "Ăn uống", Category.CategoryType.EXPENSE, "#ef4444", "Utensils", null);
-            createCat(admin, "Cà phê", Category.CategoryType.EXPENSE, "#f87171", "Utensils", foodCat);
-            Category transportCat = createCat(admin, "Di chuyển", Category.CategoryType.EXPENSE, "#f59e0b", "Car", null);
-            createCat(admin, "Taxi / Grab", Category.CategoryType.EXPENSE, "#fbbf24", "Car", transportCat);
-            createCat(admin, "Mua sắm", Category.CategoryType.EXPENSE, "#8b5cf6", "ShoppingBag", null);
-            createCat(admin, "Hóa đơn", Category.CategoryType.EXPENSE, "#ec4899", "FileText", null);
-            createCat(admin, "Tiền lương", Category.CategoryType.INCOME, "#10b981", "Banknote", null);
+    private User createOrGetUser(String username, String email, String fullName, User.Role role) {
+        return userRepository.findByUsername(username).orElseGet(() -> {
+            User user = new User();
+            user.setUsername(username);
+            user.setEmail(email);
+            user.setPassword(passwordEncoder.encode("123"));
+            user.setFullName(fullName);
+            user.setRole(role);
+            user = userRepository.save(user);
 
-            CategoryRule rule1 = new CategoryRule();
-            rule1.setCategory(foodCat);
-            rule1.setKeyword("Highlands");
-            rule1.setPriority(1);
-            categoryRuleRepository.save(rule1);
+            if (role == User.Role.USER) {
+                categoryService.cloneAdminCategoriesForNewUser(user);
+            }
+            log.info("Đã tạo tài khoản {}: {} / Pass: 123", role.name(), username);
+            return user;
+        });
+    }
 
-            CategoryRule rule2 = new CategoryRule();
-            rule2.setCategory(transportCat);
-            rule2.setKeyword("Grab");
-            rule2.setPriority(2);
-            categoryRuleRepository.save(rule2);
-        }
+    private void seedSystemCategories(User admin) {
+        Category foodCat = createCat(admin, "Ăn uống", Category.CategoryType.EXPENSE, "#ef4444", "Utensils", null);
+        createCat(admin, "Cà phê", Category.CategoryType.EXPENSE, "#f87171", "Utensils", foodCat);
+        Category transportCat = createCat(admin, "Di chuyển", Category.CategoryType.EXPENSE, "#f59e0b", "Car", null);
+        createCat(admin, "Taxi / Grab", Category.CategoryType.EXPENSE, "#fbbf24", "Car", transportCat);
+        createCat(admin, "Mua sắm", Category.CategoryType.EXPENSE, "#8b5cf6", "ShoppingBag", null);
+        createCat(admin, "Hóa đơn", Category.CategoryType.EXPENSE, "#ec4899", "FileText", null);
+        createCat(admin, "Tiền lương", Category.CategoryType.INCOME, "#10b981", "Banknote", null);
 
-        User demoUser;
-        if (!userRepository.existsByUsername("user_demo")) {
-            demoUser = new User();
-            demoUser.setUsername("user_demo");
-            demoUser.setEmail("user_demo@example.com");
-            demoUser.setPassword(passwordEncoder.encode("123"));
-            demoUser.setFullName("Minh Khôi");
-            demoUser.setRole(User.Role.USER);
-            demoUser = userRepository.save(demoUser);
-            log.info("Đã tạo tài khoản USER: user_demo / 123");
-        } else {
-            demoUser = userRepository.findByUsername("user_demo").get();
-        }
+        CategoryRule rule1 = new CategoryRule();
+        rule1.setCategory(foodCat);
+        rule1.setKeyword("Highlands");
+        rule1.setPriority(1);
+        categoryRuleRepository.save(rule1);
 
-        if (walletRepository.findAllWalletAccessByUser(demoUser.getId()).size() > 0) {
-            log.info("Dữ liệu mẫu đã tồn tại, bỏ qua Seed Data.");
-            return;
-        }
+        CategoryRule rule2 = new CategoryRule();
+        rule2.setCategory(transportCat);
+        rule2.setKeyword("Grab");
+        rule2.setPriority(2);
+        categoryRuleRepository.save(rule2);
+    }
 
+    private void seedFinancialDataForUser(User user) {
         Wallet walletCash = new Wallet();
-        walletCash.setOwner(demoUser);
+        walletCash.setOwner(user);
         walletCash.setName("Tiền mặt");
         walletCash.setIcon("Wallet");
         walletCash.setColor("#10b981");
@@ -118,22 +124,21 @@ public class DataSeeder implements CommandLineRunner {
         walletRepository.save(walletCash);
 
         Wallet walletBank = new Wallet();
-        walletBank.setOwner(demoUser);
+        walletBank.setOwner(user);
         walletBank.setName("Vietcombank");
         walletBank.setIcon("CreditCard");
         walletBank.setColor("#3b82f6");
         walletBank.setBalance(BigDecimal.valueOf(44500000.0));
         walletRepository.save(walletBank);
 
-        List<Category> availableCategories = categoryRepository.findAvailableCategories(demoUser.getId());
+        List<Category> availableCategories = categoryRepository.findAvailableCategories(user.getId());
         Category foodCat = availableCategories.stream().filter(c -> c.getName().equals("Ăn uống")).findFirst().get();
         Category shoppingCat = availableCategories.stream().filter(c -> c.getName().equals("Mua sắm")).findFirst().get();
         Category salaryCat = availableCategories.stream().filter(c -> c.getName().equals("Tiền lương")).findFirst().get();
-
-        Category personalHobby = createCat(demoUser, "Sở thích cá nhân", Category.CategoryType.EXPENSE, "#14b8a6", "Activity", null);
+        Category personalHobby = createCat(user, "Sở thích cá nhân", Category.CategoryType.EXPENSE, "#14b8a6", "Activity", null);
 
         SavingGoal goal1 = new SavingGoal();
-        goal1.setUser(demoUser);
+        goal1.setUser(user);
         goal1.setTitle("Đổi xe SH");
         goal1.setTargetAmount(BigDecimal.valueOf(80000000.0));
         goal1.setCurrentAmount(BigDecimal.valueOf(18000000.0));
@@ -141,21 +146,12 @@ public class DataSeeder implements CommandLineRunner {
         goal1.setStatus(SavingGoal.GoalStatus.IN_PROGRESS);
         savingGoalRepository.save(goal1);
 
-        SavingGoal goal2 = new SavingGoal();
-        goal2.setUser(demoUser);
-        goal2.setTitle("Quỹ khẩn cấp");
-        goal2.setTargetAmount(BigDecimal.valueOf(30000000.0));
-        goal2.setCurrentAmount(BigDecimal.valueOf(30000000.0));
-        goal2.setDeadline(LocalDate.now().plusMonths(1));
-        goal2.setStatus(SavingGoal.GoalStatus.COMPLETE);
-        savingGoalRepository.save(goal2);
-
         LocalDate today = LocalDate.now();
         int currentMonth = today.getMonthValue();
         int currentYear = today.getYear();
 
         Budget budget1 = new Budget();
-        budget1.setUser(demoUser);
+        budget1.setUser(user);
         budget1.setCategory(foodCat);
         budget1.setMonth(currentMonth);
         budget1.setYear(currentYear);
@@ -164,22 +160,13 @@ public class DataSeeder implements CommandLineRunner {
         budget1.setStatus(Budget.BudgetStatus.ACTIVE);
         budgetRepository.save(budget1);
 
-        Budget budget2 = new Budget();
-        budget2.setUser(demoUser);
-        budget2.setCategory(shoppingCat);
-        budget2.setMonth(currentMonth);
-        budget2.setYear(currentYear);
-        budget2.setLimitAmount(BigDecimal.valueOf(2000000.0));
-        budget2.setWarningPercent(90.0);
-        budget2.setStatus(Budget.BudgetStatus.EXCEED);
-        budgetRepository.save(budget2);
-
         RecurringBill bill1 = new RecurringBill();
-        bill1.setUser(demoUser);
+        bill1.setUser(user);
         bill1.setTitle("Tiền mạng Internet");
         bill1.setAmount(BigDecimal.valueOf(250000));
         bill1.setFrequency(RecurringBill.Frequency.MONTHLY);
-        bill1.setNextDueDate(today.plusDays(5));
+        bill1.setExecutionDay(15);
+        bill1.setNotificationTime(LocalTime.of(8, 0));
         recurringBillRepository.save(bill1);
 
         createTx(walletBank, salaryCat, BigDecimal.valueOf(25000000.0), Transaction.TransactionType.INCOME, today.minusMonths(1).withDayOfMonth(5), "Lương tháng trước");
@@ -196,10 +183,7 @@ public class DataSeeder implements CommandLineRunner {
             createTx(selectedWallet, randomCategory, randomAmount, Transaction.TransactionType.EXPENSE, randomDate, "Chi tiêu tự động " + i);
         }
 
-        createTx(walletCash, foodCat, BigDecimal.valueOf(100000.0), Transaction.TransactionType.EXPENSE, today, "Phở sáng");
-        createTx(walletBank, shoppingCat, BigDecimal.valueOf(550000.0), Transaction.TransactionType.EXPENSE, today, "Mua quần áo");
-
-        log.info("Đã seed thành công dữ liệu mẫu toàn diện!");
+        log.info("Đã seed thành công dữ liệu tài chính mẫu cho user_demo!");
     }
 
     private Category createCat(User user, String name, Category.CategoryType type, String color, String icon, Category parent) {

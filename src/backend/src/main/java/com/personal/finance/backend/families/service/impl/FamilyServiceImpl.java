@@ -190,9 +190,15 @@ public class FamilyServiceImpl implements FamilyService {
     public void deleteFamily(Long familyId, Long requesterId) {
         Family family = getFamilyEntity(familyId);
         requireOwner(family, requesterId);
-
         walletMemberRepository.revokeAllSharingForFamily(familyId, requesterId);
-
+        if (family.getMembers() != null && !family.getMembers().isEmpty()) {
+            familyMemberRepository.deleteAll(family.getMembers());
+        }
+        User owner = family.getOwner();
+        if (owner != null) {
+            owner.setFamily(null);
+            userRepository.save(owner);
+        }
         familyRepository.delete(family);
     }
 }

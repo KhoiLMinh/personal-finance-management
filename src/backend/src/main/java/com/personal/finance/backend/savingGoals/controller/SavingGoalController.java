@@ -35,13 +35,6 @@ public class SavingGoalController {
         return ResponseEntity.ok(savingGoalService.getSavingGoals(userId, pageable));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<SavingGoalDTO> getSavingGoalById(
-            @RequestAttribute("userId") Long userId,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(savingGoalService.getSavingGoalById(id, userId));
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<SavingGoalDTO> updateSavingGoal(
             @RequestAttribute("userId") Long userId,

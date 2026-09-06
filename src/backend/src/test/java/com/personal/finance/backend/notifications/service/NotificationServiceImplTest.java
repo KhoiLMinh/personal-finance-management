@@ -10,6 +10,7 @@ import com.personal.finance.backend.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -55,18 +56,20 @@ class NotificationServiceImplTest {
         mockNotification.setTitle("Cảnh báo ngân sách");
         mockNotification.setContent("Bạn đã tiêu quá 80% ngân sách.");
         mockNotification.setRead(false);
+        mockNotification.setPriority(1);
         mockNotification.setUser(mockUser);
 
         mockNotificationDTO = new NotificationDTO();
         mockNotificationDTO.setId(10L);
         mockNotificationDTO.setTitle("Cảnh báo ngân sách");
         mockNotificationDTO.setRead(false);
+        mockNotificationDTO.setPriority(1);
     }
 
     @Test
-    void getMyNotifications_ReturnsPageOfDTOs() {
+    void getMyNotifications_UsesPriorityQuery() {
         Page<Notification> page = new PageImpl<>(List.of(mockNotification));
-        when(notificationRepository.findAllByUserIdOrderByCreateAtDesc(eq(1L), any(Pageable.class))).thenReturn(page);
+        when(notificationRepository.findMyPriorityNotifications(eq(1L), any(Pageable.class))).thenReturn(page);
         when(notificationMapper.toDTO(mockNotification)).thenReturn(mockNotificationDTO);
 
         Page<NotificationDTO> result = notificationService.getMyNotifications(1L, Pageable.unpaged());
@@ -74,11 +77,12 @@ class NotificationServiceImplTest {
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
         assertEquals(10L, result.getContent().get(0).getId());
+        verify(notificationRepository, times(1)).findMyPriorityNotifications(eq(1L), any(Pageable.class));
     }
 
     @Test
     void markAsRead_Success() {
-        when(notificationRepository.markAsRead(10L, 1L)).thenReturn(1); // Giả lập update thành công 1 row
+        when(notificationRepository.markAsRead(10L, 1L)).thenReturn(1);
 
         notificationService.markAsRead(10L, 1L);
 
@@ -87,7 +91,7 @@ class NotificationServiceImplTest {
 
     @Test
     void markAllAsRead_Success() {
-        when(notificationRepository.markAllAsRead(1L)).thenReturn(5); // Giả lập update 5 rows
+        when(notificationRepository.markAllAsRead(1L)).thenReturn(5);
 
         notificationService.markAllAsRead(1L);
 
@@ -117,14 +121,18 @@ class NotificationServiceImplTest {
     }
 
     @Test
-    void createSystemNotification_UserExists_Success() {
+    void createSystemNotification_WithPriority_Success() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
-        when(notificationRepository.save(any(Notification.class))).thenReturn(mockNotification);
+        notificationService.createSystemNotification(1L, "Test Title", "Test Content", 2);
 
-        notificationService.createSystemNotification(1L, "Test Title", "Test Content");
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository, times(1)).save(captor.capture());
 
-        verify(userRepository, times(1)).findById(1L);
-        verify(notificationRepository, times(1)).save(any(Notification.class)); 
+        Notification savedNoti = captor.getValue();
+        assertEquals("Test Title", savedNoti.getTitle());
+        assertEquals("Test Content", savedNoti.getContent());
+        assertEquals(2, savedNoti.getPriority()); // Đảm bảo lưu đúng mức độ ưu tiên
+        assertFalse(savedNoti.isRead());
     }
 
     @Test
@@ -132,7 +140,7 @@ class NotificationServiceImplTest {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            notificationService.createSystemNotification(99L, "Title", "Content");
+            notificationService.createSystemNotification(99L, "Title", "Content", 1);
         });
 
         assertEquals("Không tìm thấy người dùng để gửi thông báo!", exception.getMessage());

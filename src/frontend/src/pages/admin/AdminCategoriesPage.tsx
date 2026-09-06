@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Button, Row, Col, Badge, Spinner, Modal, Form, Table, InputGroup } from 'react-bootstrap';
-import { Layers, Plus, Trash2, Save, Tags, PlusCircle } from 'lucide-react';
+import { Layers, Plus, Trash2, Save, Tags, PlusCircle, Edit, ShieldAlert } from 'lucide-react';
 import categoryService from '../../services/categoryService';
 import MySpinner from '../../components/MySpinner';
 
@@ -9,15 +9,16 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(true);
 
   const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
+    id: null as number | null,
     name: '',
     type: 'EXPENSE',
     color: '#3b82f6',
     icon: 'Layers',
-    parentId: ''
+    parentId: '' as string | number
   });
-
 
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
@@ -40,37 +41,63 @@ export default function AdminCategoriesPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
+  const handleOpenCreate = () => {
+    setIsEditing(false);
+    setFormData({ id: null, name: '', type: 'EXPENSE', color: '#3b82f6', icon: 'Layers', parentId: '' });
+    setShowModal(true);
+  };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleOpenEdit = (category: any) => {
+    setIsEditing(true);
+    setFormData({
+      id: category.id,
+      name: category.name,
+      type: category.type,
+      color: category.color || '#3b82f6',
+      icon: category.icon || 'Layers',
+      parentId: category.parentId || ''
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       const payload = {
-        ...formData,
+        name: formData.name,
+        type: formData.type,
+        icon: formData.icon,
+        color: formData.color,
         parentId: formData.parentId ? Number(formData.parentId) : undefined
       };
-      await categoryService.createCategory(payload);
+
+      if (isEditing && formData.id) {
+        await categoryService.updateCategory(formData.id, payload);
+      } else {
+        await categoryService.createCategory(payload);
+      }
       setShowModal(false);
-      setFormData({ name: '', type: 'EXPENSE', color: '#3b82f6', icon: 'Layers', parentId: '' });
       fetchCategories(); 
     } catch (error: any) {
-      alert(error.response?.data?.error?.message || "Lỗi tạo danh mục!");
+      alert(error.response?.data?.error?.message || "Lỗi lưu danh mục!");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Xóa danh mục này? Lưu ý: Không thể xóa nếu danh mục đã có giao dịch.")) {
+    if (window.confirm("CẢNH BÁO: Thao tác này sẽ xóa danh mục mẫu trên hệ thống.\n\nLưu ý: Các User đã được nhân bản danh mục này trước đó sẽ KHÔNG BỊ MẤT. Việc xóa chỉ ảnh hưởng đến các User đăng ký mới sau này.\n\nTiếp tục?")) {
       try {
         await categoryService.deleteCategory(id);
         fetchCategories();
       } catch (error: any) {
-        alert(error.response?.data?.error?.message || "Lỗi xóa danh mục!");
+        alert(error.response?.data?.error?.message || "Hệ thống báo lỗi: Không thể xóa danh mục này do đã phát sinh dữ liệu giao dịch liên quan.");
       }
     }
   };
 
+  // --- HANDLER CHO TỪ KHÓA (RULES) ---
   const handleOpenRules = async (category: any) => {
     setSelectedCategory(category);
     setShowRuleModal(true);
@@ -125,23 +152,23 @@ export default function AdminCategoriesPage() {
     <div className="p-4 flex-grow-1" style={{ backgroundColor: '#e2e8f0' }}>
 
       <Card className="border-0 rounded-4 mb-4 shadow-sm" style={{ backgroundColor: '#b0bec5' }}>
-        <Card.Body className="p-4 d-flex justify-content-between align-items-center">
+        <Card.Body className="p-4 d-flex flex-wrap gap-3 justify-content-between align-items-center">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white p-2 rounded-circle shadow-sm">
-              <Layers size={32} color="var(--color-primary)" />
+              <ShieldAlert size={32} color="var(--color-primary)" />
             </div>
             <div>
-              <h3 className="fw-bold text-dark mb-1">Danh mục hệ thống mặc định</h3>
-              <p className="text-dark mb-0 opacity-75">Quản lý danh mục cha/con và quy tắc nhận diện (Rules)</p>
+              <h3 className="fw-bold text-dark mb-1">Quản trị Danh mục Mẫu</h3>
+              <p className="text-dark mb-0 opacity-75">Tất cả thay đổi tại đây sẽ được tự động nhân bản cho người dùng mới</p>
             </div>
           </div>
           
           <Button 
             variant="primary" 
             className="rounded-pill px-4 fw-bold d-flex align-items-center"
-            onClick={() => { setFormData({...formData, parentId: ''}); setShowModal(true); }}
+            onClick={handleOpenCreate}
           >
-            <Plus size={20} className="me-1" /> Thêm danh mục
+            <Plus size={20} className="me-1" /> Thêm danh mục hệ thống
           </Button>
         </Card.Body>
       </Card>
@@ -159,11 +186,13 @@ export default function AdminCategoriesPage() {
                     <Layers size={18} />
                   </div>
                   <div className="min-width-0">
-                    <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '140px' }}>
+                    <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '140px' }} title={c.name}>
                       {c.isChild && '↳ '}{c.name}
                     </div>
                     {c.isChild ? (
-                      <Badge bg="secondary" className="fw-normal">Con của: {c.parentName}</Badge>
+                      <Badge bg="secondary" className="fw-normal text-truncate" style={{ maxWidth: '140px' }}>
+                        Con của: {c.parentName}
+                      </Badge>
                     ) : (
                       <Badge bg={c.type === 'INCOME' ? 'success' : 'danger'}>
                         {c.type === 'INCOME' ? 'THU NHẬP' : 'CHI TIÊU'}
@@ -172,26 +201,33 @@ export default function AdminCategoriesPage() {
                   </div>
                 </div>
                 
-                <div className="d-flex justify-content-between border-top pt-2">
-                  <Button variant="light" size="sm" className="text-primary fw-medium border-0 px-3 flex-grow-1 me-2" onClick={() => handleOpenRules(c)}>
+
+                <div className="d-flex justify-content-between border-top pt-2 mt-auto">
+                  <Button variant="light" size="sm" className="text-primary fw-medium border-0 px-2 flex-grow-1 text-start" onClick={() => handleOpenRules(c)}>
                     <Tags size={16} className="me-1" /> Từ khóa
                   </Button>
-                  <Button variant="light" size="sm" className="text-danger border-0 flex-shrink-0" onClick={() => handleDelete(c.id)}>
-                    <Trash2 size={16} />
-                  </Button>
+                  <div className="d-flex gap-1">
+                    <Button variant="light" size="sm" className="text-primary border-0 px-2" onClick={() => handleOpenEdit(c)}>
+                      <Edit size={16} />
+                    </Button>
+                    <Button variant="light" size="sm" className="text-danger border-0 px-2" title="Xóa khỏi hệ thống" onClick={() => handleDelete(c.id)}>
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
               </Card.Body>
             </Card>
           </Col>
         ))}
       </Row>
-
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
         <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
-          <Modal.Title className="fw-bold fs-4">+ Thêm Danh mục mới</Modal.Title>
+          <Modal.Title className="fw-bold fs-4 text-dark">
+            {isEditing ? 'Sửa danh mục hệ thống' : '+ Thêm Danh mục mới'}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body className="px-4 pb-4 pt-3">
-          <Form onSubmit={handleCreate}>
+          <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
               <Form.Label className="text-muted fw-medium small">Tên danh mục</Form.Label>
               <Form.Control 
@@ -207,7 +243,9 @@ export default function AdminCategoriesPage() {
                   <Form.Label className="text-muted fw-medium small">Loại thu/chi</Form.Label>
                   <Form.Select 
                     size="lg" className="bg-light border-0"
-                    value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value, parentId: ''})}
+                    value={formData.type} 
+                    onChange={(e) => setFormData({...formData, type: e.target.value, parentId: ''})}
+                    disabled={isEditing} 
                   >
                     <option value="EXPENSE">Khoản chi tiêu (-)</option>
                     <option value="INCOME">Khoản thu nhập (+)</option>
@@ -222,8 +260,10 @@ export default function AdminCategoriesPage() {
                     value={formData.parentId} onChange={(e) => setFormData({...formData, parentId: e.target.value})}
                   >
                     <option value="">-- Không có --</option>
-                    {categories.filter(c => c.type === formData.type && !c.parentId).map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                    {categories
+                      .filter(c => c.type === formData.type && !c.parentId && c.id !== formData.id)
+                      .map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </Form.Select>
                 </Form.Group>
@@ -255,7 +295,8 @@ export default function AdminCategoriesPage() {
             </Row>
 
             <Button type="submit" className="w-100 py-3 fs-5 fw-bold rounded-4 border-0" disabled={isSubmitting} style={{ backgroundColor: 'var(--color-primary)' }}>
-              {isSubmitting ? <Spinner size="sm" className="me-2"/> : <Save size={20} className="me-2"/>} Lưu danh mục
+              {isSubmitting ? <Spinner size="sm" className="me-2"/> : <Save size={20} className="me-2"/>} 
+              {isEditing ? 'Lưu thay đổi' : 'Tạo danh mục'}
             </Button>
           </Form>
         </Modal.Body>

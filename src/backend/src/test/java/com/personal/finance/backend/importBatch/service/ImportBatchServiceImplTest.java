@@ -78,7 +78,6 @@ class ImportBatchServiceImplTest {
     @Test
     void extractHeaders_Csv_Success() {
         String csvData = "Ngày,Số tiền,Nội dung\n2026-08-15,-50000,Highlands Coffee";
-        // Bắt buộc thêm StandardCharsets.UTF_8 để mock file không bị lỗi font
         MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes(StandardCharsets.UTF_8));
 
         List<String> headers = importBatchService.extractHeaders(file);

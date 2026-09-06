@@ -1,3 +1,4 @@
+// src/backend/src/main/java/com/personal/finance/backend/categories/repository/CategoryRepository.java
 package com.personal.finance.backend.categories.repository;
 
 import com.personal.finance.backend.categories.entity.Category;
@@ -16,9 +17,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Optional<Category> findByNameAndUserId(String name, Long userId);
 
-    @Query("SELECT c FROM Category c WHERE c.user.id = :userId OR c.user.role = 'ADMIN' ORDER BY c.createAt DESC")
+    @Query("SELECT c FROM Category c WHERE c.user.id = :userId ORDER BY c.createAt DESC")
     List<Category> findAvailableCategories(@Param("userId") Long userId);
 
-    @Query("SELECT c FROM Category c WHERE c.id = :id AND (c.user.id = :userId OR c.user.role = 'ADMIN')")
+    @Query("SELECT c FROM Category c WHERE c.id = :id AND c.user.id = :userId")
     Optional<Category> findByIdAndAccessibleByUser(@Param("id") Long id, @Param("userId") Long userId);
 }

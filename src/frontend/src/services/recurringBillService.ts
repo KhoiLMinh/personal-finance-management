@@ -12,7 +12,11 @@ const recurringBillService = {
   deleteBill: async (id: number) => {
     const response = await api.delete(`/recurring-bills/${id}`);
     return response.data;
-  }
+  },
+  updateBill: async (id: number, data: any) => {
+    const response = await api.put(`/recurring-bills/${id}`, data);
+    return response.data;
+  },
 };
 
 export default recurringBillService;

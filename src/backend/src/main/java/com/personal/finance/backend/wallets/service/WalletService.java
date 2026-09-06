@@ -10,10 +10,8 @@ import java.util.List;
 public interface WalletService {
     WalletDTO createWallet(Long ownerId, CreateWalletRequest request);
     List<WalletDTO> getWalletsForUser(Long userId);
-    WalletDTO getWalletById(Long walletId, Long requesterId);
     WalletDTO updateWallet(Long walletId, Long requesterId, UpdateWalletRequest request);
     void deleteWallet(Long walletId, Long requesterId);
-
     WalletMemberDTO shareWallet(Long walletId, Long requesterId, com.personal.finance.backend.wallets.dto.request.AddWalletMemberRequest request);
     List<WalletMemberDTO> getWalletMembers(Long walletId, Long requesterId);
 }

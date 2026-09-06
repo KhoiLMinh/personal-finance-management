@@ -70,7 +70,7 @@ class ReportServiceImplTest {
         lineChartRawData.add(new Object[]{"2026-08-15", Transaction.TransactionType.EXPENSE, BigDecimal.valueOf(200000.0)});
         when(transactionRepository.getTrendData(userId, startDate, endDate)).thenReturn(lineChartRawData);
 
-        DashboardOverviewDTO result = reportService.getDashboardOverview(userId, startDate, endDate);
+        DashboardOverviewDTO result = reportService.getDashboardOverview(userId, startDate, endDate, anyString());
 
         assertNotNull(result);
         assertEquals(50000000.0, result.getTotalBalance().doubleValue());
@@ -99,7 +99,7 @@ class ReportServiceImplTest {
         lenient().when(transactionRepository.getExpenseByCategory(userId, startDate, endDate)).thenReturn(new ArrayList<>());
         lenient().when(transactionRepository.getTrendData(userId, startDate, endDate)).thenReturn(new ArrayList<>());
 
-        DashboardOverviewDTO result = reportService.getDashboardOverview(userId, startDate, endDate);
+        DashboardOverviewDTO result = reportService.getDashboardOverview(userId, startDate, endDate, anyString());
 
         assertEquals(100.0, result.getIncomeChangePercent());
     }

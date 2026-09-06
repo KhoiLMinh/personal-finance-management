@@ -4,6 +4,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.personal.finance.backend.categories.service.CategoryService;
 import com.personal.finance.backend.users.entity.User;
 import com.personal.finance.backend.users.repository.UserRepository;
 import com.personal.finance.backend.users.service.AuthService;
@@ -32,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
+    private final CategoryService categoryService;
 
     @Value("${app.google.client-id}")
     private String googleClientId;
@@ -51,7 +53,8 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
-        userRepository.save(user);
+        user = userRepository.save(user);
+        categoryService.cloneAdminCategoriesForNewUser(user);
     }
 
     @Override
@@ -97,9 +100,11 @@ public class AuthServiceImpl implements AuthService {
 
                     newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
                     newUser.setRole(User.Role.USER);
-
+                    newUser.setProvider(User.Provider.GOOGLE);
                     log.info("Tạo mới tài khoản qua Google cho email: {}", email);
-                    return userRepository.save(newUser);
+                    newUser = userRepository.save(newUser);
+                    categoryService.cloneAdminCategoriesForNewUser(newUser);
+                    return newUser;
                 });
 
                 String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole().name());
@@ -119,6 +124,10 @@ public class AuthServiceImpl implements AuthService {
     public void changePassword(Long id, ChangePasswordRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+
+        if (user.getProvider() == User.Provider.GOOGLE) {
+            throw new RuntimeException("Tài khoản liên kết với Google không hỗ trợ đổi mật khẩu!");
+        }
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new RuntimeException("Mật khẩu cũ không chính xác!");

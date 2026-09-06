@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.security.Provider;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,8 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 public class User extends Base {
+    @Column(name = "user_code", unique = true, updatable = false, length = 36)
+    private String userCode = java.util.UUID.randomUUID().toString();
 
     @NotBlank
     @Column(nullable = false, unique = true, length = 50)
@@ -46,6 +49,10 @@ public class User extends Base {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Provider provider = Provider.LOCAL;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -78,4 +85,7 @@ public class User extends Base {
     public enum Role {
         ADMIN, USER
     }
+
+    public enum Provider {
+        LOCAL, GOOGLE }
 }

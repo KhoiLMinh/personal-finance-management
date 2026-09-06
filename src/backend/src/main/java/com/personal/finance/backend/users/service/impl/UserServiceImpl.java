@@ -1,5 +1,6 @@
 package com.personal.finance.backend.users.service.impl;
 
+import com.personal.finance.backend.common.service.CloudinaryService;
 import com.personal.finance.backend.users.dto.request.UpdateProfileRequest;
 import com.personal.finance.backend.users.dto.response.UserDTO;
 import com.personal.finance.backend.users.entity.User;
@@ -19,6 +20,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     public List<UserDTO> getAllUsers() {
@@ -35,17 +37,36 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
 
         user.setFullName(request.getFullName());
-        user.setAvatar(request.getAvatar());
+        if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
+            String avatarUrl = cloudinaryService.uploadImage(request.getAvatar());
+            user.setAvatar(avatarUrl);
+        }
         return userMapper.toDTO(userRepository.save(user));
     }
 
     @Override
     @Transactional
-    public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("Không tìm thấy người dùng!");
+    public void deleteUser(String userCode) {
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+
+        if (user.getId() == 1L) {
+            throw new RuntimeException("Không thể xóa tài khoản Quản trị viên gốc!");
         }
-        userRepository.deleteById(id);
+        userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public void toggleUserStatus(String userCode) {
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+
+        if (user.getId() == 1L) {
+            throw new RuntimeException("Không thể khóa tài khoản Quản trị viên gốc!");
+        }
+        user.setActive(!user.isActive());
+        userRepository.save(user);
     }
 
     @Override

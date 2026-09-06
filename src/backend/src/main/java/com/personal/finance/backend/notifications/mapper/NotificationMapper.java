@@ -14,6 +14,7 @@ public class NotificationMapper {
         dto.setTitle(notification.getTitle());
         dto.setContent(notification.getContent());
         dto.setRead(notification.isRead());
+        dto.setPriority(notification.getPriority());
         dto.setCreateAt(notification.getCreateAt());
         return dto;
     }

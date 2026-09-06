@@ -14,6 +14,10 @@ const authService = {
   changePassword: async (passwordData: any) => {
     const response = await api.put('/auth/change-password', passwordData);
     return response.data;
+  },
+  googleLogin: async (data: { googleToken: string }) => {
+    const response = await api.post('/auth/google', data);
+    return response.data;
   }
 };
 

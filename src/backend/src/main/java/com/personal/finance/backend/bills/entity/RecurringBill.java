@@ -13,6 +13,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -33,11 +34,19 @@ public class RecurringBill extends Base {
     @Column(nullable = false, length = 20)
     private Frequency frequency;
 
-    @NotNull
-    @Column(nullable = false)
-    private LocalDate nextDueDate;
-
     private String description;
+
+    @Column(name = "execution_day")
+    private Integer executionDay;
+
+    @Column(name = "notification_time")
+    private LocalTime notificationTime;
+
+    @Column(name = "last_executed")
+    private LocalDate lastExecuted;
+
+    @Column(name = "last_warning")
+    private LocalDate lastWarning;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -45,6 +54,6 @@ public class RecurringBill extends Base {
     private User user;
 
     public enum Frequency {
-        DAILY, WEEKLY, MONTHLY, YEARLY
+        DAILY, WEEKLY, MONTHLY
     }
 }

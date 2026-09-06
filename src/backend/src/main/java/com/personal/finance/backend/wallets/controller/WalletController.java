@@ -34,12 +34,6 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getWalletsForUser(userId));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<WalletDTO> getWalletById(
-            @RequestAttribute("userId") Long userId,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(walletService.getWalletById(id, userId));
-    }
 
     @PutMapping("/{id}")
     public ResponseEntity<WalletDTO> updateWallet(

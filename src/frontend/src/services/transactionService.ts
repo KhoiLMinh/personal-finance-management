@@ -1,13 +1,13 @@
-import api from './api';
+import api from "./api";
 
 const transactionService = {
   getTransactions: async (params: any) => {
-    const response = await api.get('/transactions', { params });
+    const response = await api.get("/transactions", { params });
     return response.data;
   },
 
   createTransaction: async (data: any) => {
-    const response = await api.post('/transactions', data);
+    const response = await api.post("/transactions", data);
     return response.data;
   },
 
@@ -24,7 +24,7 @@ const transactionService = {
   getTransactionHistory: async (id: number) => {
     const response = await api.get(`/transactions/${id}/history`);
     return response.data;
-  }
+  },
 };
 
 export default transactionService;

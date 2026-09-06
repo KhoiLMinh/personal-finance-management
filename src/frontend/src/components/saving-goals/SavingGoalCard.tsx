@@ -11,7 +11,6 @@ interface Props {
 }
 
 export default function SavingGoalCard({ goal, onAddFund, onEdit, onDelete }: Props) {
-  // Tính toán phần trăm hoàn thành
   const percentage = goal.targetAmount > 0 
     ? Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100)) 
     : 0;
@@ -22,7 +21,6 @@ export default function SavingGoalCard({ goal, onAddFund, onEdit, onDelete }: Pr
   return (
     <Card className="border-0 rounded-4 shadow-sm h-100 bg-white" style={{ border: '1px solid var(--color-border)' }}>
       <Card.Body className="p-4 d-flex flex-column">
-        {/* Tiêu đề & Cài đặt */}
         <div className="d-flex justify-content-between align-items-start mb-3">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-light rounded-3 d-flex align-items-center justify-content-center" style={{ width: 48, height: 48 }}>
@@ -49,13 +47,11 @@ export default function SavingGoalCard({ goal, onAddFund, onEdit, onDelete }: Pr
           </div>
         </div>
 
-        {/* Thông tin số tiền */}
         <div className="d-flex justify-content-between text-muted small fw-medium mb-2 mt-auto">
           <span>Đã tích lũy: {formatCurrency(goal.currentAmount)}</span>
           <span>Mục tiêu: {formatCurrency(goal.targetAmount)}</span>
         </div>
 
-        {/* Thanh Tiến Độ */}
         <ProgressBar 
           now={percentage} 
           variant={isCompleted ? "success" : "primary"} 
@@ -63,7 +59,6 @@ export default function SavingGoalCard({ goal, onAddFund, onEdit, onDelete }: Pr
           style={{ height: '8px' }} 
         />
 
-        {/* Footer Card */}
         <div className="d-flex justify-content-between align-items-center pt-2 border-top">
           <span className="text-muted fw-medium small">
             Còn thiếu: <span className="text-dark fw-bold">{formatCurrency(remaining)}</span>

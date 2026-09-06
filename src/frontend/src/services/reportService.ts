@@ -1,9 +1,9 @@
 import api from './api';
 
 const reportService = {
-  getOverview: async (startDate: string, endDate: string) => {
+  getOverview: async (startDate: string, endDate: string, timeUnit: string) => {
     const response = await api.get('/report/overview', {
-      params: { startDate, endDate }
+      params: { startDate, endDate, timeUnit }
     });
     return response.data;
   },

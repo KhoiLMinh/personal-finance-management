@@ -25,8 +25,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public Page<NotificationDTO> getMyNotifications(Long userId, Pageable pageable) {
-        return notificationRepository.findAllByUserIdOrderByCreateAtDesc(userId, pageable)
-                .map(notificationMapper::toDTO);
+        return notificationRepository.findMyPriorityNotifications(userId, pageable).map(notificationMapper :: toDTO);
     }
 
     @Override
@@ -57,7 +56,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void createSystemNotification(Long userId, String title, String content) {
+    public void createSystemNotification(Long userId, String title, String content, Integer priority) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng để gửi thông báo!"));
 
@@ -65,6 +64,7 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setUser(user);
         notification.setTitle(title);
         notification.setContent(content);
+        notification.setPriority(priority);
         notification.setRead(false);
 
         notificationRepository.save(notification);

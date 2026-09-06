@@ -34,13 +34,6 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.getCategoriesForUser(userId));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<CategoryDTO> getCategoryById(
-            @RequestAttribute("userId") Long userId,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(categoryService.getCategoryById(id, userId));
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<CategoryDTO> updateCategory(
             @RequestAttribute("userId") Long userId,
@@ -54,6 +47,14 @@ public class CategoryController {
             @RequestAttribute("userId") Long userId,
             @PathVariable Long id) {
         categoryService.hideCategory(id, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/unhide")
+    public ResponseEntity<Void> unhideCategory(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long id) {
+        categoryService.unhideCategory(id, userId);
         return ResponseEntity.noContent().build();
     }
 

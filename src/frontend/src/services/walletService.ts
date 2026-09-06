@@ -1,13 +1,13 @@
-import api from './api';
+import api from "./api";
 
 const walletService = {
   getMyWallets: async () => {
-    const response = await api.get('/wallets');
-    return response.data; // Trả về List<WalletDTO>
+    const response = await api.get("/wallets");
+    return response.data;
   },
 
   createWallet: async (data: any) => {
-    const response = await api.post('/wallets', data);
+    const response = await api.post("/wallets", data);
     return response.data;
   },
 
@@ -26,10 +26,13 @@ const walletService = {
     return response.data;
   },
 
-  shareWallet: async (walletId: number, data: { email: string; permission: string }) => {
+  shareWallet: async (
+    walletId: number,
+    data: { email: string; permission: string },
+  ) => {
     const response = await api.post(`/wallets/${walletId}/members/share`, data);
     return response.data;
-  }
+  },
 };
 
 export default walletService;

@@ -1,0 +1,88 @@
+{
+  "info": {
+    "name": "1. Financial API - ADMIN",
+    "description": "Các chức năng dành riêng cho Quản trị viên",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "token", "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsInVzZXJJZCI6MSwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzg4NTgxMTc1LCJleHAiOjE3ODg1ODQ3NzV9.Ex1oFI7J-d9XnGhVFMmtl0noaSP-Zilzn_eFpK9eIF8", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+  },
+  "item": [
+    {
+      "name": "1. Auth Admin",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "auth", "login" ] }
+          }
+        },
+        {
+          "name": "Get Profile Admin",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/profile", "host": [ "{{baseUrl}}" ], "path": [ "users", "profile" ] } }
+        }
+      ]
+    },
+    {
+      "name": "2. User Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users", "host": [ "{{baseUrl}}" ], "path": [ "users" ] } }
+        },
+        {
+          "name": "Toggle User Status (Khóa/Mở)",
+          "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/users/8e9815d1-2a1d-47a2-8c56-6eead4b2ec7f/toggle-status", "host": [ "{{baseUrl}}" ], "path": [ "users", "USER_CODE_CUA_USER", "toggle-status" ] } }
+        },
+        {
+          "name": "Delete User",
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/users/8e9815d1-2a1d-47a2-8c56-6eead4b2ec7f", "host": [ "{{baseUrl}}" ], "path": [ "users", "USER_CODE_CUA_USER" ] } }
+        }
+      ]
+    },
+    {
+      "name": "3. System Settings",
+      "item": [
+        {
+          "name": "Get All Settings",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/settings", "host": [ "{{baseUrl}}" ], "path": [ "settings" ] } }
+        },
+        {
+          "name": "Update Setting",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n    \"value\": \"85\"\n}" },
+            "url": { "raw": "{{baseUrl}}/settings/DEFAULT_BUDGET_WARNING_PERCENT", "host": [ "{{baseUrl}}" ], "path": [ "settings", "DEFAULT_BUDGET_WARNING_PERCENT" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Backup & Restore",
+      "item": [
+        {
+          "name": "Export Data (Backup)",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/data/export", "host": [ "{{baseUrl}}" ], "path": [ "data", "export" ] } }
+        },
+        {
+          "name": "Restore Data",
+          "request": {
+            "method": "POST",
+            "body": { "mode": "formdata", "formdata": [ { "key": "file", "type": "file", "src": "" } ] },
+            "url": { "raw": "{{baseUrl}}/data/restore", "host": [ "{{baseUrl}}" ], "path": [ "data", "restore" ] }
+          }
+        }
+      ]
+    }
+  ]
+}

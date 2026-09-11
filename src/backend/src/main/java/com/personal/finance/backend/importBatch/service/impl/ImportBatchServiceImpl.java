@@ -97,7 +97,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         batch = importBatchRepository.save(batch);
 
         Category uncategorized = getOrCreateUncategorizedCategory(userId);
-        List<CategoryRule> userRules = categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(userId);
+        List<CategoryRule> userRules = categoryRuleRepository.findAllByCategoryUserIdOrderByPriorityDesc(userId);
         List<Category> allCategories = categoryRepository.findAllByUserIdOrderByCreateAtDesc(userId);
 
         List<Transaction> transactionsToSave = new ArrayList<>();

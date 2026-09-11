@@ -51,7 +51,7 @@ public class TransactionServiceImpl implements TransactionService {
         Wallet wallet = walletRepository.findById(request.getWalletId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ví!"));
 
-        Category category = categoryRepository.findByIdAndAccessibleByUser(request.getCategoryId(), userId)
+        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục hoặc không có quyền sử dụng!"));
 
         Transaction transaction = new Transaction();
@@ -116,10 +116,9 @@ public class TransactionServiceImpl implements TransactionService {
             throw new AccessDeniedException("Bạn không có quyền sửa giao dịch trong ví này!");
         }
 
-        Category category = categoryRepository.findByIdAndAccessibleByUser(request.getCategoryId(), userId)
+        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
 
-        // === GHI LOG ĐỐI SOÁT LỊCH SỬ ===
         boolean isChanged = transaction.getAmount().compareTo(request.getAmount()) != 0
                 || transaction.getType() != request.getType()
                 || !transaction.getDate().equals(request.getDate())

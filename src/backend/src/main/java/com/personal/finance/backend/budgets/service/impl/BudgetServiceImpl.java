@@ -67,7 +67,7 @@ public class BudgetServiceImpl implements BudgetService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
 
-        Category category = categoryRepository.findByIdAndAccessibleByUser(request.getCategoryId(), userId)
+        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục hoặc không có quyền sử dụng!"));
 
         Budget budget = new Budget();

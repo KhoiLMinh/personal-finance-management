@@ -14,6 +14,5 @@ public interface CategoryRuleRepository extends JpaRepository<CategoryRule, Long
 
     Optional<CategoryRule> findByIdAndCategoryId(Long id, Long categoryId);
 
-    @Query("SELECT r FROM CategoryRule r WHERE r.category.user.id = :userId ORDER BY r.priority DESC")
-    List<CategoryRule> findAllByUserIdOrderByPriorityDesc(@Param("userId") Long userId);
+    List<CategoryRule> findAllByCategoryUserIdOrderByPriorityDesc(Long userId);
 }

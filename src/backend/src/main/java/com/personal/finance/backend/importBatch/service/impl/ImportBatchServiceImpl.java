@@ -237,7 +237,6 @@ public class ImportBatchServiceImpl implements ImportBatchService {
     }
 
     private LocalDate parseFlexibleDate(String dateStr) {
-        // Đã bổ sung yyyy-MM-dd và các định dạng phổ biến nhất
         String[] dateFormats = {"yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "yyyy/MM/dd", "dd-MM-yyyy", "d-M-yyyy"};
         for (String format : dateFormats) {
             try {

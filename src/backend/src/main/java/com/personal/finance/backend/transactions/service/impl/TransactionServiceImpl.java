@@ -72,7 +72,8 @@ public class TransactionServiceImpl implements TransactionService {
         walletRepository.updateBalance(wallet.getId(), deltaAmount);
 
         if (request.getType() == Transaction.TransactionType.EXPENSE) {
-            budgetService.checkAndAlertBudget(userId, request.getCategoryId(), request.getDate().getMonthValue(), request.getDate().getYear());
+            budgetService.checkAndAlertBudget(userId, request.getCategoryId(), request.getDate().getMonthValue(),
+                    request.getDate().getYear());
         }
 
         log.info("Tạo giao dịch thành công ID: {}", savedTransaction.getId());

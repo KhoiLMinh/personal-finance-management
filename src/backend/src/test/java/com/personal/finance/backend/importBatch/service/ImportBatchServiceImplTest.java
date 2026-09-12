@@ -111,7 +111,7 @@ class ImportBatchServiceImplTest {
         when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
         when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
         when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
-        when(categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(1L)).thenReturn(List.of(mockRule));
+        when(categoryRuleRepository.findAllByCategoryUserIdOrderByPriorityDesc(1L)).thenReturn(List.of(mockRule));
 
         when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(50000.0), eq("Highlands Coffee"))).thenReturn(false);
 

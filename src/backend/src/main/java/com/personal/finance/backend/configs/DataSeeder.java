@@ -131,7 +131,7 @@ public class DataSeeder implements CommandLineRunner {
         walletBank.setBalance(BigDecimal.valueOf(44500000.0));
         walletRepository.save(walletBank);
 
-        List<Category> availableCategories = categoryRepository.findAvailableCategories(user.getId());
+        List<Category> availableCategories = categoryRepository.findAllByUserIdOrderByCreateAtDesc(user.getId());
         Category foodCat = availableCategories.stream().filter(c -> c.getName().equals("Ăn uống")).findFirst().get();
         Category shoppingCat = availableCategories.stream().filter(c -> c.getName().equals("Mua sắm")).findFirst().get();
         Category salaryCat = availableCategories.stream().filter(c -> c.getName().equals("Tiền lương")).findFirst().get();

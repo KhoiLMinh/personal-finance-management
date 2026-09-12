@@ -140,16 +140,16 @@ public class WalletServiceImpl implements WalletService {
             throw new RuntimeException("Chỉ có thể chia sẻ ví cho các thành viên trong cùng một Gia đình!");
         }
 
-        com.personal.finance.backend.wallets.entity.WalletMember member = walletMemberRepository.findByWalletIdAndUserId(walletId, targetUser.getId())
-                .orElse(new com.personal.finance.backend.wallets.entity.WalletMember());
+        WalletMember member = walletMemberRepository.findByWalletIdAndUserId(walletId, targetUser.getId())
+                .orElse(new WalletMember());
 
         member.setWallet(wallet);
         member.setUser(targetUser);
         member.setPermissions(request.getPermission());
 
-        com.personal.finance.backend.wallets.entity.WalletMember savedMember = walletMemberRepository.save(member);
+        WalletMember savedMember = walletMemberRepository.save(member);
 
-        String roleName = request.getPermission() == com.personal.finance.backend.wallets.entity.WalletMember.Permission.EDIT ? "CHỈNH SỬA" : "CHỈ XEM";
+        String roleName = request.getPermission() == WalletMember.Permission.EDIT ? "CHỈNH SỬA" : "CHỈ XEM";
         String emailBody = String.format(
                 "Xin chào %s,\n\n" +
                         "Bạn vừa được chia sẻ quyền truy cập vào ví: '%s' từ thành viên trong gia đình.\n" +

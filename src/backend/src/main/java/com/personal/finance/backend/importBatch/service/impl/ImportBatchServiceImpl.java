@@ -150,7 +150,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 String amountStr = fields[amountCol].replace("\"", "").replace(",", "").trim();
                 String descStr = fields[descCol].replace("\"", "").trim();
 
-                if (dateStr.isEmpty() || amountStr.isEmpty()) continue; // Skip dòng rỗng
+                if (dateStr.isEmpty() || amountStr.isEmpty()) continue; 
 
                 totalRows++;
 
@@ -158,7 +158,8 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 Double rawAmount = Double.parseDouble(amountStr);
                 BigDecimal absoluteAmount = BigDecimal.valueOf(Math.abs(rawAmount));
 
-                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId, date, absoluteAmount.doubleValue(), descStr)) {
+                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId,
+                        date, absoluteAmount.doubleValue(), descStr)) {
                     duplicateRows++;
                     continue;
                 }

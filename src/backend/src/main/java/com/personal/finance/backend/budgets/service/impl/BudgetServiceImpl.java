@@ -149,10 +149,7 @@ public class BudgetServiceImpl implements BudgetService {
                     BigDecimal totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(
                             categoryId, userId, month, year, Transaction.TransactionType.EXPENSE);
                     User user = budget.getUser();
-
-
                     BigDecimal warningLimit = budget.getLimitAmount().multiply(BigDecimal.valueOf(budget.getWarningPercent() / 100.0));
-
 
                     if (totalSpent.compareTo(budget.getLimitAmount()) >= 0 && budget.getStatus() != Budget.BudgetStatus.EXCEED) {
                         budget.setStatus(Budget.BudgetStatus.EXCEED);
@@ -171,7 +168,6 @@ public class BudgetServiceImpl implements BudgetService {
 
                         String msg = String.format("Bạn đã chi tiêu %s, đạt mức cảnh báo %.0f%% ngân sách (%s) cho danh mục '%s' trong tháng %d/%d. Hãy chú ý chi tiêu nhé!",
                                 totalSpent, budget.getWarningPercent(), budget.getLimitAmount(), budget.getCategory().getName(), month, year);
-
                         notificationService.createSystemNotification(userId, "⚠️ Sắp vượt ngân sách!", msg, 2);
                         emailService.sendEmail(user.getEmail(), "Cảnh báo ngân sách - Personal Finance", msg);
                     }

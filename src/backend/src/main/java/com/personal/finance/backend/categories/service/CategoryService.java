@@ -17,7 +17,6 @@ public interface CategoryService {
     void unhideCategory(Long id, Long userId);
     void deleteCategory(Long id, Long userId);
     void cloneAdminCategoriesForNewUser(User newUser);
-
     CategoryRuleDTO addRule(Long categoryId, Long userId, CreateCategoryRuleRequest request);
     List<CategoryRuleDTO> getRules(Long categoryId, Long userId);
     void deleteRule(Long categoryId, Long ruleId, Long userId);

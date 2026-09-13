@@ -88,7 +88,7 @@ class TransactionServiceImplTest {
 
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
         when(walletRepository.findById(1L)).thenReturn(Optional.of(mockWallet));
-        when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
 
@@ -159,7 +159,7 @@ class TransactionServiceImplTest {
 
         when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
-        when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
 
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
@@ -184,7 +184,7 @@ class TransactionServiceImplTest {
 
         when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
-        when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
 
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
@@ -237,7 +237,7 @@ class TransactionServiceImplTest {
 
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
         when(walletRepository.findById(1L)).thenReturn(Optional.of(mockWallet));
-        when(categoryRepository.findByIdAndAccessibleByUser(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionMapper.toDTO(any())).thenReturn(new TransactionDTO());
 

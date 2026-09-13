@@ -97,7 +97,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         batch = importBatchRepository.save(batch);
 
         Category uncategorized = getOrCreateUncategorizedCategory(userId);
-        List<CategoryRule> userRules = categoryRuleRepository.findAllByUserIdOrderByPriorityDesc(userId);
+        List<CategoryRule> userRules = categoryRuleRepository.findAllByCategoryUserIdOrderByPriorityDesc(userId);
         List<Category> allCategories = categoryRepository.findAllByUserIdOrderByCreateAtDesc(userId);
 
         List<Transaction> transactionsToSave = new ArrayList<>();
@@ -150,7 +150,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 String amountStr = fields[amountCol].replace("\"", "").replace(",", "").trim();
                 String descStr = fields[descCol].replace("\"", "").trim();
 
-                if (dateStr.isEmpty() || amountStr.isEmpty()) continue; // Skip dòng rỗng
+                if (dateStr.isEmpty() || amountStr.isEmpty()) continue; 
 
                 totalRows++;
 
@@ -158,7 +158,8 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                 Double rawAmount = Double.parseDouble(amountStr);
                 BigDecimal absoluteAmount = BigDecimal.valueOf(Math.abs(rawAmount));
 
-                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId, date, absoluteAmount.doubleValue(), descStr)) {
+                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId,
+                        date, absoluteAmount.doubleValue(), descStr)) {
                     duplicateRows++;
                     continue;
                 }
@@ -237,7 +238,6 @@ public class ImportBatchServiceImpl implements ImportBatchService {
     }
 
     private LocalDate parseFlexibleDate(String dateStr) {
-        // Đã bổ sung yyyy-MM-dd và các định dạng phổ biến nhất
         String[] dateFormats = {"yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "yyyy/MM/dd", "dd-MM-yyyy", "d-M-yyyy"};
         for (String format : dateFormats) {
             try {

@@ -50,8 +50,7 @@ public class CategoryServiceImpl implements CategoryService {
         category.setUser(user);
 
         if (request.getParentId() != null) {
-            Category parent = categoryRepository.findByIdAndAccessibleByUser(request.getParentId(), userId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục cha!"));
+            Category parent = getOwnedCategory(request.getParentId(), userId);
             if (parent.getType() != request.getType()) {
                 throw new RuntimeException("Danh mục con phải cùng loại với danh mục cha!");
             }
@@ -64,7 +63,7 @@ public class CategoryServiceImpl implements CategoryService {
             List<User> allUsers = userRepository.findAll().stream()
                     .filter(u -> u.getRole() == User.Role.USER)
                     .toList();
-
+            //inlist
             for (User u : allUsers) {
                 if (categoryRepository.findByNameAndUserId(savedCategory.getName(), u.getId()).isEmpty()) {
                     Category clone = new Category();
@@ -88,7 +87,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryDTO> getCategoriesForUser(Long userId) {
-        return this.categoryRepository.findAvailableCategories(userId)
+        return this.categoryRepository.findAllByUserIdOrderByCreateAtDesc(userId)
                 .stream()
                 .map(categoryMapper::toDTO)
                 .toList();
@@ -151,9 +150,8 @@ public class CategoryServiceImpl implements CategoryService {
                 clone.setColor(adminCat.getColor());
                 clone.setUser(newUser);
                 clone.setHidden(adminCat.isHidden());
-                clone.setParent(parentMap.get(adminCat.getParent().getId()));
-                Category savedClone = categoryRepository.save(clone);
-                parentMap.put(adminCat.getId(), savedClone);
+                clone.setParent(parentMap.get(adminCat.getParent().getId())); //has parent
+                parentMap.put(adminCat.getId(), categoryRepository.save(clone));
             }
         }
 
@@ -195,7 +193,6 @@ public class CategoryServiceImpl implements CategoryService {
 
         CategoryRule savedRule = categoryRuleRepository.save(rule);
 
-        // NẾU ADMIN TẠO TỪ KHÓA MẪU MỚI -> PHÁT THÊM CHO TẤT CẢ USER HIỆN CÓ
         if (category.getUser().getRole() == User.Role.ADMIN) {
             List<User> allUsers = userRepository.findAll().stream()
                     .filter(u -> u.getRole() == User.Role.USER)

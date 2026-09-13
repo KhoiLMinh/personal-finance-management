@@ -14,6 +14,5 @@ public class CategoryDTO {
     private String color;
     private boolean hidden;
     private Long parentId;
-
     private boolean isSystem;
 }

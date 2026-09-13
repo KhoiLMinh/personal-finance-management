@@ -89,7 +89,7 @@ class CategoryServiceImplTest {
         request.setParentId(10L);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
-        when(categoryRepository.findByIdAndAccessibleByUser(10L, 1L)).thenReturn(Optional.of(mockCategory));
+        when(categoryRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockCategory));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             categoryService.createCategory(1L, request);

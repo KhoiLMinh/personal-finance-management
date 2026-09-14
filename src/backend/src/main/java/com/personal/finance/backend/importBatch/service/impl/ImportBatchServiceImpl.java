@@ -143,49 +143,61 @@ public class ImportBatchServiceImpl implements ImportBatchService {
             }
 
             // Map data
-            for (String[] fields : rawData) {
+            int errorRows = 0;
+            for (int rowIndex = 0; rowIndex < rawData.size(); rowIndex++) {
+                String[] fields = rawData.get(rowIndex);
                 if (fields.length <= Math.max(Math.max(dateCol, amountCol), descCol)) continue;
 
                 String dateStr = fields[dateCol].replace("\"", "").trim();
-                String amountStr = fields[amountCol].replace("\"", "").replace(",", "").trim();
+                String amountStr = fields[amountCol].replace("\"", "").trim();
                 String descStr = fields[descCol].replace("\"", "").trim();
 
-                if (dateStr.isEmpty() || amountStr.isEmpty()) continue; 
+                if (dateStr.isEmpty() || amountStr.isEmpty()) continue;
 
                 totalRows++;
 
-                LocalDate date = parseFlexibleDate(dateStr);
-                Double rawAmount = Double.parseDouble(amountStr);
-                BigDecimal absoluteAmount = BigDecimal.valueOf(Math.abs(rawAmount));
+                try {
+                    LocalDate date = parseFlexibleDate(dateStr);
+                    BigDecimal rawAmount = parseVietnameseAmount(amountStr);
+                    BigDecimal absoluteAmount = rawAmount.abs();
 
-                if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId,
-                        date, absoluteAmount.doubleValue(), descStr)) {
-                    duplicateRows++;
-                    continue;
+                    if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId,
+                            date, absoluteAmount.doubleValue(), descStr)) {
+                        duplicateRows++;
+                        continue;
+                    }
+
+                    Category matchedCategory = categorizeTransaction(descStr, userRules, null);
+
+                    Transaction transaction = new Transaction();
+                    transaction.setWallet(wallet);
+                    transaction.setImportBatch(batch);
+                    transaction.setAmount(absoluteAmount);
+                    transaction.setType(rawAmount.signum() >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
+                    transaction.setDate(date);
+                    transaction.setDescription(descStr);
+                    transaction.setStatus("COMPLETED");
+
+                    if (matchedCategory != null) {
+                        transaction.setCategory(matchedCategory);
+                    } else {
+                        transaction.setCategory(uncategorized);
+                        needAiCategorization.add(transaction);
+                        descriptionsForAi.add(descStr);
+                    }
+
+                    transactionsToSave.add(transaction);
+                    netBalanceChange = netBalanceChange.add(rawAmount);
+                    successRows++;
+                } catch (Exception rowEx) {
+                    errorRows++;
+                    log.warn("Bỏ qua dòng {} do lỗi dữ liệu (ngày='{}', số tiền='{}'): {}",
+                            rowIndex + 2, dateStr, amountStr, rowEx.getMessage());
                 }
+            }
 
-                Category matchedCategory = categorizeTransaction(descStr, userRules, null);
-
-                Transaction transaction = new Transaction();
-                transaction.setWallet(wallet);
-                transaction.setImportBatch(batch);
-                transaction.setAmount(absoluteAmount);
-                transaction.setType(rawAmount >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
-                transaction.setDate(date);
-                transaction.setDescription(descStr);
-                transaction.setStatus("COMPLETED");
-
-                if (matchedCategory != null) {
-                    transaction.setCategory(matchedCategory);
-                } else {
-                    transaction.setCategory(uncategorized);
-                    needAiCategorization.add(transaction);
-                    descriptionsForAi.add(descStr);
-                }
-
-                transactionsToSave.add(transaction);
-                netBalanceChange = netBalanceChange.add(BigDecimal.valueOf(rawAmount));
-                successRows++;
+            if (errorRows > 0) {
+                log.warn("Import hoàn tất với {} dòng lỗi bị bỏ qua trên tổng {} dòng.", errorRows, totalRows);
             }
 
             if (!descriptionsForAi.isEmpty()) {
@@ -235,6 +247,26 @@ public class ImportBatchServiceImpl implements ImportBatchService {
             case FORMULA: return cell.getCellFormula();
             default: return "";
         }
+    }
+
+    private BigDecimal parseVietnameseAmount(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException("Số tiền trống");
+        }
+
+        String s = raw.trim().replace("đ", "").replace("₫", "").replace(" ", "");
+
+        if (!s.matches("[-+]?[0-9.,]+")) {
+            throw new IllegalArgumentException("Định dạng số tiền không hợp lệ: " + raw);
+        }
+
+        int lastComma = s.lastIndexOf(',');
+        if (lastComma < 0) {
+            s = s.replace(".", "");
+        } else {
+            s = s.substring(0, lastComma).replace(".", "") + "." + s.substring(lastComma + 1);
+        }
+        return new BigDecimal(s);
     }
 
     private LocalDate parseFlexibleDate(String dateStr) {

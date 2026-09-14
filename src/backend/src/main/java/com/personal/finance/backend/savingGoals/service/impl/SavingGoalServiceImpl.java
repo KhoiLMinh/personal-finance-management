@@ -127,9 +127,10 @@ public class SavingGoalServiceImpl implements SavingGoalService {
         if (goal.getStatus() == SavingGoal.GoalStatus.COMPLETE) {
             throw new RuntimeException("Mục tiêu này đã hoàn thành, không thể nộp thêm tiền!");
         }
-
-
-        walletRepository.updateBalance(wallet.getId(), request.getAmount().negate());
+        int updatedRows = walletRepository.updateBalance(wallet.getId(), request.getAmount().negate());
+        if (updatedRows == 0) {
+            throw new RuntimeException("Giao dịch bị từ chối: Số dư trong ví không đủ hoặc ví đang được giao dịch bởi thiết bị khác!");
+        }
 
 
         Category savingCategory = getOrCreateSavingCategory(userId);

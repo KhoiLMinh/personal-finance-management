@@ -164,7 +164,7 @@ class ImportBatchServiceImplTest {
             importBatchService.importData(1L, 10L, 0, 1, 2, file);
         });
 
-        assertTrue(exception.getMessage().contains("Lỗi định dạng file hoặc dữ liệu không hợp lệ"));
+        assertTrue(exception.getMessage().contains("Phát hiện dòng sai định dạng số tiền hoặc ngày tháng!"));
         verify(transactionRepository, never()).saveAll(anyList());
     }
 }

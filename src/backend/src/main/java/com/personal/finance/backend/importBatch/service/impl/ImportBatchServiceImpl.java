@@ -253,19 +253,21 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         if (raw == null || raw.isBlank()) {
             throw new IllegalArgumentException("Số tiền trống");
         }
-
         String s = raw.trim().replace("đ", "").replace("₫", "").replace(" ", "");
-
-        if (!s.matches("[-+]?[0-9.,]+")) {
-            throw new IllegalArgumentException("Định dạng số tiền không hợp lệ: " + raw);
-        }
-
         int lastComma = s.lastIndexOf(',');
-        if (lastComma < 0) {
-            s = s.replace(".", "");
+        int lastDot = s.lastIndexOf('.');
+        if (lastComma > lastDot) {
+            s = s.replace(".", "").replace(",", ".");
+        } else if (lastDot > lastComma) {
+            if (s.length() - lastDot - 1 == 3) {
+                s = s.replace(".", "").replace(",", "");
+            } else {
+                s = s.replace(",", "");
+            }
         } else {
-            s = s.substring(0, lastComma).replace(".", "") + "." + s.substring(lastComma + 1);
+            s = s.replace(",", "").replace(".", "");
         }
+
         return new BigDecimal(s);
     }
 

@@ -64,7 +64,6 @@ public class DataBackupServiceImpl implements DataBackupService {
         BackupDataDTO backupData = new BackupDataDTO();
         backupData.setExportDate(LocalDateTime.now().toString());
 
-        // 1. Fetch data
         List<WalletDTO> wallets = walletRepository.findAllWalletAccessByUser(userId)
                 .stream().map(walletMapper::toDTO).toList();
         List<CategoryDTO> categories = categoryRepository.findAllByUserIdOrderByCreateAtDesc(userId)

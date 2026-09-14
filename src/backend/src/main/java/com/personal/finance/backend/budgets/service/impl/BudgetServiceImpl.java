@@ -5,6 +5,7 @@ import com.personal.finance.backend.budgets.dto.request.UpdateBudgetRequest;
 import com.personal.finance.backend.budgets.dto.response.BudgetDTO;
 import com.personal.finance.backend.budgets.dto.response.BudgetHistoryDTO;
 import com.personal.finance.backend.budgets.entity.Budget;
+import com.personal.finance.backend.budgets.entity.BudgetHistory;
 import com.personal.finance.backend.budgets.mapper.BudgetMapper;
 import com.personal.finance.backend.budgets.repository.BudgetHistoryRepository;
 import com.personal.finance.backend.budgets.repository.BudgetRepository;
@@ -105,7 +106,7 @@ public class BudgetServiceImpl implements BudgetService {
     public BudgetDTO updateBudget(Long id, Long userId, UpdateBudgetRequest request) {
         Budget budget = getOwnedBudget(id, userId);
         boolean isChanged = false;
-        com.personal.finance.backend.budgets.entity.BudgetHistory history = new com.personal.finance.backend.budgets.entity.BudgetHistory();
+        BudgetHistory history = new BudgetHistory();
         history.setBudget(budget);
         history.setOldLimitAmount(budget.getLimitAmount());
         history.setOldWarningPercent(budget.getWarningPercent());

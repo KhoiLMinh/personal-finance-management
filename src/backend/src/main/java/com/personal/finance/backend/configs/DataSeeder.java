@@ -35,7 +35,6 @@ import java.util.Random;
 
 @Slf4j
 @Component
-@Profile("!test")
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 
@@ -123,7 +122,7 @@ public class DataSeeder implements CommandLineRunner {
         walletCash.setIcon("Wallet");
         walletCash.setColor("#10b981");
         walletCash.setBalance(BigDecimal.valueOf(5000000.0));
-        walletRepository.save(walletCash);
+        walletCash = walletRepository.save(walletCash);
 
         Wallet walletBank = new Wallet();
         walletBank.setOwner(user);
@@ -131,12 +130,24 @@ public class DataSeeder implements CommandLineRunner {
         walletBank.setIcon("CreditCard");
         walletBank.setColor("#3b82f6");
         walletBank.setBalance(BigDecimal.valueOf(44500000.0));
-        walletRepository.save(walletBank);
+        walletBank = walletRepository.save(walletBank);
 
         List<Category> availableCategories = categoryRepository.findAllByUserIdOrderByCreateAtDesc(user.getId());
-        Category foodCat = availableCategories.stream().filter(c -> c.getName().equals("Ăn uống")).findFirst().get();
-        Category shoppingCat = availableCategories.stream().filter(c -> c.getName().equals("Mua sắm")).findFirst().get();
-        Category salaryCat = availableCategories.stream().filter(c -> c.getName().equals("Tiền lương")).findFirst().get();
+        Category foodCat = availableCategories.stream()
+                .filter(c -> "Ăn uống".equalsIgnoreCase(c.getName()))
+                .findFirst()
+                .orElseGet(() -> createCat(user, "Ăn uống", Category.CategoryType.EXPENSE, "#ef4444", "Utensils", null));
+
+        Category shoppingCat = availableCategories.stream()
+                .filter(c -> "Mua sắm".equalsIgnoreCase(c.getName()))
+                .findFirst()
+                .orElseGet(() -> createCat(user, "Mua sắm", Category.CategoryType.EXPENSE, "#8b5cf6", "ShoppingBag", null));
+
+        Category salaryCat = availableCategories.stream()
+                .filter(c -> "Tiền lương".equalsIgnoreCase(c.getName()))
+                .findFirst()
+                .orElseGet(() -> createCat(user, "Tiền lương", Category.CategoryType.INCOME, "#10b981", "Banknote", null));
+
         Category personalHobby = createCat(user, "Sở thích cá nhân", Category.CategoryType.EXPENSE, "#14b8a6", "Activity", null);
 
         SavingGoal goal1 = new SavingGoal();

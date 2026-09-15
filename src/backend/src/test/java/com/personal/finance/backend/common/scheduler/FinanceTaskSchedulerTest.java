@@ -93,7 +93,7 @@ class FinanceTaskSchedulerTest {
         RecurringBill bill = new RecurringBill();
         bill.setUser(mockUser);
         bill.setFrequency(RecurringBill.Frequency.DAILY);
-        bill.setNotificationTime(LocalTime.now().plusHours(1));
+        bill.setNotificationTime(LocalTime.MAX);
 
         when(recurringBillRepository.findPendingBills(any(LocalDate.class))).thenReturn(List.of(bill));
 

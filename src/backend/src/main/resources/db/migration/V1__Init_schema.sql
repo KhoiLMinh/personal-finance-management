@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS wallet (
     balance DECIMAL(19,2) NOT NULL,
     icon VARCHAR(255),
     color VARCHAR(255),
+    version BIGINT NOT NULL DEFAULT 0,
     owner_id BIGINT NOT NULL,
     FOREIGN KEY (owner_id) REFERENCES users(id)
     );

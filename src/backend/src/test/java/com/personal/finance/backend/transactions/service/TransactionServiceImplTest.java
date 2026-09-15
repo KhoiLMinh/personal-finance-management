@@ -85,7 +85,7 @@ class TransactionServiceImplTest {
     @Test
     void createTransaction_HasEditPermission_Success() {
         Long userId = 10L;
-
+        when(walletRepository.updateBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
         when(walletRepository.findById(1L)).thenReturn(Optional.of(mockWallet));
         when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
@@ -118,7 +118,7 @@ class TransactionServiceImplTest {
     void deleteTransaction_HasEditPermission_SuccessAndRevertBalance() {
         Long userId = 10L;
         Long transactionId = 100L;
-
+        when(walletRepository.updateBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
         when(transactionRepository.findByIdAndAccessibleByUser(transactionId, userId)).thenReturn(Optional.of(mockTransaction));
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
 
@@ -149,7 +149,7 @@ class TransactionServiceImplTest {
     void updateTransaction_HasEditPermission_UpdateAmountExpense_Success() {
         Long userId = 10L;
         Long transactionId = 100L;
-
+        when(walletRepository.updateBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
         UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
         updateReq.setCategoryId(2L);
         updateReq.setAmount(BigDecimal.valueOf(70000.0));
@@ -175,7 +175,7 @@ class TransactionServiceImplTest {
     void updateTransaction_HasEditPermission_ChangeToIncome_Success() {
         Long userId = 10L;
         Long transactionId = 100L;
-
+        when(walletRepository.updateBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
         UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
         updateReq.setCategoryId(2L);
         updateReq.setAmount(BigDecimal.valueOf(100000.0));
@@ -234,7 +234,7 @@ class TransactionServiceImplTest {
     void createTransaction_ExpenseType_TriggersBudgetCheck() {
         Long userId = 10L;
         request.setType(Transaction.TransactionType.EXPENSE);
-
+        when(walletRepository.updateBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
         when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
         when(walletRepository.findById(1L)).thenReturn(Optional.of(mockWallet));
         when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));

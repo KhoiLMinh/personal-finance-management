@@ -64,7 +64,6 @@ public class DataBackupServiceImpl implements DataBackupService {
         BackupDataDTO backupData = new BackupDataDTO();
         backupData.setExportDate(LocalDateTime.now().toString());
 
-        // 1. Fetch data
         List<WalletDTO> wallets = walletRepository.findAllWalletAccessByUser(userId)
                 .stream().map(walletMapper::toDTO).toList();
         List<CategoryDTO> categories = categoryRepository.findAllByUserIdOrderByCreateAtDesc(userId)
@@ -108,28 +107,60 @@ public class DataBackupServiceImpl implements DataBackupService {
             Map<Long, Long> categoryIdMap = new HashMap<>();
 
             if (backup.getWallets() != null) {
+                List<Wallet> existingWallets = walletRepository.findAllWalletAccessByUser(userId);
                 for (WalletDTO wDto : backup.getWallets()) {
-                    Wallet w = new Wallet();
-                    w.setName(wDto.getName() + " [Phục hồi]");
-                    w.setBalance(wDto.getBalance());
-                    w.setIcon(wDto.getIcon());
-                    w.setColor(wDto.getColor());
-                    w.setOwner(user);
-                    Wallet savedW = walletRepository.save(w);
-                    walletIdMap.put(wDto.getId(), savedW.getId());
+                    Wallet w = existingWallets.stream()
+                            .filter(wallet -> wallet.getName().equals(wDto.getName()))
+                            .findFirst()
+                            .orElse(new Wallet());
+
+                    if (w.getId() == null) {
+                        w.setName(wDto.getName());
+                        w.setBalance(wDto.getBalance());
+                        w.setIcon(wDto.getIcon());
+                        w.setColor(wDto.getColor());
+                        w.setOwner(user);
+                        w = walletRepository.save(w);
+                    }
+                    walletIdMap.put(wDto.getId(), w.getId());
                 }
             }
 
             if (backup.getCategories() != null) {
                 for (CategoryDTO cDto : backup.getCategories()) {
-                    Category c = new Category();
-                    c.setName(cDto.getName());
-                    c.setType(cDto.getType());
-                    c.setIcon(cDto.getIcon());
-                    c.setColor(cDto.getColor());
-                    c.setUser(user);
-                    Category savedC = categoryRepository.save(c);
-                    categoryIdMap.put(cDto.getId(), savedC.getId());
+                    Category categoryExit = categoryRepository.findByNameAndUserId(cDto.getName(), userId)
+                            .orElse(new Category());
+
+                    if (categoryExit.getId() == null) {
+                        categoryExit.setName(cDto.getName());
+                        categoryExit.setType(Category.CategoryType.valueOf(cDto.getType().name()));
+                        categoryExit.setIcon(cDto.getIcon());
+                        categoryExit.setColor(cDto.getColor());
+                        categoryExit.setUser(user);
+                        categoryExit = categoryRepository.save(categoryExit);
+                    }
+                    categoryIdMap.put(cDto.getId(), categoryExit.getId());
+                }
+            }
+
+            if (backup.getBudgets() != null) {
+                for (BudgetDTO bDto : backup.getBudgets()) {
+                    Long newCategoryId = categoryIdMap.get(bDto.getCategoryId());
+                    if (newCategoryId != null) {
+                        boolean exists = budgetRepository.existsByUserIdAndCategoryIdAndMonthAndYear(
+                                userId, newCategoryId, bDto.getMonth(), bDto.getYear());
+                        if (!exists) {
+                            Budget b = new Budget();
+                            b.setCategory(categoryRepository.getReferenceById(newCategoryId));
+                            b.setUser(user);
+                            b.setMonth(bDto.getMonth());
+                            b.setYear(bDto.getYear());
+                            b.setLimitAmount(bDto.getLimitAmount());
+                            b.setWarningPercent(bDto.getWarningPercent());
+                            b.setStatus(Budget.BudgetStatus.valueOf(bDto.getStatus()));
+                            budgetRepository.save(b);
+                        }
+                    }
                 }
             }
 
@@ -139,29 +170,40 @@ public class DataBackupServiceImpl implements DataBackupService {
                     Long newCategoryId = categoryIdMap.get(tDto.getCategoryId());
 
                     if (newWalletId != null && newCategoryId != null) {
-                        Transaction t = new Transaction();
-                        t.setAmount(tDto.getAmount());
-                        t.setType(Transaction.TransactionType.valueOf(tDto.getType()));
-                        t.setDate(tDto.getDate());
-                        t.setDescription(tDto.getDescription());
-                        t.setStatus("COMPLETED");
-                        t.setWallet(walletRepository.getReferenceById(newWalletId));
-                        t.setCategory(categoryRepository.getReferenceById(newCategoryId));
-                        transactionRepository.save(t);
+                        boolean exists = transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(
+                                newWalletId, tDto.getDate(), tDto.getAmount().doubleValue(), tDto.getDescription());
+
+                        if (!exists) {
+                            Transaction t = new Transaction();
+                            t.setAmount(tDto.getAmount());
+                            t.setType(Transaction.TransactionType.valueOf(tDto.getType()));
+                            t.setDate(tDto.getDate());
+                            t.setDescription(tDto.getDescription());
+                            t.setStatus("COMPLETED");
+                            t.setWallet(walletRepository.getReferenceById(newWalletId));
+                            t.setCategory(categoryRepository.getReferenceById(newCategoryId));
+                            transactionRepository.save(t);
+                        }
                     }
                 }
             }
 
             if (backup.getSavingGoals() != null) {
+                List<SavingGoal> existingGoals = savingGoalRepository.findAllByUserId(userId, Pageable.unpaged()).getContent();
                 for (SavingGoalDTO sgDto : backup.getSavingGoals()) {
-                    SavingGoal sg = new SavingGoal();
-                    sg.setTitle(sgDto.getTitle() + " [Phục hồi]");
-                    sg.setTargetAmount(sgDto.getTargetAmount());
-                    sg.setCurrentAmount(sgDto.getCurrentAmount());
-                    sg.setDeadline(sgDto.getDeadline());
-                    sg.setStatus(SavingGoal.GoalStatus.valueOf(sgDto.getStatus()));
-                    sg.setUser(user);
-                    savingGoalRepository.save(sg);
+                    boolean exists = existingGoals.stream()
+                            .anyMatch(sg -> sg.getTitle().equals(sgDto.getTitle()));
+                    if (!exists) {
+                        SavingGoal sg = new SavingGoal();
+                        sg.setTitle(sgDto.getTitle());
+                        sg.setTargetAmount(sgDto.getTargetAmount());
+                        sg.setCurrentAmount(sgDto.getCurrentAmount());
+                        sg.setDeadline(sgDto.getDeadline());
+                        sg.setStatus(SavingGoal.GoalStatus.valueOf(sgDto.getStatus()));
+                        sg.setUser(user);
+                        SavingGoal savedSg = savingGoalRepository.save(sg);
+                        existingGoals.add(savedSg);
+                    }
                 }
             }
 

@@ -88,7 +88,10 @@ class FinanceTaskSchedulerTest {
 
     @Test
     void processRecurringBills_TimeNotReached_DoesNothing() {
+        User mockUser = new User();
+        mockUser.setId(1L);
         RecurringBill bill = new RecurringBill();
+        bill.setUser(mockUser);
         bill.setFrequency(RecurringBill.Frequency.DAILY);
         bill.setNotificationTime(LocalTime.now().plusHours(1));
 

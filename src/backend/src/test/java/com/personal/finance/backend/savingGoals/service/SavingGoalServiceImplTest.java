@@ -112,7 +112,7 @@ class SavingGoalServiceImplTest {
         AddFundRequest request = new AddFundRequest();
         request.setAmount(BigDecimal.valueOf(3000000.0));
         request.setWalletId(100L);
-
+        when(walletRepository.updateBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(true);
         when(walletRepository.findById(100L)).thenReturn(Optional.of(mockWallet));
         when(savingGoalRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockGoal));
@@ -190,7 +190,7 @@ class SavingGoalServiceImplTest {
         AddFundRequest request = new AddFundRequest();
         request.setAmount(BigDecimal.valueOf(15000000.0));
         request.setWalletId(100L);
-
+        when(walletRepository.updateBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
         when(walletRepository.hasEditPermission(100L, 1L)).thenReturn(true);
         when(walletRepository.findById(100L)).thenReturn(Optional.of(mockWallet));
         when(savingGoalRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockGoal));

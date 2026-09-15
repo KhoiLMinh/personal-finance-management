@@ -74,7 +74,7 @@ export default function TransactionsPage() {
   const filteredTransactions = transactions.filter((tx: any) => {
     const matchType = filterType === "ALL" || tx.type === filterType;
     const matchSearch =
-      tx.description?.toLowerCase().includes(search.toLowerCase()) ||
+      (tx.description?.toLowerCase() || "").includes(search.toLowerCase()) ||
       tx.categoryName.toLowerCase().includes(search.toLowerCase());
     return matchType && matchSearch;
   });

@@ -197,7 +197,8 @@ public class ImportBatchServiceImpl implements ImportBatchService {
             }
 
             if (errorRows > 0) {
-                log.warn("Import hoàn tất với {} dòng lỗi bị bỏ qua trên tổng {} dòng.", errorRows, totalRows);
+                log.warn("Import thất bại do có {} dòng lỗi.", errorRows);
+                throw new IllegalArgumentException("Phát hiện dòng sai định dạng số tiền hoặc ngày tháng!");
             }
 
             if (!descriptionsForAi.isEmpty()) {
@@ -225,6 +226,8 @@ public class ImportBatchServiceImpl implements ImportBatchService {
             batch.setStatus(true);
             importBatchRepository.save(batch);
 
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Lỗi parse file sao kê: ", e);
             throw new RuntimeException("Lỗi định dạng file hoặc dữ liệu không hợp lệ. Vui lòng kiểm tra lại cấu hình cột!");

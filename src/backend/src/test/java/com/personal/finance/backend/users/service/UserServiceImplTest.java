@@ -149,7 +149,7 @@ class UserServiceImplTest {
     @Test
     void toggleUserStatus_RootAdmin_ThrowsException() {
         User rootAdmin = new User();
-        rootAdmin.setId(1L); // ID = 1 là cấm khóa
+        rootAdmin.setId(1L);
         rootAdmin.setUserCode("root-uuid");
 
         when(userRepository.findByUserCode("root-uuid")).thenReturn(Optional.of(rootAdmin));

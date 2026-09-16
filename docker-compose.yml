@@ -6,12 +6,27 @@ services:
     container_name: financial-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 123
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: financial_db
     ports:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${DB_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./src/backend
@@ -20,12 +35,25 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/financial_db?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=123
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_URL=jdbc:mysql://mysql-db:3306/financial_db?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh # <--- SỬA LẠI TÊN BIẾN LÀ DB_URL
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD}
+
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION_MS=3600000
+
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
     depends_on:
-      - mysql-db
+      mysql-db:
+        condition: service_healthy
 
   frontend:
     build: ./src/frontend
@@ -33,6 +61,8 @@ services:
     restart: always
     ports:
       - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
     depends_on:
       - backend
 

@@ -5,13 +5,7 @@ import com.personal.finance.backend.common.entities.Base;
 import com.personal.finance.backend.importBatch.entity.ImportBatch;
 import com.personal.finance.backend.transactions.entity.Transaction;
 import com.personal.finance.backend.users.entity.User;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
@@ -39,6 +33,10 @@ public class Wallet extends Base {
     private String icon;
 
     private String color;
+
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)

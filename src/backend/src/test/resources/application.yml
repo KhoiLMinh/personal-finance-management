@@ -3,7 +3,7 @@ spring:
     name: financial-backend
 
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
     username: sa
     password:
     driver-class-name: org.h2.Driver
@@ -29,3 +29,8 @@ app:
 
   google:
     client-id: test-google-client-id
+
+  cloudinary:
+    cloud-name: test-cloud-name
+    api-key: test-api-key
+    api-secret: test-api-secret

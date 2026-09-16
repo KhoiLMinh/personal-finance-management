@@ -69,7 +69,10 @@ public class TransactionServiceImpl implements TransactionService {
                 ? request.getAmount()
                 : request.getAmount().negate();
 
-        walletRepository.updateBalance(wallet.getId(), deltaAmount);
+        int updatedRows = walletRepository.updateBalance(wallet.getId(), deltaAmount);
+        if (updatedRows == 0) {
+            throw new RuntimeException("Giao dịch bị từ chối: Số dư ví không đủ để thực hiện khoản chi này!");
+        }
 
         if (request.getType() == Transaction.TransactionType.EXPENSE) {
             budgetService.checkAndAlertBudget(userId, request.getCategoryId(), request.getDate().getMonthValue(),

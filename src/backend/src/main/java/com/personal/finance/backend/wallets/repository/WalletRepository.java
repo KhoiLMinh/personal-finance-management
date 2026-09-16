@@ -34,7 +34,8 @@ public interface WalletRepository extends JpaRepository<Wallet, Long> {
     boolean hasEditPermission(@Param("walletId") Long walletId, @Param("userId") Long userId);
 
     @Modifying
-    @Query("UPDATE Wallet w SET w.balance = w.balance + :amount WHERE w.id = :walletId")
+    @Query("UPDATE Wallet w SET w.balance = w.balance + :amount, w.version = w.version + 1 " +
+            "WHERE w.id = :walletId AND (w.balance + :amount) >= 0")
     int updateBalance(@Param("walletId") Long walletId, @Param("amount") BigDecimal amount);
 
 

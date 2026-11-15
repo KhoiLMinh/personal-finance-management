@@ -107,7 +107,10 @@ public class DataBackupServiceImpl implements DataBackupService {
             Map<Long, Long> categoryIdMap = new HashMap<>();
 
             if (backup.getWallets() != null) {
-                List<Wallet> existingWallets = walletRepository.findAllWalletAccessByUser(userId);
+                // only the user's own wallets: restoring must not write into wallets merely shared with them (VIEW members)
+                List<Wallet> existingWallets = walletRepository.findAllWalletAccessByUser(userId).stream()
+                        .filter(wallet -> wallet.getOwner().getId().equals(userId))
+                        .toList();
                 for (WalletDTO wDto : backup.getWallets()) {
                     Wallet w = existingWallets.stream()
                             .filter(wallet -> wallet.getName().equals(wDto.getName()))
@@ -171,7 +174,7 @@ public class DataBackupServiceImpl implements DataBackupService {
 
                     if (newWalletId != null && newCategoryId != null) {
                         boolean exists = transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(
-                                newWalletId, tDto.getDate(), tDto.getAmount().doubleValue(), tDto.getDescription());
+                                newWalletId, tDto.getDate(), tDto.getAmount(), tDto.getDescription());
 
                         if (!exists) {
                             Transaction t = new Transaction();
@@ -189,7 +192,9 @@ public class DataBackupServiceImpl implements DataBackupService {
             }
 
             if (backup.getSavingGoals() != null) {
-                List<SavingGoal> existingGoals = savingGoalRepository.findAllByUserId(userId, Pageable.unpaged()).getContent();
+                // mutable copy: Page.getContent() is unmodifiable and add() below used to abort the whole restore
+                List<SavingGoal> existingGoals = new java.util.ArrayList<>(
+                        savingGoalRepository.findAllByUserId(userId, Pageable.unpaged()).getContent());
                 for (SavingGoalDTO sgDto : backup.getSavingGoals()) {
                     boolean exists = existingGoals.stream()
                             .anyMatch(sg -> sg.getTitle().equals(sgDto.getTitle()));

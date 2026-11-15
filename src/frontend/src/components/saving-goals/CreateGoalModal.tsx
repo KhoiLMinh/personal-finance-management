@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Spinner } from 'react-bootstrap';
 import savingGoalService from '../../services/savingGoalService';
+import { toLocalISODate } from '../../utils/format';
 
 interface Props {
   show: boolean;
@@ -22,7 +23,7 @@ export default function CreateGoalModal({ show, onHide, onSuccess, editData }: P
           deadline: editData.deadline
         });
       } else {
-        setFormData({ title: '', targetAmount: '', deadline: new Date().toISOString().split('T')[0] });
+        setFormData({ title: '', targetAmount: '', deadline: toLocalISODate() });
       }
     }
   }, [show, editData]);

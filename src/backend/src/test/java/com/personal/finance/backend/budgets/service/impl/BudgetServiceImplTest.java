@@ -143,6 +143,7 @@ class BudgetServiceImplTest {
 
         when(budgetRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(mockBudget));
         when(budgetRepository.save(any(Budget.class))).thenReturn(mockBudget);
+        when(transactionRepository.sumExpenseByCategoryAndMonth(any(), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.ZERO);
 
         BudgetDTO updatedDTO = new BudgetDTO();
         updatedDTO.setLimitAmount(BigDecimal.valueOf(6000000.0));
@@ -190,6 +191,38 @@ class BudgetServiceImplTest {
         verify(budgetRepository, times(1)).save(mockBudget);
         verify(notificationService, times(1)).createSystemNotification(eq(1L), anyString(), anyString(), eq(2));
         verify(emailService, times(1)).sendEmail(eq("test@gmail.com"), anyString(), anyString());
+    }
+
+    @Test
+    void checkAndAlertBudget_SpendingDroppedAfterEditOrDelete_ResetsStaleFlags() {
+        mockBudget.setStatus(Budget.BudgetStatus.EXCEED);
+        mockBudget.setWarningSent(true);
+        Page<Budget> budgetPage = new PageImpl<>(List.of(mockBudget));
+        when(budgetRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(budgetPage);
+        when(transactionRepository.sumExpenseByCategoryAndMonth(eq(10L), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.valueOf(1000000.0));
+
+        budgetService.checkAndAlertBudget(1L, 10L, 8, 2026);
+
+        assertEquals(Budget.BudgetStatus.ACTIVE, mockBudget.getStatus());
+        assertFalse(mockBudget.isWarningSent());
+        verify(notificationService, never()).createSystemNotification(anyLong(), anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    void updateBudget_RaiseLimitAboveSpending_ClearsExceed() {
+        mockBudget.setStatus(Budget.BudgetStatus.EXCEED);
+        mockBudget.setWarningSent(true);
+        UpdateBudgetRequest request = new UpdateBudgetRequest();
+        request.setLimitAmount(BigDecimal.valueOf(10000000.0));
+        when(budgetRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(mockBudget));
+        when(budgetRepository.save(any(Budget.class))).thenReturn(mockBudget);
+        when(transactionRepository.sumExpenseByCategoryAndMonth(any(), eq(1L), eq(8), eq(2026), eq(Transaction.TransactionType.EXPENSE))).thenReturn(BigDecimal.valueOf(6000000.0));
+
+        budgetService.updateBudget(100L, 1L, request);
+
+        // 6M of 10M = 60% < 80% warning threshold
+        assertEquals(Budget.BudgetStatus.ACTIVE, mockBudget.getStatus());
+        assertFalse(mockBudget.isWarningSent());
     }
 
     @Test

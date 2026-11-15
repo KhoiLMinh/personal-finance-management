@@ -74,12 +74,80 @@ class TransactionServiceImplTest {
 
         mockCategory = new Category();
         mockCategory.setId(2L);
+        mockCategory.setType(Category.CategoryType.EXPENSE);
 
         mockTransaction = new Transaction();
         mockTransaction.setId(100L);
         mockTransaction.setWallet(mockWallet);
         mockTransaction.setAmount(BigDecimal.valueOf(50000.0));
         mockTransaction.setType(Transaction.TransactionType.EXPENSE);
+        mockTransaction.setCategory(mockCategory);
+        mockTransaction.setDate(LocalDate.now());
+    }
+
+    @Test
+    void createTransaction_CategoryTypeMismatch_Rejected() {
+        Long userId = 10L;
+        request.setType(Transaction.TransactionType.INCOME); // category 2 is EXPENSE
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(walletRepository.findById(1L)).thenReturn(Optional.of(mockWallet));
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> transactionService.createTransaction(userId, request));
+
+        assertEquals("Danh mục không phù hợp với loại giao dịch (thu/chi)!", ex.getMessage());
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteTransaction_RevertWouldMakeBalanceNegative_Rejected() {
+        Long userId = 10L;
+        mockTransaction.setType(Transaction.TransactionType.INCOME);
+        when(transactionRepository.findByIdAndAccessibleByUser(100L, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(walletRepository.updateBalance(1L, BigDecimal.valueOf(50000.0).negate())).thenReturn(0);
+
+        assertThrows(RuntimeException.class, () -> transactionService.deleteTransaction(100L, userId));
+
+        verify(transactionRepository, never()).delete(any());
+    }
+
+    @Test
+    void updateTransaction_InsufficientBalance_Rejected() {
+        Long userId = 10L;
+        UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
+        updateReq.setCategoryId(2L);
+        updateReq.setAmount(BigDecimal.valueOf(9_000_000.0));
+        updateReq.setType(Transaction.TransactionType.EXPENSE);
+        updateReq.setDate(LocalDate.now());
+        when(transactionRepository.findByIdAndAccessibleByUser(100L, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(walletRepository.updateBalance(anyLong(), any(BigDecimal.class))).thenReturn(0);
+
+        assertThrows(RuntimeException.class, () -> transactionService.updateTransaction(100L, userId, updateReq));
+
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    void updateTransaction_MoveToAnotherMonth_RechecksBothBudgets() {
+        Long userId = 10L;
+        mockTransaction.setDate(LocalDate.of(2026, 10, 31));
+        UpdateTransactionRequest updateReq = new UpdateTransactionRequest();
+        updateReq.setCategoryId(2L);
+        updateReq.setAmount(BigDecimal.valueOf(50000.0));
+        updateReq.setType(Transaction.TransactionType.EXPENSE);
+        updateReq.setDate(LocalDate.of(2026, 11, 1));
+        when(transactionRepository.findByIdAndAccessibleByUser(100L, userId)).thenReturn(Optional.of(mockTransaction));
+        when(walletRepository.hasEditPermission(1L, userId)).thenReturn(true);
+        when(categoryRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(mockCategory));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
+
+        transactionService.updateTransaction(100L, userId, updateReq);
+
+        verify(budgetService).checkAndAlertBudget(userId, 2L, 11, 2026);
+        verify(budgetService).checkAndAlertBudget(userId, 2L, 10, 2026);
     }
 
     @Test

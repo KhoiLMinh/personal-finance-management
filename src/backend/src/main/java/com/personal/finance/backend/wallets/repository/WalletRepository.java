@@ -41,8 +41,9 @@ public interface WalletRepository extends JpaRepository<Wallet, Long> {
 
     @Query("""
         SELECT COALESCE(SUM(w.balance), 0)
-        FROM Wallet w LEFT JOIN WalletMember wm ON wm.wallet = w 
-        WHERE w.owner.id = :userId OR wm.user.id = :userId
+        FROM Wallet w
+        WHERE w.owner.id = :userId
+           OR EXISTS (SELECT 1 FROM WalletMember wm WHERE wm.wallet = w AND wm.user.id = :userId)
         """)
     BigDecimal getTotalBalanceAccessibleByUser(@Param("userId") Long userId);
 }

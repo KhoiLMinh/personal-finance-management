@@ -32,14 +32,22 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     private final ReportService reportService;
     private final WalletRepository walletRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = createRestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${app.gemini.api-key}")
     private String geminiApiKey;
 
     private static final String GEMINI_API_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
+
+    // without timeouts a hung Gemini call blocks the request thread (and the import DB transaction) indefinitely
+    private static RestTemplate createRestTemplate() {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(10));
+        factory.setReadTimeout(java.time.Duration.ofSeconds(30));
+        return new RestTemplate(factory);
+    }
 
     @Override
     public String analyzeReport(Long userId, LocalDate startDate, LocalDate endDate) {
@@ -99,10 +107,10 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     }
 
     private String callGeminiTextApi(String systemInstruction, String userPrompt) {
-        String url = GEMINI_API_URL + geminiApiKey;
-
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        // key in a header, not the URL: RestClientException messages embed the URL and used to reach the client
+        headers.set("x-goog-api-key", geminiApiKey);
 
         Map<String, Object> systemPart = Map.of("text", systemInstruction);
         Map<String, Object> systemInstructionMap = Map.of("parts", List.of(systemPart));
@@ -118,7 +126,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity(GEMINI_API_URL, entity, Map.class);
             List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
             Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
             List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
@@ -126,7 +134,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             return (String) parts.get(0).get("text");
         } catch (Exception e) {
             log.error("Lỗi khi gọi Gemini API: ", e);
-            throw new RuntimeException("Gemini API error: " + e.getMessage());
+            throw new RuntimeException("Trợ lý AI tạm thời không khả dụng, vui lòng thử lại sau!");
         }
     }
 }

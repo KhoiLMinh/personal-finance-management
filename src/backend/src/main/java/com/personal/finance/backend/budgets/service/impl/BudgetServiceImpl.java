@@ -127,6 +127,9 @@ public class BudgetServiceImpl implements BudgetService {
             budgetHistoryRepository.save(history);
         }
         Budget updatedBudget = budgetRepository.save(budget);
+        if (isChanged) {
+            evaluateBudget(userId, budget);
+        }
         log.info("Cập nhật thành công ngân sách ID: {} bởi UserId: {}", id, userId);
         return budgetMapper.toDTO(updatedBudget);
     }
@@ -145,34 +148,52 @@ public class BudgetServiceImpl implements BudgetService {
         budgetRepository.findAllByUserId(userId, Pageable.unpaged()).stream()
                 .filter(b -> b.getCategory().getId().equals(categoryId) && b.getMonth() == month && b.getYear() == year)
                 .findFirst()
-                .ifPresent(budget -> {
+                .ifPresent(budget -> evaluateBudget(userId, budget));
+    }
 
-                    BigDecimal totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(
-                            categoryId, userId, month, year, Transaction.TransactionType.EXPENSE);
-                    User user = budget.getUser();
-                    BigDecimal warningLimit = budget.getLimitAmount().multiply(BigDecimal.valueOf(budget.getWarningPercent() / 100.0));
+    private void evaluateBudget(Long userId, Budget budget) {
+        Long categoryId = budget.getCategory().getId();
+        int month = budget.getMonth();
+        int year = budget.getYear();
+        BigDecimal totalSpent = transactionRepository.sumExpenseByCategoryAndMonth(
+                categoryId, userId, month, year, Transaction.TransactionType.EXPENSE);
+        User user = budget.getUser();
+        BigDecimal warningLimit = budget.getLimitAmount().multiply(BigDecimal.valueOf(budget.getWarningPercent() / 100.0));
 
-                    if (totalSpent.compareTo(budget.getLimitAmount()) >= 0 && budget.getStatus() != Budget.BudgetStatus.EXCEED) {
-                        budget.setStatus(Budget.BudgetStatus.EXCEED);
-                        budgetRepository.save(budget);
+        // spending can drop (transaction edited/deleted): clear stale flags so status matches data and alerts can fire again
+        boolean reset = false;
+        if (budget.getStatus() == Budget.BudgetStatus.EXCEED && totalSpent.compareTo(budget.getLimitAmount()) < 0) {
+            budget.setStatus(Budget.BudgetStatus.ACTIVE);
+            reset = true;
+        }
+        if (budget.isWarningSent() && totalSpent.compareTo(warningLimit) < 0) {
+            budget.setWarningSent(false);
+            reset = true;
+        }
+        if (reset) {
+            budgetRepository.save(budget);
+        }
 
-                        String msg = String.format("Bạn đã chi tiêu %s, VƯỢT QUÁ ngân sách %s cho danh mục '%s' trong tháng %d/%d.",
-                                totalSpent, budget.getLimitAmount(), budget.getCategory().getName(), month, year);
+        if (totalSpent.compareTo(budget.getLimitAmount()) >= 0 && budget.getStatus() != Budget.BudgetStatus.EXCEED) {
+            budget.setStatus(Budget.BudgetStatus.EXCEED);
+            budgetRepository.save(budget);
 
-                        notificationService.createSystemNotification(userId, "Vượt ngân sách chi tiêu!", msg, 1);
-                        emailService.sendEmail(user.getEmail(), "Cảnh báo vượt ngân sách - Personal Finance", msg);
-                    }
+            String msg = String.format("Bạn đã chi tiêu %s, VƯỢT QUÁ ngân sách %s cho danh mục '%s' trong tháng %d/%d.",
+                    totalSpent, budget.getLimitAmount(), budget.getCategory().getName(), month, year);
 
-                    else if (totalSpent.compareTo(warningLimit) >= 0 && totalSpent.compareTo(budget.getLimitAmount()) < 0 && !budget.isWarningSent()) {
-                        budget.setWarningSent(true);
-                        budgetRepository.save(budget);
+            notificationService.createSystemNotification(userId, "Vượt ngân sách chi tiêu!", msg, 1);
+            emailService.sendEmail(user.getEmail(), "Cảnh báo vượt ngân sách - Personal Finance", msg);
+        }
 
-                        String msg = String.format("Bạn đã chi tiêu %s, đạt mức cảnh báo %.0f%% ngân sách (%s) cho danh mục '%s' trong tháng %d/%d. Hãy chú ý chi tiêu nhé!",
-                                totalSpent, budget.getWarningPercent(), budget.getLimitAmount(), budget.getCategory().getName(), month, year);
-                        notificationService.createSystemNotification(userId, "⚠️ Sắp vượt ngân sách!", msg, 2);
-                        emailService.sendEmail(user.getEmail(), "Cảnh báo ngân sách - Personal Finance", msg);
-                    }
-                });
+        else if (totalSpent.compareTo(warningLimit) >= 0 && totalSpent.compareTo(budget.getLimitAmount()) < 0 && !budget.isWarningSent()) {
+            budget.setWarningSent(true);
+            budgetRepository.save(budget);
+
+            String msg = String.format("Bạn đã chi tiêu %s, đạt mức cảnh báo %.0f%% ngân sách (%s) cho danh mục '%s' trong tháng %d/%d. Hãy chú ý chi tiêu nhé!",
+                    totalSpent, budget.getWarningPercent(), budget.getLimitAmount(), budget.getCategory().getName(), month, year);
+            notificationService.createSystemNotification(userId, "⚠️ Sắp vượt ngân sách!", msg, 2);
+            emailService.sendEmail(user.getEmail(), "Cảnh báo ngân sách - Personal Finance", msg);
+        }
     }
 
 

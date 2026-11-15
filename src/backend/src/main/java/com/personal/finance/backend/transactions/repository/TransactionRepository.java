@@ -17,21 +17,22 @@ import java.util.Optional;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
+    // EXISTS instead of LEFT JOIN members: a join repeats each row once per wallet member and inflates SUMs
+    String ACCESSIBLE_BY_USER = "(w.owner.id = :userId OR EXISTS (SELECT 1 FROM WalletMember wm WHERE wm.wallet = w AND wm.user.id = :userId)) ";
+
 
     @Query("""
         SELECT t FROM Transaction t 
-        LEFT JOIN t.wallet w 
-        LEFT JOIN w.members wm 
-        WHERE (w.owner.id = :userId OR wm.user.id = :userId) 
+        JOIN t.wallet w
+        WHERE (w.owner.id = :userId OR EXISTS (SELECT 1 FROM WalletMember wm WHERE wm.wallet = w AND wm.user.id = :userId))
         AND t.id = :id
         """)
     Optional<Transaction> findByIdAndAccessibleByUser(@Param("id") Long id, @Param("userId") Long userId);
 
     @Query("""
         SELECT t FROM Transaction t
-        LEFT JOIN t.wallet w
-        LEFT JOIN w.members wm
-        WHERE (w.owner.id = :userId OR wm.user.id = :userId)
+        JOIN t.wallet w
+        WHERE (w.owner.id = :userId OR EXISTS (SELECT 1 FROM WalletMember wm WHERE wm.wallet = w AND wm.user.id = :userId))
         AND (:walletId IS NULL OR w.id = :walletId)
         AND (:categoryId IS NULL OR t.category.id = :categoryId)
         AND (:startDate IS NULL OR t.date >= :startDate)
@@ -49,12 +50,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             Pageable pageable
     );
 
-    boolean existsByWalletIdAndDateAndAmountAndDescription(Long walletId, java.time.LocalDate date, Double amount, String description);
+    boolean existsByWalletIdAndDateAndAmountAndDescription(Long walletId, LocalDate date, BigDecimal amount, String description);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0.0) FROM Transaction t " +
-            "LEFT JOIN t.wallet w " +
-            "LEFT JOIN w.members wm " +
-            "WHERE t.category.id = :categoryId AND (w.owner.id = :userId OR wm.user.id = :userId) " +
+            "JOIN t.wallet w " +
+            "WHERE t.category.id = :categoryId AND " + ACCESSIBLE_BY_USER +
             "AND t.type = :type AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
     BigDecimal sumExpenseByCategoryAndMonth(
             @Param("categoryId") Long categoryId,
@@ -67,9 +67,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("""
         SELECT COALESCE(SUM(t.amount), 0.0) 
         FROM Transaction t 
-        LEFT JOIN t.wallet w 
-        LEFT JOIN w.members wm 
-        WHERE (w.owner.id = :userId OR wm.user.id = :userId) 
+        JOIN t.wallet w
+        WHERE (w.owner.id = :userId OR EXISTS (SELECT 1 FROM WalletMember wm WHERE wm.wallet = w AND wm.user.id = :userId))
         AND t.type = :type 
         AND (:startDate IS NULL OR t.date >= :startDate) 
         AND (:endDate IS NULL OR t.date <= :endDate)
@@ -87,9 +86,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         )
         FROM Transaction t 
         JOIN t.category c 
-        LEFT JOIN t.wallet w 
-        LEFT JOIN w.members wm 
-        WHERE (w.owner.id = :userId OR wm.user.id = :userId) 
+        JOIN t.wallet w
+        WHERE (w.owner.id = :userId OR EXISTS (SELECT 1 FROM WalletMember wm WHERE wm.wallet = w AND wm.user.id = :userId))
         AND t.type = 'EXPENSE' 
         AND (:startDate IS NULL OR t.date >= :startDate) 
         AND (:endDate IS NULL OR t.date <= :endDate)
@@ -104,9 +102,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("""
         SELECT t.date, t.type, SUM(t.amount) 
         FROM Transaction t 
-        LEFT JOIN t.wallet w 
-        LEFT JOIN w.members wm 
-        WHERE (w.owner.id = :userId OR wm.user.id = :userId) 
+        JOIN t.wallet w
+        WHERE (w.owner.id = :userId OR EXISTS (SELECT 1 FROM WalletMember wm WHERE wm.wallet = w AND wm.user.id = :userId))
         AND t.date >= :startDate AND t.date <= :endDate 
         GROUP BY t.date, t.type 
         ORDER BY t.date ASC

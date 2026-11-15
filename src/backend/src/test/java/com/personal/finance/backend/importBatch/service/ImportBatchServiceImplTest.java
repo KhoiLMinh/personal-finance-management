@@ -43,6 +43,7 @@ class ImportBatchServiceImplTest {
     @Mock private UserRepository userRepository;
     @Mock private ImportBatchMapper importBatchMapper;
     @Mock private AiAssistantService aiAssistantService;
+    @Mock private com.personal.finance.backend.budgets.service.BudgetService budgetService;
 
     @InjectMocks
     private ImportBatchServiceImpl importBatchService;
@@ -65,10 +66,12 @@ class ImportBatchServiceImplTest {
         mockCategoryFood = new Category();
         mockCategoryFood.setId(100L);
         mockCategoryFood.setName("Ăn uống");
+        mockCategoryFood.setType(Category.CategoryType.EXPENSE);
 
         mockCategoryUncat = new Category();
         mockCategoryUncat.setId(99L);
         mockCategoryUncat.setName("Chưa phân loại");
+        mockCategoryUncat.setType(Category.CategoryType.EXPENSE);
 
         mockRule = new CategoryRule();
         mockRule.setKeyword("Highlands");
@@ -113,7 +116,8 @@ class ImportBatchServiceImplTest {
         when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
         when(categoryRuleRepository.findAllByCategoryUserIdOrderByPriorityDesc(1L)).thenReturn(List.of(mockRule));
 
-        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(50000.0), eq("Highlands Coffee"))).thenReturn(false);
+        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(new java.math.BigDecimal("50000")), eq("Highlands Coffee"))).thenReturn(false);
+        when(walletRepository.updateBalance(eq(10L), any())).thenReturn(1);
 
         ImportBatchDTO mockResponseDTO = new ImportBatchDTO();
         mockResponseDTO.setSuccessRows(1);
@@ -125,6 +129,44 @@ class ImportBatchServiceImplTest {
         assertEquals(1, result.getSuccessRows());
         verify(transactionRepository, times(1)).saveAll(anyList());
         verify(aiAssistantService, never()).categorizeTransactionsBatch(anyList(), anyList());
+        verify(budgetService).checkAndAlertBudget(1L, 100L, 8, 2026);
+    }
+
+    @Test
+    void importData_InsufficientBalance_ThrowsSoTransactionRollsBack() {
+        String csvData = "Ngày,Số tiền,Ghi chú\n2026-08-15,-50000,Highlands Coffee";
+        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes(StandardCharsets.UTF_8));
+
+        when(walletRepository.hasEditPermission(10L, 1L)).thenReturn(true);
+        when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
+        when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
+        when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
+        when(categoryRuleRepository.findAllByCategoryUserIdOrderByPriorityDesc(1L)).thenReturn(List.of(mockRule));
+        when(walletRepository.updateBalance(eq(10L), any())).thenReturn(0);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> importBatchService.importData(1L, 10L, 0, 1, 2, file));
+
+        assertTrue(ex.getMessage().contains("số dư ví sẽ bị âm"));
+        verify(budgetService, never()).checkAndAlertBudget(anyLong(), anyLong(), anyInt(), anyInt());
+    }
+
+    @Test
+    void importData_RuleOfWrongType_NotAppliedToIncome() {
+        String csvData = "Ngày,Số tiền,Ghi chú\n2026-08-15,50000,Highlands hoàn tiền";
+        MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", csvData.getBytes(StandardCharsets.UTF_8));
+
+        when(walletRepository.hasEditPermission(10L, 1L)).thenReturn(true);
+        when(walletRepository.findById(10L)).thenReturn(Optional.of(mockWallet));
+        when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
+        when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
+        when(categoryRuleRepository.findAllByCategoryUserIdOrderByPriorityDesc(1L)).thenReturn(List.of(mockRule));
+        when(walletRepository.updateBalance(eq(10L), any())).thenReturn(1);
+        when(aiAssistantService.categorizeTransactionsBatch(anyList(), anyList())).thenReturn(java.util.Map.of());
+
+        importBatchService.importData(1L, 10L, 0, 1, 2, file);
+
+        // EXPENSE rule "Highlands" must not tag an INCOME row; it goes to AI / Uncategorized instead
+        verify(aiAssistantService).categorizeTransactionsBatch(eq(List.of("Highlands hoàn tiền")), anyList());
     }
 
     @Test
@@ -137,7 +179,7 @@ class ImportBatchServiceImplTest {
         when(importBatchRepository.save(any())).thenReturn(new ImportBatch());
         when(categoryRepository.findByNameAndUserId("Chưa phân loại", 1L)).thenReturn(Optional.of(mockCategoryUncat));
 
-        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(50000.0), eq("Highlands Coffee"))).thenReturn(true);
+        when(transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(eq(10L), any(), eq(new java.math.BigDecimal("50000")), eq("Highlands Coffee"))).thenReturn(true);
 
         ImportBatchDTO mockResponseDTO = new ImportBatchDTO();
         mockResponseDTO.setDuplicatedRows(1);

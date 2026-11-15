@@ -1,6 +1,7 @@
 package com.personal.finance.backend.importBatch.service.impl;
 
 import com.personal.finance.backend.ai_assistant.service.AiAssistantService;
+import com.personal.finance.backend.budgets.service.BudgetService;
 import com.personal.finance.backend.categories.entity.Category;
 import com.personal.finance.backend.categories.entity.CategoryRule;
 import com.personal.finance.backend.categories.repository.CategoryRepository;
@@ -46,6 +47,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
     private final UserRepository userRepository;
     private final AiAssistantService aiAssistantService;
     private final ImportBatchMapper importBatchMapper;
+    private final BudgetService budgetService;
 
     private static final String CSV_SPLIT_REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
 
@@ -162,18 +164,19 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                     BigDecimal absoluteAmount = rawAmount.abs();
 
                     if (transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(walletId,
-                            date, absoluteAmount.doubleValue(), descStr)) {
+                            date, absoluteAmount, descStr)) {
                         duplicateRows++;
                         continue;
                     }
 
-                    Category matchedCategory = categorizeTransaction(descStr, userRules, null);
+                    Transaction.TransactionType type = rawAmount.signum() >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE;
+                    Category matchedCategory = categorizeTransaction(descStr, type, userRules, null);
 
                     Transaction transaction = new Transaction();
                     transaction.setWallet(wallet);
                     transaction.setImportBatch(batch);
                     transaction.setAmount(absoluteAmount);
-                    transaction.setType(rawAmount.signum() >= 0 ? Transaction.TransactionType.INCOME : Transaction.TransactionType.EXPENSE);
+                    transaction.setType(type);
                     transaction.setDate(date);
                     transaction.setDescription(descStr);
                     transaction.setStatus("COMPLETED");
@@ -208,7 +211,7 @@ public class ImportBatchServiceImpl implements ImportBatchService {
                     Long predictedCategoryId = aiResults.get(t.getDescription());
                     if (predictedCategoryId != null) {
                         allCategories.stream()
-                                .filter(c -> c.getId().equals(predictedCategoryId))
+                                .filter(c -> c.getId().equals(predictedCategoryId) && sameType(c, t.getType()))
                                 .findFirst()
                                 .ifPresent(t::setCategory);
                     }
@@ -217,7 +220,9 @@ public class ImportBatchServiceImpl implements ImportBatchService {
 
             if (!transactionsToSave.isEmpty()) {
                 transactionRepository.saveAll(transactionsToSave);
-                walletRepository.updateBalance(walletId, netBalanceChange);
+                if (walletRepository.updateBalance(walletId, netBalanceChange) == 0) {
+                    throw new IllegalArgumentException("Import bị từ chối: số dư ví sẽ bị âm sau khi ghi nhận các khoản chi trong file!");
+                }
             }
 
             batch.setTotalRows(totalRows);
@@ -225,6 +230,12 @@ public class ImportBatchServiceImpl implements ImportBatchService {
             batch.setDuplicatedRows(duplicateRows);
             batch.setStatus(true);
             importBatchRepository.save(batch);
+
+            transactionsToSave.stream()
+                    .filter(t -> t.getType() == Transaction.TransactionType.EXPENSE)
+                    .map(t -> List.of(t.getCategory().getId(), (long) t.getDate().getMonthValue(), (long) t.getDate().getYear()))
+                    .distinct()
+                    .forEach(k -> budgetService.checkAndAlertBudget(userId, k.get(0), k.get(1).intValue(), k.get(2).intValue()));
 
         } catch (IllegalArgumentException e) {
             throw e;
@@ -284,10 +295,14 @@ public class ImportBatchServiceImpl implements ImportBatchService {
         throw new RuntimeException("Không hỗ trợ định dạng ngày: " + dateStr);
     }
 
-    private Category categorizeTransaction(String description, List<CategoryRule> rules, Category fallback) {
+    private static boolean sameType(Category category, Transaction.TransactionType type) {
+        return category.getType() != null && category.getType().name().equals(type.name());
+    }
+
+    private Category categorizeTransaction(String description, Transaction.TransactionType type, List<CategoryRule> rules, Category fallback) {
         String lowerDesc = description.toLowerCase();
         for (CategoryRule rule : rules) {
-            if (lowerDesc.contains(rule.getKeyword().toLowerCase())) {
+            if (lowerDesc.contains(rule.getKeyword().toLowerCase()) && sameType(rule.getCategory(), type)) {
                 return rule.getCategory();
             }
         }

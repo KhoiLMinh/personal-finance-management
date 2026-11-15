@@ -53,6 +53,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục hoặc không có quyền sử dụng!"));
+        requireMatchingType(category, request.getType());
 
         Transaction transaction = new Transaction();
         transaction.setWallet(wallet);
@@ -103,9 +104,12 @@ public class TransactionServiceImpl implements TransactionService {
         BigDecimal revertAmount = transaction.getType() == Transaction.TransactionType.INCOME
                 ? transaction.getAmount().negate()
                 : transaction.getAmount();
-        walletRepository.updateBalance(transaction.getWallet().getId(), revertAmount);
+        if (walletRepository.updateBalance(transaction.getWallet().getId(), revertAmount) == 0) {
+            throw new RuntimeException("Không thể xóa: số dư ví sẽ bị âm sau khi hoàn tác khoản thu này!");
+        }
 
         transactionRepository.delete(transaction);
+        recheckBudget(userId, transaction.getType(), transaction.getCategory().getId(), transaction.getDate());
         log.info("Đã xóa giao dịch ID: {}", id);
     }
 
@@ -122,6 +126,12 @@ public class TransactionServiceImpl implements TransactionService {
 
         Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục!"));
+        Long oldCategoryId = transaction.getCategory().getId();
+        Transaction.TransactionType oldType = transaction.getType();
+        LocalDate oldDate = transaction.getDate();
+        if (!oldCategoryId.equals(request.getCategoryId())) {
+            requireMatchingType(category, request.getType());
+        }
 
         boolean isChanged = transaction.getAmount().compareTo(request.getAmount()) != 0
                 || transaction.getType() != request.getType()
@@ -150,8 +160,9 @@ public class TransactionServiceImpl implements TransactionService {
                 ? request.getAmount() : request.getAmount().negate();
         BigDecimal netChange = newImpact.subtract(oldImpact);
 
-        if (netChange.compareTo(BigDecimal.ZERO) != 0) {
-            walletRepository.updateBalance(transaction.getWallet().getId(), netChange);
+        if (netChange.compareTo(BigDecimal.ZERO) != 0
+                && walletRepository.updateBalance(transaction.getWallet().getId(), netChange) == 0) {
+            throw new RuntimeException("Giao dịch bị từ chối: Số dư ví không đủ cho thay đổi này!");
         }
 
         transaction.setCategory(category);
@@ -160,14 +171,31 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setDate(request.getDate());
         transaction.setDescription(request.getDescription());
 
-        if (request.getType() == Transaction.TransactionType.EXPENSE) {
-            budgetService.checkAndAlertBudget(userId, request.getCategoryId(), request.getDate().getMonthValue(), request.getDate().getYear());
-        }
-
         Transaction updatedTransaction = transactionRepository.save(transaction);
+
+        recheckBudget(userId, request.getType(), request.getCategoryId(), request.getDate());
+        boolean leftOldBudget = !oldCategoryId.equals(request.getCategoryId())
+                || oldType != request.getType()
+                || oldDate.getMonthValue() != request.getDate().getMonthValue()
+                || oldDate.getYear() != request.getDate().getYear();
+        if (leftOldBudget) {
+            recheckBudget(userId, oldType, oldCategoryId, oldDate);
+        }
         log.info("Cập nhật thành công giao dịch ID: {} bởi UserId: {}", id, userId);
 
         return transactionMapper.toDTO(updatedTransaction);
+    }
+
+    private void requireMatchingType(Category category, Transaction.TransactionType type) {
+        if (category.getType() == null || !category.getType().name().equals(type.name())) {
+            throw new RuntimeException("Danh mục không phù hợp với loại giao dịch (thu/chi)!");
+        }
+    }
+
+    private void recheckBudget(Long userId, Transaction.TransactionType type, Long categoryId, LocalDate date) {
+        if (type == Transaction.TransactionType.EXPENSE) {
+            budgetService.checkAndAlertBudget(userId, categoryId, date.getMonthValue(), date.getYear());
+        }
     }
 
     @Override

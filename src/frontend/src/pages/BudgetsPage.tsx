@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import budgetService from '../services/budgetService';
 import categoryService from '../services/categoryService';
 import reportService from '../services/reportService';
+import { toLocalISODate } from '../utils/format';
 
 import MySpinner from '../components/MySpinner';
 import BudgetCard from '../components/budgets/BudgetCard';
@@ -26,8 +27,8 @@ export default function BudgetsPage() {
     setLoading(true);
     try {
       const date = new Date();
-      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
-      const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+      const firstDay = toLocalISODate(new Date(date.getFullYear(), date.getMonth(), 1));
+      const lastDay = toLocalISODate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
 
       const [budgetsRes, catRes, reportRes] = await Promise.all([
         budgetService.getBudgets({ page: 0, size: 50 }),

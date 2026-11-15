@@ -122,4 +122,57 @@ class DataBackupServiceImplTest {
 
         verify(walletRepository, times(1)).save(any(Wallet.class));
     }
+
+    @Test
+    void importUserData_NewSavingGoal_RestoredWithoutError() throws Exception {
+        BackupDataDTO backupData = new BackupDataDTO();
+        com.personal.finance.backend.savingGoals.dto.response.SavingGoalDTO g = new com.personal.finance.backend.savingGoals.dto.response.SavingGoalDTO();
+        g.setTitle("Mua xe");
+        g.setTargetAmount(new BigDecimal("1000000"));
+        g.setCurrentAmount(BigDecimal.ZERO);
+        g.setDeadline(java.time.LocalDate.of(2027, 1, 1));
+        g.setStatus("IN_PROGRESS");
+        backupData.setSavingGoals(List.of(g));
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        MultipartFile file = new MockMultipartFile("file", "b.json", "application/json", mapper.writeValueAsBytes(backupData));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+        when(savingGoalRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+        when(savingGoalRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // Page.getContent() is unmodifiable; restore used to fail with "File sao lưu không hợp lệ"
+        assertDoesNotThrow(() -> backupService.importUserData(1L, file));
+        verify(savingGoalRepository, times(1)).save(any());
+    }
+
+    @Test
+    void importUserData_SameNameWalletOnlySharedWithUser_NotReused() throws Exception {
+        BackupDataDTO backupData = new BackupDataDTO();
+        WalletDTO wDto = new WalletDTO();
+        wDto.setId(10L);
+        wDto.setName("Ví chung");
+        wDto.setBalance(BigDecimal.ZERO);
+        backupData.setWallets(List.of(wDto));
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        MultipartFile file = new MockMultipartFile("file", "b.json", "application/json", mapper.writeValueAsBytes(backupData));
+
+        User otherOwner = new User();
+        otherOwner.setId(2L);
+        Wallet shared = new Wallet();
+        shared.setId(50L);
+        shared.setName("Ví chung");
+        shared.setOwner(otherOwner);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+        when(walletRepository.findAllWalletAccessByUser(1L)).thenReturn(List.of(shared));
+        Wallet created = new Wallet();
+        created.setId(60L);
+        when(walletRepository.save(any(Wallet.class))).thenReturn(created);
+
+        backupService.importUserData(1L, file);
+
+        // a new wallet owned by the user is created instead of writing into user 2's wallet
+        verify(walletRepository, times(1)).save(any(Wallet.class));
+    }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Row, Col, Spinner } from 'react-bootstrap';
 import transactionService from '../../services/transactionService';
+import { toLocalISODate } from '../../utils/format';
 
 interface Props {
   show: boolean;
@@ -18,7 +19,7 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
     amount: '',
     categoryId: '',
     walletId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     description: ''
   });
 
@@ -36,11 +37,11 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
       } else {
         setFormData(prev => ({
           ...prev,
-          categoryId: categories.length > 0 ? categories[0].id : '',
+          categoryId: '',
           walletId: wallets.length > 0 ? wallets[0].id : '',
           amount: '',
           description: '',
-          date: new Date().toISOString().split('T')[0],
+          date: toLocalISODate(),
         }));
       }
     }
@@ -90,13 +91,13 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
               <Button 
                 variant={formData.type === 'INCOME' ? 'info' : 'light'} 
                 className={`rounded-pill px-4 fw-medium ${formData.type === 'INCOME' ? 'text-white' : 'text-muted border'}`}
-                onClick={() => setFormData({...formData, type: 'INCOME'})}
+                onClick={() => setFormData({...formData, type: 'INCOME', categoryId: formData.type === 'INCOME' ? formData.categoryId : ''})}
                 style={formData.type === 'INCOME' ? { backgroundColor: 'var(--color-primary)' } : {}}
               >Khoản thu (+)</Button>
               <Button 
                 variant={formData.type === 'EXPENSE' ? 'info' : 'light'} 
                 className={`rounded-pill px-4 fw-medium ${formData.type === 'EXPENSE' ? 'text-white' : 'text-muted border'}`}
-                onClick={() => setFormData({...formData, type: 'EXPENSE'})}
+                onClick={() => setFormData({...formData, type: 'EXPENSE', categoryId: formData.type === 'EXPENSE' ? formData.categoryId : ''})}
                 style={formData.type === 'EXPENSE' ? { backgroundColor: 'var(--color-primary)' } : {}}
               >Khoản chi (-)</Button>
             </div>

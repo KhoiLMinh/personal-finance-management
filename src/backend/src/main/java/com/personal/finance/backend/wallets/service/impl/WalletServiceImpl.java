@@ -71,14 +71,25 @@ public class WalletServiceImpl implements WalletService {
         wallet.setColor(request.getColor());
         wallet.setOwner(owner);
 
-        return walletMapper.toDTO(walletRepository.save(wallet));
+        return withPermission(walletMapper.toDTO(walletRepository.save(wallet)), OWNER);
+    }
+
+    private static final String OWNER = "OWNER";
+
+    private WalletDTO withPermission(WalletDTO dto, String permission) {
+        dto.setMyPermission(permission);
+        return dto;
     }
 
     @Override
     public List<WalletDTO> getWalletsForUser(Long userId) {
         return walletRepository.findAllWalletAccessByUser(userId)
                 .stream()
-                .map(walletMapper::toDTO)
+                .map(w -> withPermission(walletMapper.toDTO(w), w.getOwner().getId().equals(userId)
+                        ? OWNER
+                        : walletMemberRepository.findByWalletIdAndUserId(w.getId(), userId)
+                                .map(m -> m.getPermissions().name())
+                                .orElse(WalletMember.Permission.VIEW.name())))
                 .toList();
     }
 
@@ -91,7 +102,7 @@ public class WalletServiceImpl implements WalletService {
         wallet.setName(request.getName());
         wallet.setIcon(request.getIcon());
         wallet.setColor(request.getColor());
-        return walletMapper.toDTO(walletRepository.save(wallet));
+        return withPermission(walletMapper.toDTO(walletRepository.save(wallet)), OWNER);
     }
 
     @Override

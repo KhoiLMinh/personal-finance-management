@@ -20,10 +20,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (
-      error.response &&
-      (error.response.status === 401 || error.response.status === 403)
-    ) {
+    // 401 = session invalid (expired/locked) -> sign out. 403 = signed in but not allowed -> let the screen show the message.
+    if (error.response && error.response.status === 401) {
       console.warn("Phiên đăng nhập hết hạn hoặc tài khoản bị khóa!");
 
       localStorage.removeItem("access_token");

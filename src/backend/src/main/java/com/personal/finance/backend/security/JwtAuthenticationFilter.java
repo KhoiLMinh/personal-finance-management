@@ -43,9 +43,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 User user = userRepository.findById(userId).orElse(null);
                 if (user == null || !user.isActive()) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    // 401, not 403: the session is no longer valid, so the client must sign out (403 = signed in but not allowed)
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json;charset=UTF-8");
-                    response.getWriter().write("{\"error\": {\"code\": \"FORBIDDEN\", \"message\": \"Tài khoản của bạn đã bị quản trị viên khóa!\"}}");
+                    response.getWriter().write("{\"error\": {\"code\": \"ACCOUNT_LOCKED\", \"message\": \"Tài khoản của bạn đã bị quản trị viên khóa!\"}}");
                     return;
                 }
 

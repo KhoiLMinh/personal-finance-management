@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Form, Button, Row, Col, Spinner } from 'react-bootstrap';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Modal, Form, Button, ButtonGroup, Row, Col, Spinner } from 'react-bootstrap';
 import transactionService from '../../services/transactionService';
 import { toLocalISODate } from '../../utils/format';
+import { canWriteWallet } from '../../utils/wallet';
 
 interface Props {
   show: boolean;
@@ -12,7 +13,9 @@ interface Props {
   editData?: any;
 }
 //FR-02
-export default function TransactionModal({ show, onHide, onSuccess, wallets, categories, editData }: Props) {
+export default function TransactionModal({ show, onHide, onSuccess, wallets: allWallets, categories, editData }: Props) {
+  // VIEW-only shared wallets cannot take new transactions; when editing, keep the transaction's own wallet visible
+  const wallets = useMemo(() => (editData ? allWallets : allWallets.filter(canWriteWallet)), [allWallets, editData]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: 'EXPENSE',
@@ -71,99 +74,89 @@ export default function TransactionModal({ show, onHide, onSuccess, wallets, cat
       onSuccess();
       onHide();
     } catch (error: any) {
-      alert(error.response?.data?.error?.message || "Lỗi khi lưu giao dịch!");
+      alert(error.response?.data?.error?.message || 'Không lưu được giao dịch. Kiểm tra lại thông tin rồi thử lại.');
     } finally {
       setLoading(false);
     }
   };
 
+  const selectableCats = categories.filter(c => c.type === formData.type && !c.hidden);
+
   return (
-    <Modal show={show} onHide={onHide} centered size="lg">
-      <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
-        <Modal.Title className="fw-bold fs-4">{editData ? 'Sửa giao dịch' : '+ Thêm giao dịch mới'}</Modal.Title>
+    <Modal show={show} onHide={onHide} centered>
+      <Modal.Header closeButton>
+        <Modal.Title as="h2" className="h5 mb-0">{editData ? 'Sửa giao dịch' : 'Thêm giao dịch'}</Modal.Title>
       </Modal.Header>
-      <Modal.Body className="px-4 pb-4 pt-3">
-        <Form onSubmit={handleSubmit}>
-          
-          <div className="mb-4">
-            <Form.Label className="text-muted fw-medium small mb-2">Loại giao dịch</Form.Label>
-            <div className="d-flex gap-3">
-              <Button 
-                variant={formData.type === 'INCOME' ? 'info' : 'light'} 
-                className={`rounded-pill px-4 fw-medium ${formData.type === 'INCOME' ? 'text-white' : 'text-muted border'}`}
-                onClick={() => setFormData({...formData, type: 'INCOME', categoryId: formData.type === 'INCOME' ? formData.categoryId : ''})}
-                style={formData.type === 'INCOME' ? { backgroundColor: 'var(--color-primary)' } : {}}
-              >Khoản thu (+)</Button>
-              <Button 
-                variant={formData.type === 'EXPENSE' ? 'info' : 'light'} 
-                className={`rounded-pill px-4 fw-medium ${formData.type === 'EXPENSE' ? 'text-white' : 'text-muted border'}`}
-                onClick={() => setFormData({...formData, type: 'EXPENSE', categoryId: formData.type === 'EXPENSE' ? formData.categoryId : ''})}
-                style={formData.type === 'EXPENSE' ? { backgroundColor: 'var(--color-primary)' } : {}}
-              >Khoản chi (-)</Button>
-            </div>
-          </div>
+      <Form onSubmit={handleSubmit}>
+        <Modal.Body>
+          <ButtonGroup className="w-100 mb-3" aria-label="Loại giao dịch">
+            {(['EXPENSE', 'INCOME'] as const).map(t => (
+              <Button key={t} variant={formData.type === t ? 'primary' : 'outline-secondary'} aria-pressed={formData.type === t}
+                onClick={() => setFormData({ ...formData, type: t, categoryId: formData.type === t ? formData.categoryId : '' })}>
+                {t === 'EXPENSE' ? 'Khoản chi' : 'Khoản thu'}
+              </Button>
+            ))}
+          </ButtonGroup>
 
-          <Form.Group className="mb-3">
-            <Form.Label className="text-muted fw-medium small">Số tiền (VNĐ)</Form.Label>
-            <Form.Control size="lg" type="number" min="1" required className="bg-light border-0" 
-              value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} />
+          <Form.Group className="mb-3" controlId="tx-amount">
+            <Form.Label className="small text-secondary">Số tiền (đ)</Form.Label>
+            <Form.Control type="number" inputMode="numeric" min="1" step="1" required className="num fs-5"
+              value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} />
           </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label className="text-muted fw-medium small">Danh mục</Form.Label>
-            <Form.Select size="lg" className="bg-light border-0" required
-              value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: e.target.value})}>
-              <option value="">-- Chọn danh mục --</option>
-              {categories
-                .filter(c => c.type === formData.type && !c.hidden && !c.parentId)
-                .map(parent => (
-                  <React.Fragment key={parent.id}>
-                    <option value={parent.id} className="fw-bold">{parent.name}</option>
-                    {categories
-                      .filter(child => child.type === formData.type && !child.hidden && child.parentId === parent.id)
-                      .map(child => (
-                        <option key={child.id} value={child.id}>&nbsp;&nbsp;&nbsp;↳ {child.name}</option>
+          <Row className="g-3 mb-3">
+            <Col sm={6}>
+              <Form.Group controlId="tx-category">
+                <Form.Label className="small text-secondary">Danh mục</Form.Label>
+                <Form.Select required value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}>
+                  <option value="">Chọn danh mục</option>
+                  {selectableCats.filter(c => !c.parentId).map(parent => (
+                    <React.Fragment key={parent.id}>
+                      <option value={parent.id}>{parent.name}</option>
+                      {selectableCats.filter(child => child.parentId === parent.id).map(child => (
+                        <option key={child.id} value={child.id}>&nbsp;&nbsp;↳ {child.name}</option>
                       ))}
-                  </React.Fragment>
-              ))}
-            </Form.Select>
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label className="text-muted fw-medium small">Ví thanh toán</Form.Label>
-            <Form.Select size="lg" className="bg-light border-0" required disabled={!!editData}
-              value={formData.walletId} onChange={(e) => setFormData({...formData, walletId: e.target.value})}>
-              <option value="">-- Chọn ví --</option>
-              {wallets.map(w => (
-                <option key={w.id} value={w.id}>{w.name} - Số dư: {w.balance.toLocaleString('vi-VN')}đ</option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-
-          <Row className="mb-4">
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="text-muted fw-medium small">Ngày giao dịch</Form.Label>
-                <Form.Control size="lg" type="date" required className="bg-light border-0"
-                  value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
+                    </React.Fragment>
+                  ))}
+                </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="text-muted fw-medium small">Ghi chú</Form.Label>
-                <Form.Control size="lg" type="text" className="bg-light border-0" placeholder="Tùy chọn..."
-                  value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+            <Col sm={6}>
+              <Form.Group controlId="tx-wallet">
+                <Form.Label className="small text-secondary">Ví</Form.Label>
+                <Form.Select required disabled={!!editData}
+                  value={formData.walletId} onChange={(e) => setFormData({ ...formData, walletId: e.target.value })}>
+                  <option value="">Chọn ví</option>
+                  {wallets.map(w => (
+                    <option key={w.id} value={w.id}>{w.name} · {Number(w.balance).toLocaleString('vi-VN')} đ</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col sm={6}>
+              <Form.Group controlId="tx-date">
+                <Form.Label className="small text-secondary">Ngày</Form.Label>
+                <Form.Control type="date" required value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })} />
+              </Form.Group>
+            </Col>
+            <Col sm={6}>
+              <Form.Group controlId="tx-note">
+                <Form.Label className="small text-secondary">Ghi chú</Form.Label>
+                <Form.Control type="text" maxLength={255} placeholder="Không bắt buộc"
+                  value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
               </Form.Group>
             </Col>
           </Row>
-
-          <Button type="submit" className="w-100 py-3 fs-5 fw-bold rounded-4 border-0" disabled={loading} style={{ backgroundColor: 'var(--color-primary)' }}>
-            {loading ? <Spinner size="sm" className="me-2"/> : null}
-            Lưu giao dịch
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={onHide}>Hủy</Button>
+          <Button type="submit" disabled={loading}>
+            {loading && <Spinner size="sm" className="me-2" />}
+            {editData ? 'Lưu thay đổi' : 'Thêm giao dịch'}
           </Button>
-
-        </Form>
-      </Modal.Body>
+        </Modal.Footer>
+      </Form>
     </Modal>
   );
 }

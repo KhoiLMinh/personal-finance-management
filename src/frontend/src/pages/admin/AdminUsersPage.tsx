@@ -1,223 +1,107 @@
-import React, { useEffect, useState } from "react";
-import { Card, Table, Badge, Button } from "react-bootstrap";
-import { Users, Trash2, ShieldAlert, Lock, Unlock } from "lucide-react";
-import userService from "../../services/userService";
-import { useAuth } from "../../context/AuthContext";
-import MySpinner from "../../components/MySpinner";
+import { useCallback, useEffect, useState } from 'react';
+import { Button, Form, InputGroup } from 'react-bootstrap';
+import { Lock, Search, Trash2, Unlock } from 'lucide-react';
+import userService from '../../services/userService';
+import { useAuth } from '../../context/AuthContext';
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/PageState';
+
+interface AdminUser { id: number; userCode: string; username: string; fullName: string | null; email: string; role: 'ADMIN' | 'USER'; active: boolean }
+
+const ROOT_ADMIN_ID = 1;
 
 export default function AdminUsersPage() {
   const { user } = useAuth();
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<AdminUser[] | null>(null);
+  const [error, setError] = useState(false);
+  const [query, setQuery] = useState('');
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    setError(false);
     try {
-      const data = await userService.getAllUsers();
-      setUsers(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+      setUsers(await userService.getAllUsers());
+    } catch {
+      setError(true);
     }
-  };
-
-  useEffect(() => {
-    fetchUsers();
   }, []);
 
-  const handleDelete = async (
-    userCode: string,
-    isRoot: boolean,
-    isSelf: boolean,
-    username: string,
-  ) => {
-    if (isRoot) {
-      alert("Không thể xóa Quản trị viên gốc của hệ thống!");
-      return;
-    }
-    if (isSelf) {
-      alert("Bạn không thể tự xóa chính mình!");
-      return;
-    }
-    if (
-      window.confirm(
-        `Hành động này không thể hoàn tác. Bạn chắc chắn muốn xóa tài khoản "${username}" cùng toàn bộ dữ liệu (Ví, Giao dịch) của họ chứ?`,
-      )
-    ) {
-      try {
-        await userService.deleteUser(userCode);
-        setUsers(users.filter((u) => u.userCode !== userCode));
-      } catch (error: any) {
-        alert(error.response?.data?.error?.message || "Lỗi xóa người dùng!");
-      }
+  useEffect(() => { load(); }, [load]);
+
+  const protectedReason = (u: AdminUser) =>
+    u.id === ROOT_ADMIN_ID ? 'Quản trị viên gốc của hệ thống' : u.id === user?.id ? 'Tài khoản của bạn' : null;
+
+  const handleDelete = async (u: AdminUser) => {
+    if (protectedReason(u)) return;
+    if (!window.confirm(`Xóa tài khoản "${u.username}" cùng toàn bộ ví và giao dịch của họ? Thao tác này không hoàn tác được.`)) return;
+    try {
+      await userService.deleteUser(u.userCode);
+      setUsers((prev) => (prev ?? []).filter((x) => x.userCode !== u.userCode));
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Không xóa được tài khoản.');
     }
   };
 
-  const handleToggleStatus = async (
-    userCode: string,
-    isRoot: boolean,
-    isSelf: boolean,
-    username: string,
-    currentStatus: boolean,
-  ) => {
-    if (isRoot) {
-      alert("Không thể khóa Quản trị viên gốc của hệ thống!");
-      return;
-    }
-    if (isSelf) {
-      alert("Bạn không thể tự khóa chính mình!");
-      return;
-    }
-
-    const actionText = currentStatus ? "khóa" : "mở khóa";
-    if (
-      window.confirm(
-        `Bạn có chắc chắn muốn ${actionText} tài khoản "${username}" không?`,
-      )
-    ) {
-      try {
-        await userService.toggleUserStatus(userCode);
-        setUsers(
-          users.map((u) =>
-            u.userCode === userCode ? { ...u, active: !u.active } : u,
-          ),
-        );
-      } catch (error: any) {
-        alert(
-          error.response?.data?.error?.message ||
-            `Lỗi ${actionText} người dùng!`,
-        );
-      }
+  const handleToggle = async (u: AdminUser) => {
+    if (protectedReason(u)) return;
+    const action = u.active ? 'Khóa' : 'Mở khóa';
+    const extra = u.active ? ' Người dùng sẽ bị đăng xuất ở lần thao tác tiếp theo.' : '';
+    if (!window.confirm(`${action} tài khoản "${u.username}"?${extra}`)) return;
+    try {
+      await userService.toggleUserStatus(u.userCode);
+      setUsers((prev) => (prev ?? []).map((x) => (x.userCode === u.userCode ? { ...x, active: !x.active } : x)));
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || `Không ${action.toLowerCase()} được tài khoản.`);
     }
   };
 
-  if (loading) return <MySpinner />;
+  const q = query.trim().toLowerCase();
+  const shown = (users ?? []).filter((u) => !q || [u.username, u.fullName ?? '', u.email].some((f) => f.toLowerCase().includes(q)));
+  const lockedCount = (users ?? []).filter((u) => !u.active).length;
 
   return (
-    <div className="p-4 flex-grow-1" style={{ backgroundColor: "#e2e8f0" }}>
-      <Card
-        className="border-0 rounded-4 mb-4 shadow-sm"
-        style={{ backgroundColor: "#b0bec5" }}
-      >
-        <Card.Body className="p-4 d-flex align-items-center gap-3">
-          <div className="bg-white p-2 rounded-circle shadow-sm">
-            <Users size={32} color="var(--color-primary)" />
-          </div>
-          <div>
-            <h3 className="fw-bold text-dark mb-1">
-              Quản lý Tài khoản (Users)
-            </h3>
-            <p className="text-dark mb-0 opacity-75">
-              Hệ thống hiện có {users.length} tài khoản
-            </p>
-          </div>
-        </Card.Body>
-      </Card>
+    <div className="page">
+      <div className="page-toolbar">
+        <div className="small text-secondary">{users ? `${users.length} tài khoản · ${lockedCount} đang bị khóa` : ' '}</div>
+        <InputGroup size="sm" style={{ maxWidth: 320 }}>
+          <InputGroup.Text><Search size={14} aria-hidden /></InputGroup.Text>
+          <Form.Control aria-label="Tìm người dùng" placeholder="Tên, username hoặc email" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </InputGroup>
+      </div>
 
-      <Card className="border-0 rounded-4 shadow-sm overflow-hidden">
-        <Table hover responsive className="mb-0 align-middle">
-          <thead className="bg-light">
-            <tr>
-              <th className="py-3 px-4 text-muted small fw-bold">ID</th>
-              <th className="py-3 text-muted small fw-bold">USER</th>
-              <th className="py-3 text-muted small fw-bold">EMAIL</th>
-              <th className="py-3 text-muted small fw-bold">VAI TRÒ</th>
-              <th className="py-3 text-muted small fw-bold">TRẠNG THÁI</th>
-              <th className="py-3 px-4 text-end text-muted small fw-bold">
-                THAO TÁC
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr
-                key={u.userCode}
-                className={!u.active ? "bg-light opacity-75" : ""}
-              >
-                <td className="px-4 fw-medium text-muted font-monospace">
-                  #{u.userCode.substring(0, 8)}
-                </td>
-                <td>
-                  <div className="fw-bold text-dark">
-                    {u.fullName || u.username}
+      <section className="panel">
+        {error ? (
+          <ErrorState onRetry={load} />
+        ) : users === null ? (
+          <LoadingState />
+        ) : shown.length === 0 ? (
+          <EmptyState title={q ? 'Không có tài khoản khớp từ khóa' : 'Chưa có người dùng nào'} />
+        ) : (
+          <ul className="list-unstyled mb-0">
+            {shown.map((u) => {
+              const reason = protectedReason(u);
+              return (
+                <li key={u.userCode} className={`d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-bottom ${u.active ? '' : 'opacity-75'}`}>
+                  <div className="flex-grow-1" style={{ minWidth: 200 }}>
+                    <div className="fw-medium text-truncate">{u.fullName || u.username} <span className="text-secondary fw-normal small">@{u.username}</span></div>
+                    <div className="small text-secondary text-truncate">{u.email}</div>
                   </div>
-                  <div className="small text-muted">@{u.username}</div>
-                </td>
-                <td className="text-muted">{u.email}</td>
-                <td>
-                  <Badge
-                    bg={u.role === "ADMIN" ? "danger" : "primary"}
-                    className="rounded-pill px-3 py-2"
-                  >
-                    {u.role === "ADMIN" ? (
-                      <>
-                        <ShieldAlert size={12} className="me-1" /> ADMIN
-                      </>
-                    ) : (
-                      "USER"
-                    )}
-                  </Badge>
-                </td>
-                <td>
-                  <Badge
-                    bg={u.active ? "success" : "secondary"}
-                    className="rounded-pill px-3 py-2"
-                  >
-                    {u.active ? "Hoạt động" : "Bị khóa"}
-                  </Badge>
-                </td>
-                <td className="px-4 text-end">
-                  <Button
-                    variant={u.active ? "outline-warning" : "outline-success"}
-                    size="sm"
-                    className="rounded-circle p-2 border-0 me-2"
-                    disabled={u.id === 1 || u.id === user?.id}
-                    onClick={() =>
-                      handleToggleStatus(
-                        u.userCode,
-                        u.id === 1,
-                        u.id === user?.id,
-                        u.username,
-                        u.active,
-                      )
-                    }
-                    title={
-                      u.active ? "Khóa tài khoản này" : "Mở khóa tài khoản này"
-                    }
-                  >
-                    {u.active ? <Lock size={18} /> : <Unlock size={18} />}
-                  </Button>
-                  <Button
-                    variant="outline-danger"
-                    size="sm"
-                    className="rounded-circle p-2 border-0"
-                    disabled={u.id === 1 || u.id === user?.id}
-                    onClick={() =>
-                      handleDelete(
-                        u.userCode,
-                        u.id === 1,
-                        u.id === user?.id,
-                        u.username,
-                      )
-                    }
-                    title="Xóa tài khoản"
-                  >
-                    <Trash2 size={18} />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 && (
-              <tr>
-                <td colSpan={6} className="text-center py-5 text-muted">
-                  Chưa có người dùng nào.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </Table>
-      </Card>
+                  {u.role === 'ADMIN' && <span className="status-pill warning">Quản trị viên</span>}
+                  <span className={`status-pill ${u.active ? 'ok' : 'over'}`}>{u.active ? 'Hoạt động' : 'Bị khóa'}</span>
+                  <div className="d-flex" title={reason ?? undefined}>
+                    <Button variant="link" size="sm" className="text-secondary p-1" disabled={!!reason} onClick={() => handleToggle(u)}
+                      aria-label={`${u.active ? 'Khóa' : 'Mở khóa'} ${u.username}${reason ? ` (${reason})` : ''}`}>
+                      {u.active ? <Lock size={16} aria-hidden /> : <Unlock size={16} aria-hidden />}
+                    </Button>
+                    <Button variant="link" size="sm" className="text-secondary p-1" disabled={!!reason} onClick={() => handleDelete(u)}
+                      aria-label={`Xóa ${u.username}${reason ? ` (${reason})` : ''}`}>
+                      <Trash2 size={16} aria-hidden />
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

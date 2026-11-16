@@ -1,78 +1,65 @@
-import React from 'react';
-import { Card, ProgressBar, Dropdown } from 'react-bootstrap';
-import { Settings, Target, CheckCircle2 } from 'lucide-react';
+import { Button } from 'react-bootstrap';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import type { SavingGoal } from '../../types/finance';
 import { formatCurrency } from '../../utils/format';
+import { goalState } from '../../utils/goal';
 
 interface Props {
-  goal: any;
+  goal: SavingGoal;
   onAddFund: (goalId: number) => void;
-  onEdit: (goal: any) => void;
-  onDelete: (goalId: number) => void;
+  onEdit: (goal: SavingGoal) => void;
+  onDelete: (goal: SavingGoal) => void;
 }
 
 export default function SavingGoalCard({ goal, onAddFund, onEdit, onDelete }: Props) {
-  const percentage = goal.targetAmount > 0 
-    ? Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100)) 
-    : 0;
-  
-  const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);
-  const isCompleted = goal.status === 'COMPLETE' || percentage >= 100;
+  const st = goalState(goal);
+  const open = st.state !== 'done' && st.state !== 'cancelled';
+  // a hint, not a record: what is left divided by the whole months left before the deadline
+  const monthsLeft = Math.max(1, Math.ceil(st.days / 30));
+  const pace = open && st.days >= 0 && st.remaining > 0 ? st.remaining / monthsLeft : null;
 
   return (
-    <Card className="border-0 rounded-4 shadow-sm h-100 bg-white" style={{ border: '1px solid var(--color-border)' }}>
-      <Card.Body className="p-4 d-flex flex-column">
-        <div className="d-flex justify-content-between align-items-start mb-3">
-          <div className="d-flex align-items-center gap-3">
-            <div className="bg-light rounded-3 d-flex align-items-center justify-content-center" style={{ width: 48, height: 48 }}>
-              {isCompleted ? <CheckCircle2 size={24} className="text-success" /> : <Target size={24} className="text-secondary" />}
-            </div>
-            <div>
-              <h5 className="fw-bold text-dark mb-1">{goal.title}</h5>
-              <div className="text-muted small">Hạn chót: {new Date(goal.deadline).toLocaleDateString('vi-VN')}</div>
-            </div>
+    <article className="panel h-100 d-flex flex-column">
+      <div className="panel-body d-flex flex-column gap-2 flex-grow-1">
+        <div className="d-flex justify-content-between align-items-start gap-2">
+          <div style={{ minWidth: 0 }}>
+            <h3 className="h6 fw-semibold mb-0 text-truncate">{goal.title}</h3>
+            <div className="small text-secondary">Hạn {new Date(`${goal.deadline}T00:00:00`).toLocaleDateString('vi-VN')}</div>
           </div>
-
-          <div className="d-flex flex-column align-items-end">
-            <Dropdown align="end">
-              <Dropdown.Toggle variant="light" size="sm" className="border-0 bg-transparent shadow-none p-1 hide-caret text-muted">
-                <Settings size={18} />
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="shadow border-0 rounded-3">
-                <Dropdown.Item onClick={() => onEdit(goal)}>Sửa thông tin</Dropdown.Item>
-                <Dropdown.Divider />
-                <Dropdown.Item onClick={() => onDelete(goal.id)} className="text-danger">Xóa mục tiêu</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-            <span className="fw-bold fs-5" style={{ color: 'var(--color-primary)' }}>{percentage}%</span>
-          </div>
+          <span className={`status-pill ${st.pill}`}>{st.label}</span>
         </div>
 
-        <div className="d-flex justify-content-between text-muted small fw-medium mb-2 mt-auto">
-          <span>Đã tích lũy: {formatCurrency(goal.currentAmount)}</span>
-          <span>Mục tiêu: {formatCurrency(goal.targetAmount)}</span>
+        <div className="d-flex justify-content-between align-items-baseline mt-2">
+          <span className="num fs-5 fw-semibold">{formatCurrency(goal.currentAmount)}</span>
+          <span className="num small text-secondary">/ {formatCurrency(goal.targetAmount)}</span>
         </div>
-
-        <ProgressBar 
-          now={percentage} 
-          variant={isCompleted ? "success" : "primary"} 
-          className="mb-4 rounded-pill" 
-          style={{ height: '8px' }} 
-        />
-
-        <div className="d-flex justify-content-between align-items-center pt-2 border-top">
-          <span className="text-muted fw-medium small">
-            Còn thiếu: <span className="text-dark fw-bold">{formatCurrency(remaining)}</span>
-          </span>
-          <button 
-            onClick={() => onAddFund(goal.id)}
-            disabled={isCompleted}
-            className={`btn btn-sm rounded-pill px-3 fw-bold ${isCompleted ? 'btn-secondary opacity-50' : 'btn-danger text-white'}`}
-            style={!isCompleted ? { backgroundColor: '#ef4444', border: 'none' } : {}}
-          >
-            {isCompleted ? 'Đã hoàn thành' : '+ Nộp thêm'}
-          </button>
+        <div className={`meter ${st.state === 'done' ? 'ok' : ''}`} role="progressbar" aria-valuenow={Math.min(100, st.percent)} aria-valuemin={0} aria-valuemax={100}
+          aria-label={`Đã đạt ${st.percent}% mục tiêu ${goal.title}`}>
+          <span style={{ width: `${Math.min(100, st.percent)}%` }} />
         </div>
-      </Card.Body>
-    </Card>
+        <div className="d-flex justify-content-between small">
+          <span className="num text-secondary">Đạt {st.percent}%</span>
+          {st.remaining > 0 && <span className="num">Còn thiếu {formatCurrency(st.remaining)}</span>}
+        </div>
+        {pace !== null && (
+          <div className="small text-secondary">Để kịp hạn, cần để dành khoảng <span className="num text-ink">{formatCurrency(Math.ceil(pace))}</span>/tháng.</div>
+        )}
+        {st.state === 'overdue' && <div className="small text-danger-strong">Đã quá hạn. Cân nhắc dời hạn hoặc giảm số tiền mục tiêu.</div>}
+      </div>
+
+      <div className="d-flex border-top">
+        {open && (
+          <Button variant="link" size="sm" className="flex-fill text-decoration-none d-inline-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" onClick={() => onAddFund(goal.id)}>
+            <Plus size={14} aria-hidden /> Nộp thêm
+          </Button>
+        )}
+        <Button variant="link" size="sm" className={`flex-fill text-secondary text-decoration-none d-inline-flex align-items-center justify-content-center gap-1 py-2 ${open ? 'border-start' : ''}`} onClick={() => onEdit(goal)}>
+          <Pencil size={14} aria-hidden /> Sửa
+        </Button>
+        <Button variant="link" size="sm" className="flex-fill text-danger-strong text-decoration-none d-inline-flex align-items-center justify-content-center gap-1 py-2 border-start" onClick={() => onDelete(goal)}>
+          <Trash2 size={14} aria-hidden /> Xóa
+        </Button>
+      </div>
+    </article>
   );
 }

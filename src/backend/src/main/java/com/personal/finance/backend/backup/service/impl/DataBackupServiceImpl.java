@@ -171,6 +171,19 @@ public class DataBackupServiceImpl implements DataBackupService {
                 for (TransactionDTO tDto : backup.getTransactions()) {
                     Long newWalletId = walletIdMap.get(tDto.getWalletId());
                     Long newCategoryId = categoryIdMap.get(tDto.getCategoryId());
+                    if (newWalletId != null && newCategoryId == null && tDto.getCategoryName() != null) {
+                        // tx made by another member of a shared wallet uses that member's category, which is not in this
+                        // user's export: map it by name (creating it once) instead of silently dropping the transaction
+                        newCategoryId = categoryRepository.findByNameAndUserId(tDto.getCategoryName(), userId)
+                                .orElseGet(() -> {
+                                    Category c = new Category();
+                                    c.setName(tDto.getCategoryName());
+                                    c.setType(Category.CategoryType.valueOf(tDto.getType()));
+                                    c.setUser(user);
+                                    return categoryRepository.save(c);
+                                }).getId();
+                        categoryIdMap.put(tDto.getCategoryId(), newCategoryId);
+                    }
 
                     if (newWalletId != null && newCategoryId != null) {
                         boolean exists = transactionRepository.existsByWalletIdAndDateAndAmountAndDescription(

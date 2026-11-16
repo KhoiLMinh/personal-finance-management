@@ -1,61 +1,53 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Button, Spinner, Row, Col } from 'react-bootstrap';
+import { Modal, Form, Button, Spinner, Alert } from 'react-bootstrap';
+import { CreditCard, Landmark, Wallet as WalletIcon } from 'lucide-react';
 import walletService from '../../services/walletService';
+import { formatCurrency } from '../../utils/format';
+import type { Wallet } from '../../utils/wallet';
 
 interface Props {
   show: boolean;
   onHide: () => void;
   onSuccess: () => void;
-  editData?: any;
+  editData?: Wallet | null;
 }
+
+const KINDS = [
+  { value: 'Wallet', label: 'Tiền mặt', Icon: WalletIcon },
+  { value: 'Bank', label: 'Ngân hàng', Icon: Landmark },
+  { value: 'CreditCard', label: 'Thẻ', Icon: CreditCard },
+];
+const SWATCHES = ['#2348c9', '#0f7f4f', '#a15c07', '#7c3aed', '#0e7490', '#be185d', '#475569'];
+const DEFAULT_COLOR = SWATCHES[0];
 
 export default function WalletModal({ show, onHide, onSuccess, editData }: Props) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    balance: '', 
-    icon: 'Wallet', 
-    color: '#3b82f6' 
-  });
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({ name: '', balance: '', icon: 'Wallet', color: DEFAULT_COLOR });
 
   useEffect(() => {
-    if (show) {
-      if (editData) {
-        setFormData({
-          name: editData.name,
-          balance: editData.balance.toString(),
-          icon: editData.icon || 'Wallet',
-          color: editData.color || '#3b82f6'
-        });
-      } else {
-        setFormData({ name: '', balance: '', icon: 'Wallet', color: '#3b82f6' });
-      }
-    }
+    if (!show) return;
+    setError('');
+    setFormData(editData
+      ? { name: editData.name, balance: String(editData.balance), icon: editData.icon || 'Wallet', color: editData.color || DEFAULT_COLOR }
+      : { name: '', balance: '', icon: 'Wallet', color: DEFAULT_COLOR });
   }, [show, editData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
       if (editData) {
-        await walletService.updateWallet(editData.id, {
-          name: formData.name,
-          icon: formData.icon,
-          color: formData.color
-        });
+        // balance is not editable: it is derived from transactions
+        await walletService.updateWallet(editData.id, { name: formData.name, icon: formData.icon, color: formData.color });
       } else {
-        // Tạo mới
-        await walletService.createWallet({
-          name: formData.name,
-          balance: Number(formData.balance),
-          icon: formData.icon,
-          color: formData.color
-        });
+        await walletService.createWallet({ name: formData.name, balance: Number(formData.balance || 0), icon: formData.icon, color: formData.color });
       }
       onSuccess();
       onHide();
-    } catch (error: any) {
-      alert(error.response?.data?.error?.message || "Lỗi khi lưu thông tin ví!");
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Không lưu được ví. Kiểm tra lại thông tin rồi thử lại.');
     } finally {
       setLoading(false);
     }
@@ -63,78 +55,66 @@ export default function WalletModal({ show, onHide, onSuccess, editData }: Props
 
   return (
     <Modal show={show} onHide={onHide} centered>
-      <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
-        <Modal.Title className="fw-bold fs-4">{editData ? 'Sửa thông tin ví' : '+ Tạo ví mới'}</Modal.Title>
+      <Modal.Header closeButton>
+        <Modal.Title as="h2" className="h5 mb-0">{editData ? 'Sửa ví' : 'Tạo ví'}</Modal.Title>
       </Modal.Header>
-      <Modal.Body className="px-4 pb-4 pt-3">
-        <Form onSubmit={handleSubmit}>
-          
-          <Form.Group className="mb-3">
-            <Form.Label className="text-muted fw-medium small">Tên ví / Ngân hàng</Form.Label>
-            <Form.Control 
-              size="lg" 
-              type="text" 
-              required 
-              className="bg-light border-0" 
-              placeholder="VD: Tiền mặt, Vietcombank..."
-              value={formData.name} 
-              onChange={(e) => setFormData({...formData, name: e.target.value})} 
-            />
+      <Form onSubmit={handleSubmit}>
+        <Modal.Body>
+          {error && <Alert variant="danger" className="py-2 small">{error}</Alert>}
+
+          <Form.Group className="mb-3" controlId="wallet-name">
+            <Form.Label className="small text-secondary">Tên ví</Form.Label>
+            <Form.Control required maxLength={100} placeholder="VD: Tiền mặt, Vietcombank" value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
           </Form.Group>
 
-          {/* Không cho sửa số dư nếu đang ở chế độ Edit */}
-          <Form.Group className="mb-3">
-            <Form.Label className="text-muted fw-medium small">Số dư ban đầu (VNĐ)</Form.Label>
-            <Form.Control 
-              size="lg" 
-              type="number" 
-              min="0" 
-              required={!editData} 
-              disabled={!!editData}
-              className="bg-light border-0" 
-              placeholder="0"
-              value={formData.balance} 
-              onChange={(e) => setFormData({...formData, balance: e.target.value})} 
-            />
-            {editData && <Form.Text className="text-danger small">Bạn không thể sửa số dư của ví đã tạo.</Form.Text>}
+          <fieldset className="mb-3">
+            <legend className="small text-secondary mb-1" style={{ fontSize: 'var(--fs-sm)' }}>Loại ví</legend>
+            <div className="d-flex gap-2">
+              {KINDS.map(({ value, label, Icon }) => {
+                const on = formData.icon === value;
+                return (
+                  <Button key={value} variant={on ? 'primary' : 'outline-secondary'} aria-pressed={on} className="flex-fill d-inline-flex align-items-center justify-content-center gap-1"
+                    onClick={() => setFormData({ ...formData, icon: value })}>
+                    <Icon size={16} aria-hidden /> {label}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <Form.Group className="mb-3" controlId="wallet-balance">
+            <Form.Label className="small text-secondary">{editData ? 'Số dư hiện tại' : 'Số dư ban đầu (đ)'}</Form.Label>
+            {editData ? (
+              <>
+                <div className="num fw-semibold">{formatCurrency(editData.balance)}</div>
+                <Form.Text>Số dư thay đổi qua giao dịch, không sửa trực tiếp được.</Form.Text>
+              </>
+            ) : (
+              <Form.Control type="number" inputMode="numeric" min="0" step="1" placeholder="0" className="num" value={formData.balance}
+                onChange={(e) => setFormData({ ...formData, balance: e.target.value })} />
+            )}
           </Form.Group>
 
-          <Row className="mb-4">
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="text-muted fw-medium small">Biểu tượng</Form.Label>
-                <Form.Select 
-                  size="lg" 
-                  className="bg-light border-0"
-                  value={formData.icon} 
-                  onChange={(e) => setFormData({...formData, icon: e.target.value})}
-                >
-                  <option value="Wallet">Ví tiền</option>
-                  <option value="Bank">Ngân hàng</option>
-                  <option value="CreditCard">Thẻ tín dụng</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="text-muted fw-medium small">Màu sắc thẻ</Form.Label>
-                <Form.Control 
-                  type="color" 
-                  className="w-100 p-1 border-0 rounded-3 bg-light" 
-                  style={{ height: '48px', cursor: 'pointer' }}
-                  value={formData.color} 
-                  onChange={(e) => setFormData({...formData, color: e.target.value})} 
-                />
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Button type="submit" className="w-100 py-3 fs-5 fw-bold rounded-4 border-0" disabled={loading} style={{ backgroundColor: 'var(--color-primary)' }}>
-            {loading ? <Spinner size="sm" className="me-2"/> : null} Lưu thông tin
+          <fieldset>
+            <legend className="small text-secondary mb-1" style={{ fontSize: 'var(--fs-sm)' }}>Màu nhận diện</legend>
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              {SWATCHES.map((c) => (
+                <button key={c} type="button" className="swatch" style={{ background: c }} aria-label={`Màu ${c}`} aria-pressed={formData.color === c}
+                  onClick={() => setFormData({ ...formData, color: c })} />
+              ))}
+              <Form.Control type="color" aria-label="Chọn màu khác" className="form-control-color" value={formData.color}
+                onChange={(e) => setFormData({ ...formData, color: e.target.value })} />
+            </div>
+          </fieldset>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={onHide}>Hủy</Button>
+          <Button type="submit" disabled={loading}>
+            {loading && <Spinner size="sm" className="me-2" />}{editData ? 'Lưu thay đổi' : 'Tạo ví'}
           </Button>
-
-        </Form>
-      </Modal.Body>
+        </Modal.Footer>
+      </Form>
     </Modal>
   );
 }

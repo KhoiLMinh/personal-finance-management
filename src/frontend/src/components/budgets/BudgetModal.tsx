@@ -9,9 +9,12 @@ interface Props {
   onSuccess: () => void;
   editData?: any;
   categories: any[];
+  /** Month being viewed on the Budgets page; new budgets default to it. */
+  defaultMonth?: number;
+  defaultYear?: number;
 }
 
-export default function BudgetModal({ show, onHide, onSuccess, editData, categories }: Props) {
+export default function BudgetModal({ show, onHide, onSuccess, editData, categories, defaultMonth, defaultYear }: Props) {
   const [loading, setLoading] = useState(false);
   const [defaultWarning, setDefaultWarning] = useState('');
 
@@ -43,14 +46,14 @@ export default function BudgetModal({ show, onHide, onSuccess, editData, categor
       } else {
         setFormData({
           categoryId: categories.find((c: any) => c.type === 'EXPENSE' && !c.hidden)?.id?.toString() || '',
-          month: new Date().getMonth() + 1,
-          year: new Date().getFullYear(),
+          month: defaultMonth ?? new Date().getMonth() + 1,
+          year: defaultYear ?? new Date().getFullYear(),
           limitAmount: '',
           warningPercent: '' 
         });
       }
     }
-  }, [show, editData, categories]);
+  }, [show, editData, categories, defaultMonth, defaultYear]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -126,6 +126,19 @@ class CategoryServiceImplTest {
     }
 
     @Test
+    void deleteCategory_ChildHasTransactions_ThrowsBusinessErrorInsteadOfFkViolation() {
+        Category child = new Category();
+        child.getTransactions().add(new Transaction());
+        mockCategory.getChildren().add(child);
+        when(categoryRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(mockCategory));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> categoryService.deleteCategory(10L, 1L));
+
+        assertTrue(exception.getMessage().startsWith("Danh mục đã có giao dịch"));
+        verify(categoryRepository, never()).delete(any());
+    }
+
+    @Test
     void hideCategory_ValidRequest_Success() {
         Long userId = 1L;
         Long categoryId = 10L;

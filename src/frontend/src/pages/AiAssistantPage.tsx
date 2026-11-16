@@ -1,207 +1,176 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Card, Form, Button, InputGroup, Spinner } from 'react-bootstrap';
-import { Bot, Send, User, Trash2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Button, Form, Spinner } from 'react-bootstrap';
+import { Send, Trash2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import aiService from '../services/aiService';
+import { chatHistoryKey, useAuth } from '../context/AuthContext';
 
 interface ChatMessage {
   id: string;
   role: 'ai' | 'user';
   content: string;
+  error?: boolean;
 }
 
-const STORAGE_KEY = 'finmanage_chat_history';
+const WELCOME: ChatMessage = {
+  id: 'welcome-msg',
+  role: 'ai',
+  content: 'Chào bạn! Mình có thể gợi ý cách lập ngân sách, tiết kiệm và giải thích các khái niệm tài chính. Hãy hỏi mình bất cứ điều gì.',
+};
 
-function renderWithBold(text: string) {
-  const parts = text.split(/(\*\*.*?\*\*)/g);
-  return parts.map((part, i) =>
-    part.startsWith('**') && part.endsWith('**')
-      ? <strong key={i}>{part.slice(2, -2)}</strong>
-      : <React.Fragment key={i}>{part}</React.Fragment>
+const SUGGESTIONS = [
+  'Gợi ý cách chia thu nhập theo quy tắc 50/30/20',
+  'Làm sao để lập quỹ dự phòng khẩn cấp?',
+  'Mẹo cắt giảm chi tiêu ăn uống mỗi tháng',
+];
+
+/** Minimal rendering of Gemini's markdown: **bold**, "- "/"* " bullets and "1. " numbered lines. Everything else is plain text. */
+function inline(text: string) {
+  return text.split(/(\*\*.*?\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : <React.Fragment key={i}>{part}</React.Fragment>,
   );
+}
+
+function RichText({ text }: { text: string }) {
+  const blocks: React.ReactNode[] = [];
+  let list: { ordered: boolean; items: string[] } | null = null;
+  const flush = () => {
+    if (!list) return;
+    const Tag = list.ordered ? 'ol' : 'ul';
+    blocks.push(<Tag key={blocks.length} className="mb-2 ps-3">{list.items.map((it, i) => <li key={i}>{inline(it)}</li>)}</Tag>);
+    list = null;
+  };
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    const bullet = /^[-*]\s+(.*)$/.exec(line);
+    const numbered = /^\d+\.\s+(.*)$/.exec(line);
+    if (bullet || numbered) {
+      const ordered = !!numbered;
+      if (!list || list.ordered !== ordered) { flush(); list = { ordered, items: [] }; }
+      list.items.push((bullet ?? numbered)![1]);
+    } else {
+      flush();
+      if (line) blocks.push(<p key={blocks.length} className="mb-2">{inline(line)}</p>);
+    }
+  }
+  flush();
+  return <>{blocks}</>;
 }
 
 export default function AiAssistantPage() {
   const location = useLocation();
+  const { user } = useAuth();
+  const storageKey = chatHistoryKey(user?.id ?? 0);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const savedChat = localStorage.getItem(STORAGE_KEY);
-    if (savedChat) {
-      return JSON.parse(savedChat);
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : [WELCOME];
+    } catch {
+      return [WELCOME];
     }
-    return [
-      {
-        id: 'welcome-msg',
-        role: 'ai',
-        content: 'Xin chào! Tôi là Trợ lý AI Tài chính FinManage. Bạn cần tôi tư vấn về ngân sách, lập kế hoạch tiết kiệm hay đánh giá khoản chi tiêu nào?'
-      }
-    ];
   });
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-    scrollToBottom();
-  }, [messages, isLoading]);
+    try { localStorage.setItem(storageKey, JSON.stringify(messages)); } catch { /* storage full or blocked: history just won't persist */ }
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading, storageKey]);
 
   useEffect(() => {
     if (location.state?.adviceContext) {
-      const cleanAdvice = location.state.adviceContext.replace(/\*\*/g, '').replace(/\n/g, ' ').trim();
-      setInput(`Dựa trên nhận xét: "${cleanAdvice}". Hãy lập cho tôi một kế hoạch chi tiêu và tiết kiệm chi tiết cho tháng tới.`);
+      const advice = String(location.state.adviceContext).replace(/\*\*/g, '').replace(/\n/g, ' ').trim();
+      setInput(`Dựa trên nhận xét: "${advice}". Hãy lập cho tôi một kế hoạch chi tiêu và tiết kiệm chi tiết cho tháng tới.`);
       window.history.replaceState({}, document.title);
     }
   }, [location]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userText = input.trim();
+  const send = async (text: string) => {
+    const question = text.trim();
+    if (!question || isLoading) return;
     setInput('');
-
-    const newUserMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: userText
-    };
-    setMessages(prev => [...prev, newUserMsg]);
+    setMessages((prev) => [...prev, { id: `${Date.now()}`, role: 'user', content: question }]);
     setIsLoading(true);
-
     try {
-      const response = await aiService.chatWithAi(userText);
-      const aiReplyMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        content: response.reply
-      };
-      setMessages(prev => [...prev, aiReplyMsg]);
-    } catch (error: any) {
-      console.error("Lỗi Chat AI:", error);
-      const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        content: 'Xin lỗi, hệ thống AI đang gặp sự cố. Vui lòng kiểm tra lại kết nối!'
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      const res = await aiService.chatWithAi(question);
+      setMessages((prev) => [...prev, { id: `${Date.now()}a`, role: 'ai', content: res.reply }]);
+    } catch (e: any) {
+      const msg = e.response?.data?.error?.message || 'Không kết nối được tới trợ lý AI. Kiểm tra mạng rồi gửi lại câu hỏi.';
+      setMessages((prev) => [...prev, { id: `${Date.now()}e`, role: 'ai', content: msg, error: true }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleClearChat = () => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện này không?")) {
-      const initialMsg: ChatMessage[] = [
-        {
-          id: 'welcome-msg',
-          role: 'ai',
-          content: 'Xin chào! Tôi là Trợ lý AI Tài chính FinManage. Bạn cần tôi tư vấn về ngân sách, lập kế hoạch tiết kiệm hay đánh giá khoản chi tiêu nào?'
-        }
-      ];
-      setMessages(initialMsg);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMsg));
-    }
+  const clear = () => {
+    if (window.confirm('Xóa toàn bộ cuộc trò chuyện trên trình duyệt này?')) setMessages([WELCOME]);
   };
 
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+
   return (
-    <div className="p-4 flex-grow-1 d-flex flex-column" style={{ backgroundColor: 'var(--color-bg)', height: '100%' }}>
-      <Card className="border-0 rounded-4 shadow-sm flex-grow-1 d-flex flex-column overflow-hidden">
-        
-        <div className="p-3 border-bottom d-flex align-items-center justify-content-between bg-primary-lighter">
-          <div className="d-flex align-items-center gap-3">
-            <div 
-              className="d-flex align-items-center justify-content-center rounded-3 shadow-sm"
-              style={{ width: 48, height: 48, backgroundColor: 'var(--color-primary)' }}
-            >
-              <Bot size={28} color="#ffffff" />
-            </div>
-            <div>
-              <h5 className="fw-bold text-dark mb-0">Trợ lý Phân tích AI FinManage</h5>
-              <small className="text-muted">Powered by Google Gemini</small>
-            </div>
+    <div className="page d-flex flex-column flex-grow-1" style={{ minHeight: 0 }}>
+      <section className="panel d-flex flex-column flex-grow-1 mx-auto w-100" style={{ maxWidth: 880, minHeight: 0 }}>
+        <div className="panel-header pb-3 border-bottom">
+          <div>
+            <h2 className="panel-title">Trợ lý tài chính</h2>
+            <div className="small text-secondary">Câu trả lời do AI tạo, có thể chưa chính xác; không thay thế tư vấn tài chính chuyên nghiệp.</div>
           </div>
-          
-          <Button 
-            variant="outline-secondary" 
-            size="sm" 
-            className="rounded-pill d-flex align-items-center fw-medium"
-            onClick={handleClearChat}
-            title="Làm mới cuộc trò chuyện"
-          >
-            <Trash2 size={16} className="me-2 text-danger" /> Xóa lịch sử
+          <Button variant="outline-secondary" size="sm" onClick={clear} className="d-inline-flex align-items-center gap-1 flex-shrink-0">
+            <Trash2 size={14} aria-hidden /> Xóa hội thoại
           </Button>
         </div>
 
-        <Card.Body className="p-4 overflow-auto d-flex flex-column gap-3" style={{ backgroundColor: 'var(--color-bg)' }}>
-          {messages.map((msg) => (
-            <div 
-              key={msg.id} 
-              className={`d-flex ${msg.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}
-            >
-              <div 
-                className={`p-3 rounded-4 shadow-sm ${msg.role === 'user' ? 'text-white' : 'text-dark'}`}
-                style={{ 
-                  maxWidth: '75%', 
-                  backgroundColor: msg.role === 'user' ? 'var(--color-primary)' : '#ffffff',
-                  border: msg.role === 'ai' ? '1px solid var(--color-border)' : 'none',
-                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
-                  borderBottomLeftRadius: msg.role === 'ai' ? '4px' : '16px',
-                }}
-              >
-                <div className="d-flex align-items-center gap-2 mb-1 opacity-75 small fw-bold">
-                  {msg.role === 'user' ? <User size={14}/> : <Bot size={14}/>}
-                  {msg.role === 'user' ? 'Bạn' : 'AI Assistant'}
-                </div>
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.5', fontSize: '1rem' }}>
-                  {renderWithBold(msg.content)}
-                </div>
+        <div className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-3" aria-live="polite" style={{ minHeight: 240 }}>
+          {messages.map((m) => (
+            <div key={m.id} className={`d-flex ${m.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
+              <div className={`chat-bubble ${m.role}${m.error ? ' error' : ''}`}>
+                <div className="chat-who">{m.role === 'user' ? 'Bạn' : 'Trợ lý AI'}</div>
+                {m.role === 'ai' ? <RichText text={m.content} /> : <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>}
+                {m.error && lastUser && (
+                  <Button size="sm" variant="link" className="p-0" onClick={() => send(lastUser.content)} disabled={isLoading}>Gửi lại câu hỏi</Button>
+                )}
               </div>
             </div>
           ))}
-
           {isLoading && (
             <div className="d-flex justify-content-start">
-              <div className="p-3 rounded-4 shadow-sm bg-white border" style={{ borderBottomLeftRadius: '4px' }}>
-                <Spinner animation="grow" size="sm" variant="primary" className="opacity-50" />
-                <span className="ms-2 small text-muted">Đang phân tích dữ liệu...</span>
+              <div className="chat-bubble ai d-flex align-items-center gap-2 text-secondary small">
+                <Spinner animation="border" size="sm" /> Đang soạn câu trả lời…
               </div>
             </div>
           )}
-          
-          <div ref={messagesEndRef} />
-        </Card.Body>
-
-        <div className="p-3 border-top bg-white">
-          <Form onSubmit={handleSendMessage}>
-            <InputGroup className="shadow-sm rounded-pill overflow-hidden border">
-              <Form.Control
-                size="lg"
-                className="border-0 shadow-none px-4"
-                placeholder="Nhập câu hỏi tài chính của bạn..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                disabled={isLoading}
-                autoFocus
-              />
-              <Button 
-                type="submit" 
-                className="px-4 border-0 d-flex align-items-center justify-content-center"
-                disabled={!input.trim() || isLoading}
-                style={{ backgroundColor: 'var(--color-primary)' }}
-              >
-                <Send size={20} className="text-white" />
-              </Button>
-            </InputGroup>
-          </Form>
+          <div ref={endRef} />
         </div>
 
-      </Card>
+        <div className="border-top p-3">
+          {messages.length <= 1 && (
+            <div className="d-flex flex-wrap gap-2 mb-2">
+              {SUGGESTIONS.map((s) => (
+                <Button key={s} size="sm" variant="outline-secondary" className="rounded-pill" onClick={() => send(s)} disabled={isLoading}>{s}</Button>
+              ))}
+            </div>
+          )}
+          <Form onSubmit={(e) => { e.preventDefault(); send(input); }} className="d-flex gap-2">
+            <Form.Control
+              aria-label="Câu hỏi cho trợ lý"
+              placeholder="Nhập câu hỏi…"
+              value={input}
+              maxLength={2000}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isLoading}
+              autoFocus
+            />
+            <Button type="submit" disabled={!input.trim() || isLoading} aria-label="Gửi câu hỏi">
+              <Send size={18} aria-hidden />
+            </Button>
+          </Form>
+          <div className="small text-secondary mt-2">
+            Mỗi câu hỏi được trả lời độc lập; trợ lý chỉ biết tổng số dư hiện tại của bạn, không xem được từng giao dịch. Số liệu chi tiết xem ở mục Báo cáo.
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

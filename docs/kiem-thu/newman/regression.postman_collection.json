@@ -1,0 +1,979 @@
+{
+  "info": {
+    "name": "FinManage – Regression (tự chứa)",
+    "description": "Tự đăng ký user mới mỗi lần chạy, dùng ID trả về, có assertion cho từng request. Chạy: newman run regression.postman_collection.json --env-var baseUrl=http://localhost:8080/api/v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// local yyyy-MM-dd (toISOString would shift the day in UTC+7)",
+          "const d = new Date(); const p = n => String(n).padStart(2, '0');",
+          "pm.collectionVariables.set('today', `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);",
+          "pm.collectionVariables.set('month', d.getMonth() + 1); pm.collectionVariables.set('year', d.getFullYear());",
+          "if (!pm.collectionVariables.get('run')) pm.collectionVariables.set('run', Date.now().toString(36));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "badToken",
+      "value": "not.a.jwt"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Đăng ký user A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nm_a_{{run}}\",\n  \"email\": \"nm_a_{{run}}@newman.local\",\n  \"password\": \"Passw0rd!\",\n  \"fullName\": \"Newman A\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đăng nhập user A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nm_a_{{run}}\",\n  \"password\": \"Passw0rd!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Có token và user\", () => { pm.expect(b.token).to.be.a(\"string\"); pm.expect(b.user.username).to.eql(pm.variables.replaceIn(\"nm_a_{{run}}\")); });",
+                  "pm.collectionVariables.set('tokenA', b.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đăng ký user B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nm_b_{{run}}\",\n  \"email\": \"nm_b_{{run}}@newman.local\",\n  \"password\": \"Passw0rd!\",\n  \"fullName\": \"Newman B\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đăng nhập user B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nm_b_{{run}}\",\n  \"password\": \"Passw0rd!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Có token và user\", () => { pm.expect(b.token).to.be.a(\"string\"); pm.expect(b.user.username).to.eql(pm.variables.replaceIn(\"nm_b_{{run}}\")); });",
+                  "pm.collectionVariables.set('tokenB', b.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Không có token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/wallets"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token sai → 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{badToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "USER gọi API admin → 403 (không phải 401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sai mật khẩu bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nm_a_{{run}}\",\n  \"password\": \"wrong\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"4xx, không có token\", () => { pm.expect(pm.response.code).to.be.within(400, 499); pm.expect(pm.response.text()).to.not.include(\"token\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Ví & danh mục",
+      "item": [
+        {
+          "name": "Tạo ví 1.000.000",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Newman ví {{run}}\",\n  \"balance\": 1000000,\n  \"icon\": \"Wallet\",\n  \"color\": \"#2348c9\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const w = pm.response.json();",
+                  "pm.test(\"balance và quyền OWNER\", () => { pm.expect(Number(w.balance)).to.eql(1000000); pm.expect(w.myPermission).to.eql(\"OWNER\"); });",
+                  "pm.collectionVariables.set('walletId', w.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sửa ví không đổi được số dư",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets/{{walletId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Newman ví sửa {{run}}\",\n  \"balance\": 999999999\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"balance giữ nguyên\", () => pm.expect(Number(pm.response.json().balance)).to.eql(1000000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lấy danh mục (đã clone mặc định)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const cs = pm.response.json();",
+                  "const exp = cs.find(c => c.type === \"EXPENSE\" && !c.parentId); const inc = cs.find(c => c.type === \"INCOME\");",
+                  "pm.test(\"Có danh mục thu và chi\", () => { pm.expect(exp).to.be.an(\"object\"); pm.expect(inc).to.be.an(\"object\"); });",
+                  "pm.collectionVariables.set('expenseCat', exp.id); pm.collectionVariables.set('incomeCat', inc.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User B không sửa được ví của A",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets/{{walletId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"hack\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Giao dịch → số dư → ngân sách → báo cáo",
+      "item": [
+        {
+          "name": "Tạo ngân sách 300.000 cho danh mục chi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/budgets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{expenseCat}}\",\n  \"month\": \"{{month}}\",\n  \"year\": \"{{year}}\",\n  \"limitAmount\": 300000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('budgetId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chi 200.000",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/transactions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletId\": \"{{walletId}}\",\n  \"categoryId\": \"{{expenseCat}}\",\n  \"amount\": 200000,\n  \"type\": \"EXPENSE\",\n  \"date\": \"{{today}}\",\n  \"description\": \"Newman chi {{run}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('txId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Số dư = 800.000",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const w = pm.response.json().find(x => x.id == pm.collectionVariables.get('walletId'));",
+                  "pm.test(\"Số dư ví = 800000\", () => pm.expect(Number(w.balance)).to.eql(800000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sửa khoản chi thành 300.000",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/transactions/{{txId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{expenseCat}}\",\n  \"amount\": 300000,\n  \"type\": \"EXPENSE\",\n  \"date\": \"{{today}}\",\n  \"description\": \"Newman chi sửa {{run}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Số dư = 700.000",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const w = pm.response.json().find(x => x.id == pm.collectionVariables.get('walletId'));",
+                  "pm.test(\"Số dư ví = 700000\", () => pm.expect(Number(w.balance)).to.eql(700000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lịch sử sửa giao dịch được ghi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/transactions/{{txId}}/history"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"1 bản ghi 200000→300000\", () => { const h = pm.response.json(); pm.expect(h).to.have.length(1); pm.expect(Number(h[0].oldAmount)).to.eql(200000); pm.expect(Number(h[0].newAmount)).to.eql(300000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chi đúng 100% → ngân sách EXCEED",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/budgets?size=200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"status EXCEED\", () => pm.expect(pm.response.json().content.find(b => b.id == pm.collectionVariables.get(\"budgetId\")).status).to.eql(\"EXCEED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Báo cáo khớp giao dịch",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/report/overview?startDate={{today}}&endDate={{today}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"totalExpense 300000, totalBalance 700000\", () => { pm.expect(Number(o.totalExpense)).to.eql(300000); pm.expect(Number(o.totalBalance)).to.eql(700000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chi vượt số dư bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/transactions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletId\": \"{{walletId}}\",\n  \"categoryId\": \"{{expenseCat}}\",\n  \"amount\": 99000000,\n  \"type\": \"EXPENSE\",\n  \"date\": \"{{today}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Danh mục thu cho khoản chi bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/transactions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletId\": \"{{walletId}}\",\n  \"categoryId\": \"{{incomeCat}}\",\n  \"amount\": 1000,\n  \"type\": \"EXPENSE\",\n  \"date\": \"{{today}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Số dư vẫn 700.000 sau các lần bị từ chối",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const w = pm.response.json().find(x => x.id == pm.collectionVariables.get('walletId'));",
+                  "pm.test(\"Số dư ví = 700000\", () => pm.expect(Number(w.balance)).to.eql(700000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Cô lập dữ liệu",
+      "item": [
+        {
+          "name": "B không thấy giao dịch của A",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              }
+            ],
+            "url": "{{baseUrl}}/transactions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"0 giao dịch\", () => pm.expect(pm.response.json().totalElements).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B không xóa được giao dịch của A",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              }
+            ],
+            "url": "{{baseUrl}}/transactions/{{txId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"4xx\", () => pm.expect(pm.response.code).to.be.within(400, 499));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B không thấy số dư của A trên dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              }
+            ],
+            "url": "{{baseUrl}}/report/overview"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"totalBalance 0\", () => pm.expect(Number(pm.response.json().totalBalance)).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Hoàn tác",
+      "item": [
+        {
+          "name": "Xóa khoản chi",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/transactions/{{txId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Số dư trở lại 1.000.000",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const w = pm.response.json().find(x => x.id == pm.collectionVariables.get('walletId'));",
+                  "pm.test(\"Số dư ví = 1000000\", () => pm.expect(Number(w.balance)).to.eql(1000000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ngân sách trở lại ACTIVE",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/budgets?size=200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"status ACTIVE\", () => pm.expect(pm.response.json().content.find(b => b.id == pm.collectionVariables.get(\"budgetId\")).status).to.eql(\"ACTIVE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tạo hóa đơn định kỳ (giờ HH:mm như FE gửi)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/recurring-bills",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Newman Internet\",\n  \"amount\": 250000,\n  \"frequency\": \"MONTHLY\",\n  \"executionDay\": 15,\n  \"notificationTime\": \"08:00\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"2xx\", () => pm.expect(pm.response.code).to.be.within(200, 201));",
+                  "pm.test(\"notificationTime 08:00\", () => pm.expect(pm.response.json().notificationTime).to.eql(\"08:00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JSON sai định dạng → 400 không lộ chi tiết parser",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/recurring-bills",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"x\",\n  \"amount\": 1,\n  \"frequency\": \"MONTHLY\",\n  \"executionDay\": 1,\n  \"notificationTime\": \"08:00:00\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"không lộ tên class Java\", () => pm.expect(pm.response.text()).to.not.include(\"java.time\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dọn dẹp: xóa ngân sách",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/budgets/{{budgetId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dọn dẹp: xóa ví",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": "{{baseUrl}}/wallets/{{walletId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

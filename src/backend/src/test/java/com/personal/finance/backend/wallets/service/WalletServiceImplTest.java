@@ -82,6 +82,23 @@ class WalletServiceImplTest {
     }
 
     @Test
+    void getWalletsForUser_ReportsCallersPermissionPerWallet() {
+        Wallet shared = new Wallet();
+        shared.setId(20L);
+        shared.setOwner(owner);
+        com.personal.finance.backend.wallets.entity.WalletMember viewMember = new com.personal.finance.backend.wallets.entity.WalletMember();
+        viewMember.setPermissions(com.personal.finance.backend.wallets.entity.WalletMember.Permission.VIEW);
+
+        when(walletRepository.findAllWalletAccessByUser(1L)).thenReturn(java.util.List.of(mockWallet));
+        when(walletRepository.findAllWalletAccessByUser(2L)).thenReturn(java.util.List.of(shared));
+        when(walletMapper.toDTO(any(Wallet.class))).thenAnswer(inv -> new WalletDTO());
+        when(walletMemberRepository.findByWalletIdAndUserId(20L, 2L)).thenReturn(Optional.of(viewMember));
+
+        assertEquals("OWNER", walletService.getWalletsForUser(1L).get(0).getMyPermission());
+        assertEquals("VIEW", walletService.getWalletsForUser(2L).get(0).getMyPermission());
+    }
+
+    @Test
     void createWallet_ValidRequest_Success() {
         CreateWalletRequest request = new CreateWalletRequest();
         request.setName("Ví Tiết Kiệm");

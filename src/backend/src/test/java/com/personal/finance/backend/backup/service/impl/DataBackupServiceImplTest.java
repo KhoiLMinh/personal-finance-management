@@ -175,4 +175,41 @@ class DataBackupServiceImplTest {
         // a new wallet owned by the user is created instead of writing into user 2's wallet
         verify(walletRepository, times(1)).save(any(Wallet.class));
     }
+
+    @Test
+    void importUserData_TransactionWithForeignCategory_IsRestoredUnderSameNamedCategory() throws Exception {
+        BackupDataDTO backupData = new BackupDataDTO();
+        WalletDTO wDto = new WalletDTO();
+        wDto.setId(10L);
+        wDto.setName("Ví chung");
+        wDto.setBalance(BigDecimal.ZERO);
+        backupData.setWallets(List.of(wDto));
+        com.personal.finance.backend.transactions.dto.response.TransactionDTO t = new com.personal.finance.backend.transactions.dto.response.TransactionDTO();
+        t.setWalletId(10L);
+        t.setCategoryId(999L); // category of another wallet member: not part of this export
+        t.setCategoryName("Taxi");
+        t.setAmount(new BigDecimal("10000"));
+        t.setType("EXPENSE");
+        t.setDate(java.time.LocalDate.of(2026, 11, 1));
+        t.setDescription("Grab");
+        backupData.setTransactions(List.of(t));
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        MultipartFile file = new MockMultipartFile("file", "b.json", "application/json", mapper.writeValueAsBytes(backupData));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+        when(walletRepository.findAllWalletAccessByUser(1L)).thenReturn(List.of());
+        Wallet created = new Wallet();
+        created.setId(60L);
+        when(walletRepository.save(any(Wallet.class))).thenReturn(created);
+        when(categoryRepository.findByNameAndUserId("Taxi", 1L)).thenReturn(Optional.empty());
+        com.personal.finance.backend.categories.entity.Category taxi = new com.personal.finance.backend.categories.entity.Category();
+        taxi.setId(70L);
+        when(categoryRepository.save(any())).thenReturn(taxi);
+
+        backupService.importUserData(1L, file);
+
+        verify(categoryRepository, times(1)).save(any());
+        verify(transactionRepository, times(1)).save(any());
+    }
 }

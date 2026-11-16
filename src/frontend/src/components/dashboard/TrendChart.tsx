@@ -1,87 +1,44 @@
-import React from "react";
-import { Card } from "react-bootstrap";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import type {
-  ValueType,
-  NameType,
-} from "recharts/types/component/DefaultTooltipContent";
-import type { TrendData } from "../../types/dashboard";
-import { formatCurrency } from "../../utils/format";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
+import type { TrendData } from '../../types/dashboard';
+import { formatCurrency, formatMillions } from '../../utils/format';
+import { EmptyState } from '../ui/PageState';
 
 interface Props {
   data: TrendData[];
+  title?: string;
 }
-//FR-12
-export default function TrendChart({ data }: Props) {
-  if (!data || data.length === 0) {
-    return (
-      <Card className="border-0 rounded-4 h-100 shadow-soft">
-        <Card.Body className="d-flex align-items-center justify-content-center text-muted p-4">
-          Chưa có dữ liệu xu hướng để hiển thị.
-        </Card.Body>
-      </Card>
-    );
-  }
 
-  const handleTooltipFormatter = (value: ValueType, name: NameType) => {
-    const numericValue = Array.isArray(value)
-      ? Number(value[0])
-      : Number(value);
-    return [
-      formatCurrency(Number.isFinite(numericValue) ? numericValue : 0),
-      name,
-    ];
-  };
-
-  const handleYAxisFormatter = (value: number | string) => {
-    const numericValue = Number(value);
-    return Number.isFinite(numericValue)
-      ? `${numericValue / 1000000}tr`
-      : String(value);
-  };
-
+// Buckets are discrete (Tuần 1–5, Tháng 1–12), so grouped bars read better than a line.
+export default function TrendChart({ data, title = 'Thu chi theo thời gian' }: Props) {
+  const hasValues = data.some((d) => d.income > 0 || d.expense > 0);
   return (
-    <Card className="border-0 rounded-4 h-100 shadow-soft">
-      <Card.Body className="p-4">
-        <h6 className="fw-bold text-dark mb-3">Xu hướng thu chi</h6>
-        <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis
-              tick={{ fontSize: 12 }}
-              tickFormatter={handleYAxisFormatter}
-            />
-            <Tooltip formatter={handleTooltipFormatter} />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="income"
-              name="Thu nhập"
-              stroke="#16a34a"
-              strokeWidth={2}
-              dot={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="expense"
-              name="Chi tiêu"
-              stroke="#dc2626"
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
+    <section className="panel h-100">
+      <div className="panel-header">
+        <h2 className="panel-title">{title}</h2>
+        <span className="text-secondary" style={{ fontSize: 'var(--fs-xs)' }}>Đơn vị: triệu đồng</span>
+      </div>
+      <div className="panel-body">
+        {!hasValues ? (
+          <EmptyState title="Chưa có giao dịch trong kỳ này" />
+        ) : (
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={data} barGap={2} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke="var(--line)" />
+              <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'var(--ink-muted)' }} tickLine={false} axisLine={{ stroke: 'var(--line)' }} />
+              <YAxis tick={{ fontSize: 12, fill: 'var(--ink-muted)' }} tickFormatter={(v) => formatMillions(Number(v)).replace(' tr', '')} tickLine={false} axisLine={false} width={44} />
+              <Tooltip
+                cursor={{ fill: 'var(--canvas)' }}
+                formatter={(value, name) => [formatCurrency(Number(value)), name]}
+                contentStyle={{ borderRadius: 8, borderColor: 'var(--line)', fontSize: 13 }}
+              />
+              {/* Recharts sorts legend items by name by default; keep the bar order (income, then expense) */}
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 13 }} itemSorter={(item) => (item.dataKey === 'income' ? 0 : 1)} />
+              <Bar dataKey="income" name="Thu nhập" fill="var(--income)" radius={[3, 3, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="expense" name="Chi tiêu" fill="var(--ink-muted)" radius={[3, 3, 0, 0]} maxBarSize={28} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </section>
   );
 }

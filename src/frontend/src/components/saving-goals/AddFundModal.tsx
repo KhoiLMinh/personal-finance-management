@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Form, Button, Spinner } from 'react-bootstrap';
 import savingGoalService from '../../services/savingGoalService';
+import { canWriteWallet } from '../../utils/wallet';
 
 interface Props {
   show: boolean;
@@ -10,7 +11,8 @@ interface Props {
   wallets: any[];
 }
 //FR-10
-export default function AddFundModal({ show, onHide, onSuccess, goalId, wallets }: Props) {
+export default function AddFundModal({ show, onHide, onSuccess, goalId, wallets: allWallets }: Props) {
+  const wallets = useMemo(() => allWallets.filter(canWriteWallet), [allWallets]);
   const [loading, setLoading] = useState(false);
   const [amount, setAmount] = useState('');
   const [walletId, setWalletId] = useState('');
@@ -40,7 +42,7 @@ export default function AddFundModal({ show, onHide, onSuccess, goalId, wallets 
   return (
     <Modal show={show} onHide={onHide} centered size="sm">
       <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
-        <Modal.Title className="fw-bold fs-5">Nộp tiền vào Tiết kiệm</Modal.Title>
+        <Modal.Title as="h2" className="h5 mb-0">Nộp tiền vào mục tiêu</Modal.Title>
       </Modal.Header>
       <Modal.Body className="px-4 pb-4 pt-3">
         <Form onSubmit={handleSubmit}>
@@ -59,7 +61,7 @@ export default function AddFundModal({ show, onHide, onSuccess, goalId, wallets 
             <Form.Control type="number" min="1" required className="bg-light border-0" 
               value={amount} onChange={(e) => setAmount(e.target.value)} />
           </Form.Group>
-          <Button variant="danger" type="submit" className="w-100 py-2 fw-bold rounded-pill border-0" disabled={loading}>
+          <Button type="submit" className="w-100" disabled={loading}>
             {loading ? <Spinner size="sm" className="me-2"/> : null} Xác nhận nộp
           </Button>
         </Form>

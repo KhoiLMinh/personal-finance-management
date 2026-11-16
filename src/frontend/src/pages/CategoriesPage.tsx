@@ -1,421 +1,305 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Button, Form, Modal, Table, Badge, Row, Col, Spinner, InputGroup } from 'react-bootstrap';
-import { Plus, Edit, Trash2, Tag, Layers, PlusCircle, ArrowLeft, Shield, Eye, ShieldAlert, Tags, Save } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Button, ButtonGroup, Form, Modal, Spinner, InputGroup, Alert, Row, Col } from 'react-bootstrap';
+import { Plus, Pencil, Trash2, Eye, Tags, Lock } from 'lucide-react';
 import categoryService from '../services/categoryService';
-import MySpinner from '../components/MySpinner';
+import type { Category, TxType } from '../types/finance';
+import { EmptyState, ErrorState, LoadingState } from '../components/ui/PageState';
 
-export default function CategoriesPage() {
-  const navigate = useNavigate();
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+interface Rule { id: number; keyword: string }
+
+const SWATCHES = ['#2348c9', '#0f7f4f', '#a15c07', '#b42318', '#7c3aed', '#0e7490', '#be185d', '#475569'];
+const ICONS = [
+  ['Layers', 'Cơ bản'], ['Utensils', 'Ăn uống'], ['Car', 'Di chuyển'], ['ShoppingBag', 'Mua sắm'],
+  ['FileText', 'Hóa đơn'], ['Activity', 'Sức khỏe'], ['Banknote', 'Tiền lương'],
+] as const;
+
+const emptyForm = (type: TxType) => ({ id: null as number | null, name: '', type, color: SWATCHES[0], icon: 'Layers', parentId: '' as string | number });
+
+/** `admin`: the admin's own categories are the system templates cloned to new users, so they stay editable. */
+export default function CategoriesPage({ admin = false }: { admin?: boolean }) {
+  const locked = (c: Category) => c.system && !admin;
+  const [categories, setCategories] = useState<Category[] | null>(null);
+  const [error, setError] = useState(false);
+  const [tab, setTab] = useState<TxType>('EXPENSE');
+  const [showHidden, setShowHidden] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    id: null as number | null,
-    name: '',
-    type: 'EXPENSE',
-    color: '#3b82f6',
-    icon: 'Layers',
-    parentId: '' as string | number
-  });
+  const [formData, setFormData] = useState(emptyForm('EXPENSE'));
 
-  const [showRuleModal, setShowRuleModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<any>(null);
-  const [rules, setRules] = useState<any[]>([]);
+  const [ruleCategory, setRuleCategory] = useState<Category | null>(null);
+  const [rules, setRules] = useState<Rule[] | null>(null);
   const [ruleKeyword, setRuleKeyword] = useState('');
-  const [ruleLoading, setRuleLoading] = useState(false);
+  const [ruleError, setRuleError] = useState('');
 
-  const fetchCategories = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    setError(false);
     try {
-      const data = await categoryService.getMyCategories();
-      setCategories(data);
-    } catch (error) {
-      console.error('Lỗi tải danh mục:', error);
-    } finally {
-      setLoading(false);
+      setCategories(await categoryService.getMyCategories());
+    } catch {
+      setError(true);
     }
-  };
-
-  useEffect(() => {
-    fetchCategories();
   }, []);
 
-  const handleOpenCreate = () => {
-    setIsEditing(false);
-    setFormData({ id: null, name: '', type: 'EXPENSE', color: '#3b82f6', icon: 'Layers', parentId: '' });
-    setShowModal(true);
-  };
+  useEffect(() => { load(); }, [load]);
 
-  const handleOpenEdit = (category: any) => {
-    if (category.isSystem) return;
-    setIsEditing(true);
-    setFormData({
-      id: category.id,
-      name: category.name,
-      type: category.type,
-      color: category.color || '#3b82f6',
-      icon: category.icon || 'Layers',
-      parentId: category.parentId || ''
-    });
+  const openCreate = () => { setFormError(''); setFormData(emptyForm(tab)); setShowModal(true); };
+  const openEdit = (c: Category) => {
+    if (locked(c)) return;
+    setFormError('');
+    setFormData({ id: c.id, name: c.name, type: c.type, color: c.color || SWATCHES[0], icon: c.icon || 'Layers', parentId: c.parentId || '' });
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFormError('');
     try {
-      const payload = {
-        name: formData.name,
-        type: formData.type,
-        icon: formData.icon,
-        color: formData.color,
-        parentId: formData.parentId ? Number(formData.parentId) : null
-      };
-
-      if (isEditing && formData.id) {
-        await categoryService.updateCategory(formData.id, payload);
-      } else {
-        await categoryService.createCategory(payload);
-      }
-      
+      const payload = { name: formData.name, type: formData.type, icon: formData.icon, color: formData.color, parentId: formData.parentId ? Number(formData.parentId) : null };
+      if (formData.id) await categoryService.updateCategory(formData.id, payload);
+      else await categoryService.createCategory(payload);
       setShowModal(false);
-      fetchCategories();
-    } catch (error: any) {
-      alert(error.response?.data?.error?.message || "Lỗi lưu danh mục!");
+      load();
+    } catch (err: any) {
+      setFormError(err.response?.data?.error?.message || 'Không lưu được danh mục. Thử lại sau.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa danh mục này?")) {
+  const handleDelete = async (c: Category) => {
+    const question = admin
+      ? `Xóa danh mục mẫu "${c.name}"?
+
+Người dùng đã được sao chép danh mục này vẫn giữ nguyên; chỉ người đăng ký sau sẽ không có nó.`
+      : `Xóa danh mục "${c.name}"?`;
+    if (!window.confirm(question)) return;
+    try {
+      await categoryService.deleteCategory(c.id);
+      load();
+    } catch (err: any) {
+      if (admin) {
+        alert(err.response?.data?.error?.message || 'Không xóa được danh mục mẫu.');
+        return;
+      }
+      // categories in use cannot be deleted; hiding keeps history intact
+      const reason = err.response?.data?.error?.message || 'Danh mục đang được sử dụng nên không xóa được.';
+      if (!window.confirm(`${reason}\n\nẨn danh mục "${c.name}" để không chọn được nữa nhưng vẫn giữ lịch sử?`)) return;
       try {
-        await categoryService.deleteCategory(id);
-        fetchCategories();
-      } catch (error: any) {
-        if (window.confirm("Danh mục này đã có giao dịch nên không thể xóa hoàn toàn.\nBạn có muốn ẨN danh mục này đi không?")) {
-          try {
-            await categoryService.hideCategory(id);
-            fetchCategories();
-          } catch (hideError) {
-            alert("Lỗi khi ẩn danh mục!");
-          }
-        }
+        await categoryService.hideCategory(c.id);
+        load();
+      } catch {
+        alert('Không ẩn được danh mục. Thử lại sau.');
       }
     }
   };
 
-  const handleUnhide = async (id: number) => {
+  const handleUnhide = async (c: Category) => {
     try {
-      await categoryService.unhideCategory(id);
-      fetchCategories();
-    } catch (error) {
-      alert("Lỗi khi gỡ ẩn danh mục!");
+      await categoryService.unhideCategory(c.id);
+      load();
+    } catch {
+      alert('Không hiện lại được danh mục. Thử lại sau.');
     }
   };
 
-  const handleOpenRules = async (category: any) => {
-    setSelectedCategory(category);
-    setShowRuleModal(true);
-    fetchRules(category.id);
-  };
-
-  const fetchRules = async (categoryId: number) => {
-    setRuleLoading(true);
+  const loadRules = async (c: Category) => {
+    setRules(null);
+    setRuleError('');
     try {
-      const data = await categoryService.getCategoryRules(categoryId);
-      setRules(data);
-    } catch (error) {
-      console.error("Lỗi lấy danh sách quy tắc:", error);
-    } finally {
-      setRuleLoading(false);
+      setRules(await categoryService.getCategoryRules(c.id));
+    } catch {
+      setRuleError('Không tải được từ khóa.');
+      setRules([]);
     }
   };
+  const openRules = (c: Category) => { setRuleCategory(c); setRuleKeyword(''); loadRules(c); };
 
-  const handleAddRule = async (e: React.FormEvent) => {
+  const addRule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ruleKeyword.trim() || !selectedCategory) return;
+    if (!ruleKeyword.trim() || !ruleCategory) return;
     try {
-      await categoryService.addCategoryRule(selectedCategory.id, { keyword: ruleKeyword.trim(), priority: 0 });
+      await categoryService.addCategoryRule(ruleCategory.id, { keyword: ruleKeyword.trim(), priority: 0 });
       setRuleKeyword('');
-      fetchRules(selectedCategory.id);
-    } catch (error: any) {
-      alert(error.response?.data?.error?.message || "Lỗi thêm từ khóa!");
+      loadRules(ruleCategory);
+    } catch (err: any) {
+      setRuleError(err.response?.data?.error?.message || 'Không thêm được từ khóa.');
     }
   };
 
-  const handleDeleteRule = async (ruleId: number) => {
-    if (!selectedCategory) return;
+  const deleteRule = async (ruleId: number) => {
+    if (!ruleCategory) return;
     try {
-      await categoryService.deleteCategoryRule(selectedCategory.id, ruleId);
-      fetchRules(selectedCategory.id);
-    } catch (error: any) {
-      alert(error.response?.data?.error?.message || "Lỗi xóa từ khóa!");
+      await categoryService.deleteCategoryRule(ruleCategory.id, ruleId);
+      loadRules(ruleCategory);
+    } catch (err: any) {
+      setRuleError(err.response?.data?.error?.message || 'Không xóa được từ khóa.');
     }
   };
 
-  const sortedCategories: any[] = [];
-  categories.filter(c => !c.parentId).forEach(parent => {
-    sortedCategories.push(parent);
-    categories.filter(c => c.parentId === parent.id).forEach(child => {
-      sortedCategories.push({ ...child, isChild: true, parentName: parent.name });
-    });
+  const ofTab = (categories ?? []).filter((c) => c.type === tab && (showHidden || !c.hidden));
+  const hiddenCount = (categories ?? []).filter((c) => c.type === tab && c.hidden).length;
+  const rows: { c: Category; child: boolean }[] = [];
+  ofTab.filter((c) => !c.parentId).forEach((p) => {
+    rows.push({ c: p, child: false });
+    ofTab.filter((c) => c.parentId === p.id).forEach((c) => rows.push({ c, child: true }));
   });
 
-  if (loading) return <MySpinner />;
+  const row = ({ c, child }: { c: Category; child: boolean }) => (
+    <li key={c.id} className={`d-flex align-items-center gap-3 py-2 border-bottom ${child ? 'ps-5 pe-3' : 'px-3'} ${c.hidden ? 'opacity-50' : ''}`}>
+      <span aria-hidden className="rounded-circle flex-shrink-0" style={{ width: 10, height: 10, background: c.color || 'var(--ink-muted)' }} />
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <span className={`text-truncate ${child ? '' : 'fw-medium'}`}>{child && <span className="text-secondary">↳ </span>}{c.name}</span>
+        {c.hidden && <span className="status-pill neutral ms-2">Đã ẩn</span>}
+        {locked(c) && <span className="status-pill neutral ms-2"><Lock size={10} aria-hidden /> Hệ thống</span>}
+      </div>
+      <div className="d-flex flex-shrink-0">
+        <Button variant="link" size="sm" className="text-secondary p-1" aria-label={`Từ khóa tự phân loại của ${c.name}`} onClick={() => openRules(c)}><Tags size={16} aria-hidden /></Button>
+        {!locked(c) && !c.hidden && (
+          <>
+            <Button variant="link" size="sm" className="text-secondary p-1" aria-label={`Sửa ${c.name}`} onClick={() => openEdit(c)}><Pencil size={16} aria-hidden /></Button>
+            <Button variant="link" size="sm" className="text-secondary p-1" aria-label={`Xóa ${c.name}`} onClick={() => handleDelete(c)}><Trash2 size={16} aria-hidden /></Button>
+          </>
+        )}
+        {!locked(c) && c.hidden && (
+          <Button variant="link" size="sm" className="text-secondary p-1" aria-label={`Hiện lại ${c.name}`} onClick={() => handleUnhide(c)}><Eye size={16} aria-hidden /></Button>
+        )}
+      </div>
+    </li>
+  );
 
   return (
-    <div className="p-4 flex-grow-1" style={{ backgroundColor: '#e2e8f0' }}>
-
-      <Card className="border-0 rounded-4 mb-4 shadow-sm" style={{ backgroundColor: '#b0bec5' }}>
-        <Card.Body className="p-4 d-flex flex-wrap gap-3 justify-content-between align-items-center">
-          <div className="d-flex align-items-center gap-3">
-            <Button 
-              variant="light" 
-              className="rounded-circle p-2 shadow-sm d-flex justify-content-center align-items-center text-secondary border-0"
-              style={{ width: '45px', height: '45px' }}
-              onClick={() => navigate(-1)} 
-              title="Quay lại"
-            >
-              <ArrowLeft size={24} />
+    <div className="page">
+      <div className="page-toolbar">
+        <ButtonGroup size="sm" aria-label="Loại danh mục">
+          {(['EXPENSE', 'INCOME'] as const).map((t) => (
+            <Button key={t} variant={tab === t ? 'primary' : 'outline-secondary'} aria-pressed={tab === t} onClick={() => setTab(t)}>
+              {t === 'EXPENSE' ? 'Chi tiêu' : 'Thu nhập'}
             </Button>
-            <div>
-              <h3 className="fw-bold text-dark mb-1">Quản lý Danh mục Chi tiêu</h3>
-              <p className="text-dark mb-0 opacity-75">Tự do tạo danh mục con từ danh mục hệ thống và quản lý từ khóa tự động</p>
-            </div>
-          </div>
-          
-          <Button 
-            variant="primary" 
-            className="rounded-pill px-4 fw-bold d-flex align-items-center"
-            onClick={handleOpenCreate}
-          >
-            <Plus size={20} className="me-1" /> Thêm danh mục cá nhân
-          </Button>
-        </Card.Body>
-      </Card>
+          ))}
+        </ButtonGroup>
+        <Button onClick={openCreate} className="d-inline-flex align-items-center gap-1"><Plus size={18} aria-hidden /> Thêm danh mục</Button>
+      </div>
 
-      <Row className="g-3">
-        {sortedCategories.map(c => (
-          <Col md={4} lg={3} key={c.id}>
-            <Card className={`border-0 rounded-4 shadow-sm h-100 ${c.isChild ? 'ms-4' : ''} ${c.hidden ? 'opacity-50 bg-light' : ''}`}>
-              <Card.Body className="d-flex flex-column justify-content-between">
-                
-                <div className="d-flex align-items-center gap-3 mb-3">
-                  <div 
-                    className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                    style={{ width: 40, height: 40, backgroundColor: c.color || '#ccc', color: '#fff', filter: c.hidden ? 'grayscale(100%)' : 'none' }}
-                  >
-                    {c.isSystem ? <Shield size={18} /> : <Layers size={18} />}
-                  </div>
-                  <div className="min-width-0">
-                    <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '140px' }} title={c.name}>
-                      {c.isChild && '↳ '}{c.name}
-                      {c.hidden && <span className="text-danger ms-1 small">(Đã ẩn)</span>}
-                    </div>
-                    {c.isChild ? (
-                      <Badge bg="secondary" className="fw-normal text-truncate" style={{ maxWidth: '140px' }}>
-                        Con của: {c.parentName}
-                      </Badge>
-                    ) : (
-                      <Badge bg={c.type === 'INCOME' ? 'success' : 'danger'}>
-                        {c.type === 'INCOME' ? 'THU NHẬP' : 'CHI TIÊU'}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                {c.isSystem ? (
-                  <div className="d-flex justify-content-between align-items-center border-top pt-2 mt-auto">
-                    <Button variant="light" size="sm" className="text-primary fw-medium border-0 px-2 text-start" onClick={() => handleOpenRules(c)}>
-                      <Tags size={16} className="me-1" /> Xem từ khóa
-                    </Button>
-                    <span className="text-muted small fw-medium d-flex align-items-center">
-                      <ShieldAlert size={14} className="me-1" /> Hệ thống
-                    </span>
-                  </div>
-                ) : (
-                  <div className="d-flex justify-content-between border-top pt-2 mt-auto">
-                    <Button variant="light" size="sm" className="text-primary fw-medium border-0 px-2 flex-grow-1 text-start" onClick={() => handleOpenRules(c)}>
-                      <Tags size={16} className="me-1" /> Từ khóa
-                    </Button>
-                    <div className="d-flex gap-1">
-                      <Button variant="light" size="sm" className="text-primary border-0 px-2" onClick={() => handleOpenEdit(c)} disabled={c.hidden}>
-                        <Edit size={16} />
-                      </Button>
-                      {c.hidden ? (
-                        <Button variant="light" size="sm" className="text-success border-0 px-2" title="Hiện lại danh mục" onClick={() => handleUnhide(c.id)}>
-                          <Eye size={16} />
-                        </Button>
-                      ) : (
-                        <Button variant="light" size="sm" className="text-danger border-0 px-2" title="Xóa danh mục" onClick={() => handleDelete(c.id)}>
-                          <Trash2 size={16} />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      <section className="panel">
+        {error ? (
+          <ErrorState onRetry={load} />
+        ) : categories === null ? (
+          <LoadingState />
+        ) : rows.length === 0 ? (
+          <EmptyState title={`Chưa có danh mục ${tab === 'EXPENSE' ? 'chi tiêu' : 'thu nhập'}`} action={<Button size="sm" onClick={openCreate}>Thêm danh mục</Button>} />
+        ) : (
+          <ul className="list-unstyled mb-0">{rows.map(row)}</ul>
+        )}
+        {hiddenCount > 0 && (
+          <div className="px-3 py-2">
+            <Form.Check type="switch" id="show-hidden" label={`Hiện ${hiddenCount} danh mục đã ẩn`} checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} className="small" />
+          </div>
+        )}
+      </section>
+      <p className="small text-secondary mt-2 mb-0">
+        {admin
+          ? 'Đây là bộ danh mục mẫu. Danh mục và từ khóa thêm ở đây được sao chép cho mọi người dùng; người dùng mới nhận toàn bộ bộ mẫu khi đăng ký.'
+          : 'Danh mục hệ thống do quản trị viên cấu hình, bạn có thể thêm danh mục con bên dưới chúng.'}
+      </p>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
-          <Modal.Title className="fw-bold fs-4 text-dark">
-            {isEditing ? 'Sửa danh mục' : '+ Thêm danh mục mới'}
-          </Modal.Title>
+        <Modal.Header closeButton>
+          <Modal.Title as="h2" className="h5 mb-0">{formData.id ? 'Sửa danh mục' : 'Thêm danh mục'}</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="px-4 pb-4 pt-3">
-          <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label className="text-muted fw-medium small">Tên danh mục</Form.Label>
-              <Form.Control 
-                size="lg" type="text" required className="bg-light border-0" 
-                placeholder="VD: Tiền điện nước..."
-                value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} 
-              />
+        <Form onSubmit={handleSubmit}>
+          <Modal.Body>
+            {formError && <Alert variant="danger" className="py-2 small">{formError}</Alert>}
+            <Form.Group className="mb-3" controlId="cat-name">
+              <Form.Label className="small text-secondary">Tên danh mục</Form.Label>
+              <Form.Control required maxLength={100} placeholder="VD: Tiền điện nước" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             </Form.Group>
-
-            <Row className="mb-3">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-muted fw-medium small">Loại thu/chi</Form.Label>
-                  <Form.Select 
-                    size="lg" className="bg-light border-0"
-                    value={formData.type} 
-                    onChange={(e) => setFormData({...formData, type: e.target.value, parentId: ''})}
-                    disabled={isEditing} 
-                  >
-                    <option value="EXPENSE">Khoản chi tiêu (-)</option>
-                    <option value="INCOME">Khoản thu nhập (+)</option>
+            <Row className="g-3 mb-3">
+              <Col sm={6}>
+                <Form.Group controlId="cat-type">
+                  <Form.Label className="small text-secondary">Loại</Form.Label>
+                  <Form.Select value={formData.type} disabled={!!formData.id} onChange={(e) => setFormData({ ...formData, type: e.target.value as TxType, parentId: '' })}>
+                    <option value="EXPENSE">Chi tiêu</option>
+                    <option value="INCOME">Thu nhập</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-muted fw-medium small">Danh mục cha (Tùy chọn)</Form.Label>
-                  <Form.Select 
-                    size="lg" className="bg-light border-0"
-                    value={formData.parentId} onChange={(e) => setFormData({...formData, parentId: e.target.value})}
-                  >
-                    <option value="">-- Không có --</option>
-                    {categories
-                      .filter(c => c.type === formData.type && !c.parentId && c.id !== formData.id)
-                      .map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
+              <Col sm={6}>
+                <Form.Group controlId="cat-parent">
+                  <Form.Label className="small text-secondary">Thuộc danh mục</Form.Label>
+                  <Form.Select value={formData.parentId} onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}>
+                    <option value="">Không (danh mục gốc)</option>
+                    {(categories ?? []).filter((c) => c.type === formData.type && !c.parentId && c.id !== formData.id).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col sm={6}>
+                <Form.Group controlId="cat-icon">
+                  <Form.Label className="small text-secondary">Biểu tượng</Form.Label>
+                  <Form.Select value={formData.icon} onChange={(e) => setFormData({ ...formData, icon: e.target.value })}>
+                    {ICONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </Form.Select>
                 </Form.Group>
               </Col>
             </Row>
-
-            <Row className="mb-4">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-muted fw-medium small">Biểu tượng (Icon)</Form.Label>
-                  <Form.Select size="lg" className="bg-light border-0" value={formData.icon} onChange={(e) => setFormData({...formData, icon: e.target.value})}>
-                    <option value="Layers">Cơ bản (Layers)</option>
-                    <option value="Utensils">Ăn uống (Utensils)</option>
-                    <option value="Car">Di chuyển (Car)</option>
-                    <option value="ShoppingBag">Mua sắm (Bag)</option>
-                    <option value="FileText">Hóa đơn (File)</option>
-                    <option value="Activity">Sức khỏe (Activity)</option>
-                    <option value="Banknote">Tiền lương (Cash)</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-muted fw-medium small">Màu nền</Form.Label>
-                  <Form.Control type="color" className="w-100 p-1 border-0 rounded-3 bg-light" style={{ height: '48px', cursor: 'pointer' }}
-                    value={formData.color} onChange={(e) => setFormData({...formData, color: e.target.value})} />
-                </Form.Group>
-              </Col>
-            </Row>
-
-            <Button type="submit" className="w-100 py-3 fs-5 fw-bold rounded-4 border-0" disabled={isSubmitting} style={{ backgroundColor: 'var(--color-primary)' }}>
-              {isSubmitting ? <Spinner size="sm" className="me-2"/> : <Save size={20} className="me-2"/>} 
-              {isEditing ? 'Lưu thay đổi' : 'Tạo danh mục'}
-            </Button>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      <Modal show={showRuleModal} onHide={() => setShowRuleModal(false)} centered scrollable>
-        <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
-          <Modal.Title className="fw-bold fs-5">
-            Từ khóa nhận diện
-            <div className="small text-primary mt-1">{selectedCategory?.name}</div>
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="px-4 pb-4 pt-3">
-          
-          {selectedCategory?.isSystem ? (
-            <div className="alert alert-secondary py-2 small mb-3 border-0 d-flex align-items-center rounded-3">
-              <ShieldAlert size={18} className="me-2 text-secondary flex-shrink-0" />
-              Đây là danh mục hệ thống. Bạn có thể xem các từ khóa nhận diện tự động nhưng không thể tùy chỉnh.
-            </div>
-          ) : (
-            <>
-              <p className="text-muted small mb-3">
-                Hệ thống (Import CSV) sẽ tự động gán giao dịch vào danh mục này nếu mô tả chứa một trong các từ khóa dưới đây.
-              </p>
-              <Form onSubmit={handleAddRule} className="mb-4">
-                <InputGroup>
-                  <Form.Control
-                    className="bg-light border-0"
-                    placeholder="VD: Highlands, Starbucks, Tiền điện..."
-                    value={ruleKeyword}
-                    onChange={(e) => setRuleKeyword(e.target.value)}
-                  />
-                  <Button type="submit" variant="primary" className="fw-bold" disabled={!ruleKeyword.trim()}>
-                    <PlusCircle size={18} /> Thêm
-                  </Button>
-                </InputGroup>
-              </Form>
-            </>
-          )}
-
-          {ruleLoading ? (
-            <div className="text-center py-4"><Spinner size="sm" variant="primary" /></div>
-          ) : rules.length === 0 ? (
-            <div className="text-center text-muted small py-4 bg-light rounded-3">Chưa có từ khóa nào.</div>
-          ) : (
-            <Table hover size="sm" className="align-middle border rounded-3 overflow-hidden">
-              <thead className="bg-light text-muted">
-                <tr>
-                  <th className="py-2 px-3 fw-medium">Từ khóa</th>
-                  {!selectedCategory?.isSystem && (
-                    <th className="py-2 px-3 fw-medium text-end">Xóa</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((rule) => (
-                  <tr key={rule.id}>
-                    <td className="px-3 fw-bold text-dark">{rule.keyword}</td>
-                    {!selectedCategory?.isSystem && (
-                      <td className="px-3 text-end">
-                        <Button variant="light" size="sm" className="text-danger border-0 p-1" onClick={() => handleDeleteRule(rule.id)}>
-                          <Trash2 size={16} />
-                        </Button>
-                      </td>
-                    )}
-                  </tr>
+            <fieldset>
+              <legend className="small text-secondary mb-1" style={{ fontSize: 'var(--fs-sm)' }}>Màu</legend>
+              <div className="d-flex flex-wrap align-items-center gap-2">
+                {SWATCHES.map((c) => (
+                  <button key={c} type="button" className="swatch" style={{ background: c }} aria-label={`Màu ${c}`} aria-pressed={formData.color === c} onClick={() => setFormData({ ...formData, color: c })} />
                 ))}
-              </tbody>
-            </Table>
+                <Form.Control type="color" aria-label="Chọn màu khác" className="form-control-color" value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })} />
+              </div>
+            </fieldset>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={() => setShowModal(false)}>Hủy</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Spinner size="sm" className="me-2" />}{formData.id ? 'Lưu thay đổi' : 'Thêm danh mục'}</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      <Modal show={ruleCategory !== null} onHide={() => setRuleCategory(null)} centered scrollable>
+        <Modal.Header closeButton>
+          <Modal.Title as="h2" className="h5 mb-0">Từ khóa tự phân loại · {ruleCategory?.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="small text-secondary">
+            Khi nhập sao kê, giao dịch có nội dung chứa một trong các từ khóa này sẽ tự vào danh mục {ruleCategory?.name}.
+          </p>
+          {ruleError && <Alert variant="danger" className="py-2 small">{ruleError}</Alert>}
+          {ruleCategory && locked(ruleCategory) ? (
+            <p className="small text-secondary">Đây là danh mục hệ thống: bạn xem được từ khóa nhưng không sửa được.</p>
+          ) : (
+            <Form onSubmit={addRule} className="mb-3">
+              <InputGroup>
+                <Form.Control aria-label="Từ khóa mới" placeholder="VD: Highlands, Grab" value={ruleKeyword} onChange={(e) => setRuleKeyword(e.target.value)} />
+                <Button type="submit" disabled={!ruleKeyword.trim()}>Thêm</Button>
+              </InputGroup>
+            </Form>
+          )}
+          {rules === null ? (
+            <LoadingState compact />
+          ) : rules.length === 0 ? (
+            <p className="small text-secondary mb-0">Chưa có từ khóa nào.</p>
+          ) : (
+            <ul className="list-unstyled d-flex flex-wrap gap-2 mb-0">
+              {rules.map((r) => (
+                <li key={r.id} className="status-pill neutral" style={{ fontSize: 'var(--fs-sm)' }}>
+                  {r.keyword}
+                  {!(ruleCategory && locked(ruleCategory)) && (
+                    <Button variant="link" size="sm" className="p-0 ms-1 text-secondary lh-1" aria-label={`Xóa từ khóa ${r.keyword}`} onClick={() => deleteRule(r.id)}>×</Button>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </Modal.Body>
       </Modal>
-
     </div>
   );
 }

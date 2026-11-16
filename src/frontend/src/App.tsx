@@ -27,6 +27,7 @@ import AdminConfigsPage from "./pages/admin/AdminConfigsPage";
 import FamilyPage from "./pages/FamilyPage";
 import RecurringBillsPage from "./pages/RecurringBillsPage";
 import CategoriesPage from "./pages/CategoriesPage";
+import ReportsPage from "./pages/ReportsPage";
 
 const ProtectedRoute = ({
   children,
@@ -96,6 +97,7 @@ function AppRoutes() {
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/saving-goals" element={<SavingGoalsPage />} />
         <Route path="/budgets" element={<BudgetsPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/wallets" element={<WalletsPage />} />
         <Route path="/import" element={<ImportPage />} />
         <Route path="/ai-assistant" element={<AiAssistantPage />} />

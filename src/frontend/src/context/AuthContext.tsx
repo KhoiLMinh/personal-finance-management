@@ -1,4 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+
+// Per-user key: chat history holds private financial questions and must never be shown to another account on the same browser.
+export const chatHistoryKey = (userId: number) => `finmanage_chat_history_${userId}`;
+const LEGACY_CHAT_KEY = 'finmanage_chat_history';
 
 export interface User {
   id: number;
@@ -62,11 +66,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = useCallback(() => {
+    if (user) localStorage.removeItem(chatHistoryKey(user.id));
+    localStorage.removeItem(LEGACY_CHAT_KEY);
     setUser(null);
     setToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('access_token');
-  }, []);
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>

@@ -1,153 +1,122 @@
-import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Button } from 'react-bootstrap';
-import { Plus, Tags } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Row, Col, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 
 import walletService from '../services/walletService';
 import savingGoalService from '../services/savingGoalService';
 import { formatCurrency } from '../utils/format';
+import { isOwnWallet, type Wallet } from '../utils/wallet';
+import type { SavingGoal } from '../types/finance';
 
-import MySpinner from '../components/MySpinner';
 import WalletCard from '../components/wallets/WalletCard';
 import WalletModal from '../components/wallets/WalletModal';
 import ShareWalletModal from '../components/wallets/ShareWalletModal';
+import { EmptyState, ErrorState, LoadingState } from '../components/ui/PageState';
 
 export default function WalletsPage() {
-  const [wallets, setWallets] = useState<any[]>([]);
-  const [savingGoals, setSavingGoals] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [wallets, setWallets] = useState<Wallet[] | null>(null);
+  const [goals, setGoals] = useState<SavingGoal[]>([]);
+  const [error, setError] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
-  const [editData, setEditData] = useState<any>(null);
+  const [editData, setEditData] = useState<Wallet | null>(null);
+  const [shareWallet, setShareWallet] = useState<Wallet | null>(null);
 
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareWalletData, setShareWalletData] = useState<any>(null);
-
-  const fetchData = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    setWallets(null);
+    setError(false);
     try {
-      const [walletRes, savingRes] = await Promise.all([
-        walletService.getMyWallets(),
-        savingGoalService.getSavingGoals({ page: 0, size: 50 })
-      ]);
-      setWallets(walletRes);
-      setSavingGoals(savingRes.content);
-    } catch (error) {
-      console.error("Lỗi tải trang Ví:", error);
-    } finally {
-      setLoading(false);
+      const [w, g] = await Promise.all([walletService.getMyWallets(), savingGoalService.getSavingGoals({ page: 0, size: 200 })]);
+      setWallets(w);
+      setGoals(g.content);
+    } catch {
+      setError(true);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Cảnh báo: Nếu bạn xóa ví này, toàn bộ lịch sử giao dịch liên quan cũng sẽ bị xóa. Bạn chắc chứ?')) {
-      try {
-        await walletService.deleteWallet(id);
-        fetchData();
-      } catch (error: any) {
-        alert(error.response?.data?.error?.message || "Lỗi xóa ví!");
-      }
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async (wallet: Wallet) => {
+    if (!window.confirm(`Xóa ví "${wallet.name}"? Toàn bộ giao dịch của ví này cũng bị xóa và không khôi phục được.`)) return;
+    try {
+      await walletService.deleteWallet(wallet.id);
+      load();
+    } catch (e: any) {
+      alert(e.response?.data?.error?.message || 'Không xóa được ví. Thử lại sau.');
     }
   };
 
-  const handleOpenEdit = (wallet: any) => {
-    setEditData(wallet);
-    setShowModal(true);
-  };
+  const openCreate = () => { setEditData(null); setShowModal(true); };
 
-  const handleOpenCreate = () => {
-    setEditData(null);
-    setShowModal(true);
-  };
+  const own = (wallets ?? []).filter(isOwnWallet);
+  const shared = (wallets ?? []).filter((w) => !isOwnWallet(w));
+  const sum = (ws: Wallet[]) => ws.reduce((s, w) => s + Number(w.balance), 0);
+  const saving = goals.filter((g) => g.status !== 'CANCELLED').reduce((s, g) => s + Number(g.currentAmount), 0);
 
-  const handleOpenShare = (wallet: any) => {
-    setShareWalletData(wallet);
-    setShowShareModal(true);
-  };
-
-  const totalWalletBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
-  const totalSavingBalance = savingGoals.reduce((sum, s) => sum + s.currentAmount, 0);
-
-  if (loading) return <MySpinner />;
+  const grid = (items: Wallet[]) => (
+    <Row className="g-3">
+      {items.map((w) => (
+        <Col sm={6} xl={4} key={w.id}>
+          <WalletCard wallet={w} onEdit={(x) => { setEditData(x); setShowModal(true); }} onDelete={handleDelete} onShare={setShareWallet} />
+        </Col>
+      ))}
+    </Row>
+  );
 
   return (
-    <div className="p-4 flex-grow-1" style={{ backgroundColor: 'var(--color-bg)' }}>
-      
-      <Card className="border-0 rounded-4 mb-3 shadow-soft">
-        <Card.Body className="p-4 d-flex justify-content-between align-items-center">
-          <div>
-            <h4 className="fw-bold mb-1" style={{ color: 'var(--color-primary-darker)' }}>Ví Hiện Có</h4>
-            <div className="text-muted small">Bao gồm {wallets.length} tài khoản đang hoạt động</div>
-          </div>
-          <h2 className="fw-bolder mb-0" style={{ fontSize: '2.5rem', color: 'var(--color-primary)' }}>
-            {formatCurrency(totalWalletBalance)}
-          </h2>
-        </Card.Body>
-      </Card>
-
-      <Card className="border-0 rounded-4 mb-5 shadow-soft">
-        <Card.Body className="p-4 d-flex justify-content-between align-items-center">
-          <div>
-            <h4 className="fw-bold mb-1" style={{ color: 'var(--color-primary-darker)' }}>Tổng tiền Tiết kiệm</h4>
-            <div className="text-muted small">Bao gồm {savingGoals.length} sổ tiết kiệm đang hoạt động</div>
-          </div>
-          <h2 className="fw-bolder mb-0 text-success" style={{ fontSize: '2.5rem' }}>
-            {formatCurrency(totalSavingBalance)}
-          </h2>
-        </Card.Body>
-      </Card>
-
-      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
-        <h5 className="fw-bold text-dark mb-0">Danh sách Ví & Tài khoản ngân hàng</h5>
-        
-        <div className="d-flex gap-2 mt-3 mt-md-0">
-          <Button 
-            className="fw-bold px-4 py-2 rounded-pill border-0 shadow-sm text-white d-inline-flex align-items-center"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-            onClick={handleOpenCreate}
-          >
-            <Plus size={18} className="me-1" /> Tạo ví
-          </Button>
-
-          <Link 
-            to="/categories"
-            className="btn bg-white text-primary fw-bold px-4 py-2 rounded-pill border-0 shadow-sm d-inline-flex align-items-center"
-          >
-            <Tags size={18} className="me-2" /> Tùy chỉnh danh mục
-          </Link>
-        </div>
+    <div className="page">
+      <div className="page-toolbar">
+        <div />
+        <Button onClick={openCreate} className="d-inline-flex align-items-center gap-1">
+          <Plus size={18} aria-hidden /> Tạo ví
+        </Button>
       </div>
 
-      <Row className="g-4 mb-4">
-        {wallets.map((wallet: any) => (
-          <Col md={6} lg={6} key={wallet.id}>
-            <WalletCard 
-              wallet={wallet} 
-              onEdit={handleOpenEdit}
-              onDelete={handleDelete}
-              onShare={handleOpenShare}
-            />
-          </Col>
-        ))}
-      </Row>
+      {error ? (
+        <div className="panel"><ErrorState onRetry={load} /></div>
+      ) : wallets === null ? (
+        <div className="panel"><LoadingState /></div>
+      ) : wallets.length === 0 ? (
+        <div className="panel">
+          <EmptyState title="Bạn chưa có ví nào" description="Tạo ví cho tiền mặt, tài khoản ngân hàng hoặc thẻ để bắt đầu ghi giao dịch."
+            action={<Button size="sm" onClick={openCreate}>Tạo ví đầu tiên</Button>} />
+        </div>
+      ) : (
+        <>
+          <section className="panel mb-3">
+            <div className="panel-body d-flex flex-wrap gap-4">
+              <div>
+                <div className="small text-secondary">Ví của bạn · {own.length} ví</div>
+                <div className="num fs-4 fw-semibold">{formatCurrency(sum(own))}</div>
+              </div>
+              {shared.length > 0 && (
+                <div>
+                  <div className="small text-secondary">Được chia sẻ · {shared.length} ví</div>
+                  <div className="num fs-4 fw-semibold">{formatCurrency(sum(shared))}</div>
+                </div>
+              )}
+              <div>
+                <div className="small text-secondary">Đã để dành cho mục tiêu</div>
+                <Link to="/saving-goals" className="num fs-4 fw-semibold text-income text-decoration-none">{formatCurrency(saving)}</Link>
+              </div>
+            </div>
+          </section>
 
-      <WalletModal 
-        show={showModal} 
-        onHide={() => setShowModal(false)} 
-        onSuccess={fetchData} 
-        editData={editData} 
-      />
-      
-      <ShareWalletModal 
-        show={showShareModal} 
-        onHide={() => setShowShareModal(false)} 
-        wallet={shareWalletData} 
-      />
+          <h2 className="h6 fw-semibold mb-2">Ví của bạn</h2>
+          {own.length > 0 ? grid(own) : <p className="small text-secondary">Bạn chưa tạo ví riêng nào.</p>}
 
+          {shared.length > 0 && (
+            <>
+              <h2 className="h6 fw-semibold mt-4 mb-2">Được chia sẻ với bạn</h2>
+              {grid(shared)}
+            </>
+          )}
+        </>
+      )}
+
+      <WalletModal show={showModal} onHide={() => setShowModal(false)} onSuccess={load} editData={editData} />
+      <ShareWalletModal show={shareWallet !== null} onHide={() => setShareWallet(null)} wallet={shareWallet} />
     </div>
   );
 }

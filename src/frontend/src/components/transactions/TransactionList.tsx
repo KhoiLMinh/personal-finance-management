@@ -1,106 +1,77 @@
-import React, { useState } from 'react';
-import { Settings, CircleDollarSign, Edit, Trash2, History } from 'lucide-react';
-import { Dropdown } from 'react-bootstrap';
+import { useState } from 'react';
+import { Button } from 'react-bootstrap';
+import { History, Pencil, Trash2 } from 'lucide-react';
+import type { Transaction } from '../../types/finance';
 import { formatCurrency } from '../../utils/format';
 import TransactionHistoryModal from './TransactionHistoryModal';
 
 interface Props {
-  transactions: any[];
-  onEdit: (tx: any) => void;
-  onDelete: (id: number) => void;
+  transactions: Transaction[];
+  canWrite: (walletId: number) => boolean;
+  onEdit: (tx: Transaction) => void;
+  onDelete: (tx: Transaction) => void;
 }
 
-export default function TransactionList({ transactions, onEdit, onDelete }: Props) {
-  const groupedTransactions = transactions.reduce((groups: any, tx: any) => {
-    const date = tx.date;
-    if (!groups[date]) {
-      groups[date] = { transactions: [], total: 0 };
-    }
-    groups[date].transactions.push(tx);
-    groups[date].total += tx.type === 'INCOME' ? tx.amount : -tx.amount;
-    return groups;
-  }, {});
+const dayTitle = (iso: string) =>
+  new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${iso}T00:00:00`));
 
-  const formatDateTitle = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    return new Intl.DateTimeFormat('vi-VN', options).format(new Date(dateString));
-  };
-
+export default function TransactionList({ transactions, canWrite, onEdit, onDelete }: Props) {
   const [historyTxId, setHistoryTxId] = useState<number | null>(null);
 
-  if (transactions.length === 0) {
-    return <div className="text-center text-muted py-5">Không tìm thấy giao dịch nào.</div>;
+  // the API already returns rows ordered by date desc, so grouping preserves order
+  const groups: { date: string; items: Transaction[]; net: number }[] = [];
+  for (const tx of transactions) {
+    let g = groups[groups.length - 1];
+    if (!g || g.date !== tx.date) groups.push((g = { date: tx.date, items: [], net: 0 }));
+    g.items.push(tx);
+    g.net += tx.type === 'INCOME' ? tx.amount : -tx.amount;
   }
 
   return (
-    <div className="d-flex flex-column gap-4">
-      {Object.keys(groupedTransactions).sort((a, b) => new Date(b).getTime() - new Date(a).getTime()).map(date => {
-        const group = groupedTransactions[date];
-        return (
-          <div key={date} className="rounded-4 shadow-sm border">
-            <div className="d-flex justify-content-between align-items-center px-4 py-3 bg-primary rounded-top-4">
-              <h6 className="mb-0 fw-bold text-white">{formatDateTitle(date)}</h6>
-              <h6 className="mb-0 fw-bold text-white">{formatCurrency(group.total)}</h6>
-            </div>
-            
-            <div className="bg-white p-2">
-              {group.transactions.map((tx: any) => (
-                <div key={tx.id} className="d-flex justify-content-between align-items-center p-3 rounded-3 hover-bg-light transition-all mb-1">
-                  
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="bg-light rounded-3 d-flex align-items-center justify-content-center" style={{ width: 48, height: 48 }}>
-                      <CircleDollarSign size={24} className="text-secondary" />
-                    </div>
-                    <div>
-                      <div className="fw-bold text-dark">{tx.categoryName}</div>
-                      <div className="d-flex align-items-center gap-2 mt-1">
-                        <span className="text-muted small text-truncate" style={{ maxWidth: '150px' }}>{tx.description || 'Không có ghi chú'}</span>
-                        <span className="badge rounded-pill bg-secondary bg-opacity-25 text-dark fw-medium px-2 py-1">
-                          {tx.walletName}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="d-flex align-items-center gap-4">
-                    <span className={`fw-bold fs-5 ${tx.type === 'INCOME' ? 'text-success' : 'text-dark'}`}>
-                      {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(tx.amount)}
-                    </span>
-                    
-                    <Dropdown align="end">
-                      <Dropdown.Toggle variant="light" size="sm" className="border-0 bg-transparent shadow-none p-1 hide-caret text-muted rounded-circle">
-                        <Settings size={18} />
-                      </Dropdown.Toggle>
-                     <Dropdown.Menu className="shadow-lg border-0 rounded-3" style={{ zIndex: 1050 }}>
-                        <Dropdown.Item onClick={() => onEdit(tx)} className="d-flex align-items-center">
-                          <Edit size={16} className="me-2 text-primary" /> Sửa giao dịch
-                        </Dropdown.Item>
-                        
-                        <Dropdown.Item onClick={() => setHistoryTxId(tx.id)} className="d-flex align-items-center">
-                          <History size={16} className="me-2 text-info" /> Xem lịch sử
-                        </Dropdown.Item>
-
-                        <Dropdown.Divider />
-                        <Dropdown.Item onClick={() => onDelete(tx.id)} className="text-danger d-flex align-items-center">
-                          <Trash2 size={16} className="me-2" /> Xóa giao dịch
-                        </Dropdown.Item>
-                      </Dropdown.Menu>
-                    </Dropdown>
-
-                  </div>
-                </div>
-              ))}
-            </div>
+    <div>
+      {groups.map((g) => (
+        <section key={g.date} aria-label={dayTitle(g.date)}>
+          <div className="d-flex justify-content-between align-items-center px-3 py-2 small text-secondary" style={{ background: 'var(--canvas)' }}>
+            <span className="text-capitalize">{dayTitle(g.date)}</span>
+            <span className="num">Ròng {g.net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(g.net))}</span>
           </div>
-        );
-      })}
+          <ul className="list-unstyled mb-0">
+            {g.items.map((tx) => {
+              const writable = canWrite(tx.walletId);
+              return (
+                <li key={tx.id} className="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+                  <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                    <div className="fw-medium text-truncate">{tx.description || tx.categoryName}</div>
+                    <div className="small text-secondary text-truncate">
+                      {tx.categoryName} · {tx.walletName}
+                    </div>
+                  </div>
+                  <span className={`num fw-semibold text-end ${tx.type === 'INCOME' ? 'text-income' : ''}`} style={{ minWidth: 110 }}>
+                    {tx.type === 'INCOME' ? '+' : '−'}{formatCurrency(tx.amount)}
+                  </span>
+                  <div className="d-flex flex-shrink-0">
+                    <Button variant="link" size="sm" className="text-secondary p-1" aria-label={`Lịch sử sửa: ${tx.description || tx.categoryName}`} onClick={() => setHistoryTxId(tx.id)}>
+                      <History size={16} aria-hidden />
+                    </Button>
+                    {writable && (
+                      <>
+                        <Button variant="link" size="sm" className="text-secondary p-1" aria-label={`Sửa: ${tx.description || tx.categoryName}`} onClick={() => onEdit(tx)}>
+                          <Pencil size={16} aria-hidden />
+                        </Button>
+                        <Button variant="link" size="sm" className="text-secondary p-1" aria-label={`Xóa: ${tx.description || tx.categoryName}`} onClick={() => onDelete(tx)}>
+                          <Trash2 size={16} aria-hidden />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
 
-      {historyTxId && (
-        <TransactionHistoryModal 
-          transactionId={historyTxId} 
-          onClose={() => setHistoryTxId(null)} 
-        />
-      )}
+      {historyTxId && <TransactionHistoryModal transactionId={historyTxId} onClose={() => setHistoryTxId(null)} />}
     </div>
   );
 }

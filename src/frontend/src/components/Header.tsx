@@ -1,13 +1,14 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { AlertTriangle, Bell, CheckCheck, Trash2 } from 'lucide-react';
-import { Dropdown, Badge, Spinner } from 'react-bootstrap';
+import { useEffect, useState, useCallback } from 'react';
+import { AlertTriangle, Bell, CheckCheck, Menu, Trash2 } from 'lucide-react';
+import { Button, Dropdown, Spinner } from 'react-bootstrap';
 import notificationService from '../services/notificationService';
 
 interface HeaderProps {
   title?: string;
+  onOpenNav: () => void;
 }
 
-export default function Header({ title = "Tổng quan về tài chính" }: HeaderProps) {
+export default function Header({ title = 'FinManage', onOpenNav }: HeaderProps) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -72,66 +73,67 @@ export default function Header({ title = "Tổng quan về tài chính" }: Heade
   };
 
   return (
-    <header
-      className="bg-white border-bottom px-4 d-flex align-items-center justify-content-between flex-shrink-0"
-      style={{ height: '70px', zIndex: 999 }}
-    >
-      <h5 className="fw-bold mb-0" style={{ color: 'var(--color-primary-darker)' }}>{title}</h5>
+    <header className="app-header">
+      <Button variant="link" className="d-lg-none text-secondary p-1" aria-label="Mở menu" onClick={onOpenNav}>
+        <Menu size={22} aria-hidden />
+      </Button>
+      <h1 className="h6 fw-semibold mb-0 flex-grow-1 text-truncate">{title}</h1>
 
       <Dropdown align="end" onToggle={(isOpen) => isOpen && fetchNotifications()}>
-        <Dropdown.Toggle as="div" className="position-relative d-flex align-items-center justify-content-center rounded-circle hide-caret"
-          style={{ cursor: 'pointer', width: 40, height: 40, backgroundColor: 'var(--color-primary-lighter)' }}>
-          
-          <Bell size={20} color="var(--color-primary)" />
-        
+        <Dropdown.Toggle
+          variant="link"
+          className="position-relative text-secondary p-1 hide-caret"
+          aria-label={unreadCount > 0 ? `Thông báo, ${unreadCount} chưa đọc` : 'Thông báo'}
+        >
+          <Bell size={20} aria-hidden />
           {unreadCount > 0 && (
-            <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle text-white d-flex align-items-center justify-content-center" style={{ width: '20px', height: '20px', fontSize: '10px', fontWeight: 'bold' }}>
+            <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.625rem' }}>
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </Dropdown.Toggle>
 
-        <Dropdown.Menu className="shadow-lg border-0 rounded-4 p-0 mt-2" style={{ width: '350px', maxHeight: '400px', overflowY: 'auto' }}>
-          <div className="d-flex justify-content-between align-items-center p-3 border-bottom bg-light">
-            <h6 className="mb-0 fw-bold">Thông báo ({unreadCount} chưa đọc)</h6>
+        <Dropdown.Menu className="p-0 mt-2" style={{ width: 'min(360px, calc(100vw - 2rem))', maxHeight: 420, overflowY: 'auto' }}>
+          <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <span className="fw-semibold small">Thông báo</span>
             {unreadCount > 0 && (
-              <span style={{cursor:'pointer'}} className="text-primary small fw-medium" onClick={handleMarkAllAsRead}>
-                <CheckCheck size={14} className="me-1"/>Đánh dấu đọc hết
-              </span>
+              <Button variant="link" size="sm" className="p-0 text-decoration-none" onClick={handleMarkAllAsRead}>
+                <CheckCheck size={14} className="me-1" aria-hidden />Đánh dấu đã đọc hết
+              </Button>
             )}
           </div>
-          
-          <div className="py-2">
-            {loading ? (
-              <div className="text-center p-3"><Spinner size="sm" variant="primary" /></div>
-            ) : notifications.length === 0 ? (
-              <div className="text-center text-muted p-4 small">Bạn không có thông báo nào.</div>
-            ) : (
-              notifications.map(n => (
-                <div key={n.id} className={`p-3 border-bottom position-relative ${n.read ? 'bg-white' : (n.priority === 1 ? 'bg-danger bg-opacity-10' : 'bg-primary-lighter')}`}>
-                  <div className="d-flex justify-content-between align-items-start mb-1">
-                    <strong className={`small d-flex align-items-center ${n.priority === 1 && !n.read ? 'text-danger' : 'text-dark'}`}>
-                      {n.priority === 1 && !n.read && <AlertTriangle size={14} className="me-1 text-danger flex-shrink-0" />}
-                      <span className={n.priority === 1 && !n.read ? 'text-danger' : ''}>{n.title}</span>
-                    </strong>
-                    <Trash2 size={14} className="text-muted flex-shrink-0 ms-2" style={{cursor: 'pointer'}} onClick={() => handleDelete(n.id)} />
+
+          {loading ? (
+            <div className="text-center p-3"><Spinner size="sm" /></div>
+          ) : notifications.length === 0 ? (
+            <div className="text-center text-secondary p-4 small">Chưa có thông báo nào.</div>
+          ) : (
+            notifications.map(n => {
+              const urgent = n.priority === 1 && !n.read;
+              return (
+                <div key={n.id} className="px-3 py-2 border-bottom" style={{ background: n.read ? undefined : (urgent ? 'var(--danger-tint)' : 'var(--brand-tint)') }}>
+                  <div className="d-flex justify-content-between align-items-start gap-2">
+                    <span className={`small fw-semibold d-flex align-items-center gap-1 ${urgent ? 'text-danger-strong' : ''}`}>
+                      {urgent && <AlertTriangle size={14} className="flex-shrink-0" aria-hidden />}
+                      {n.title}
+                    </span>
+                    <Button variant="link" size="sm" className="p-0 text-secondary" aria-label="Xóa thông báo" onClick={() => handleDelete(n.id)}>
+                      <Trash2 size={14} aria-hidden />
+                    </Button>
                   </div>
-                  <p className="text-muted small mb-1" style={{ fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>{n.content}</p>
-                  
-                  <div className="d-flex justify-content-between align-items-center mt-2">
-                    <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                      {new Date(n.createAt).toLocaleString('vi-VN')}
-                    </small>
+                  <p className="text-secondary mb-1 mt-1" style={{ fontSize: 'var(--fs-xs)', whiteSpace: 'pre-wrap' }}>{n.content}</p>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <small className="text-secondary" style={{ fontSize: 'var(--fs-xs)' }}>{new Date(n.createAt).toLocaleString('vi-VN')}</small>
                     {!n.read && (
-                      <Badge bg={n.priority === 1 ? "danger" : "primary"} style={{cursor: 'pointer'}} onClick={() => handleMarkAsRead(n.id)}>
+                      <Button variant="link" size="sm" className="p-0 text-decoration-none" style={{ fontSize: 'var(--fs-xs)' }} onClick={() => handleMarkAsRead(n.id)}>
                         Đánh dấu đã đọc
-                      </Badge>
+                      </Button>
                     )}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              );
+            })
+          )}
         </Dropdown.Menu>
       </Dropdown>
     </header>

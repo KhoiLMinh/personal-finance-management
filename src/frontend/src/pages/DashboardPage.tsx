@@ -1,172 +1,144 @@
-import React, { useEffect, useState } from 'react';
-import { Row, Col, Form } from 'react-bootstrap';
+import { useCallback, useEffect, useState } from 'react';
+import { Row, Col, Dropdown } from 'react-bootstrap';
+import { Download } from 'lucide-react';
 import reportService from '../services/reportService';
 import aiService from '../services/aiService';
+import transactionService from '../services/transactionService';
+import budgetService from '../services/budgetService';
+import savingGoalService from '../services/savingGoalService';
 import type { DashboardOverview } from '../types/dashboard';
+import type { Transaction } from '../types/finance';
 
-import MySpinner from '../components/MySpinner';
+import PeriodPicker, { currentPeriod, periodLabel, periodRange, type Period } from '../components/ui/PeriodPicker';
+import { ErrorState, LoadingState } from '../components/ui/PageState';
 import AiAdviceCard from '../components/dashboard/AiAdviceCard';
 import SummaryCards from '../components/dashboard/SummaryCards';
 import ExpenseCategoryChart from '../components/dashboard/ExpenseCategoryChart';
 import TrendChart from '../components/dashboard/TrendChart';
+import RecentTransactions from '../components/dashboard/RecentTransactions';
+import DashboardAlerts, { type AlertsData } from '../components/dashboard/DashboardAlerts';
+
+// Backend buckets: a month is split into weeks, a year into months.
+const timeUnitFor = (p: Period) => (p.mode === 'MONTH' ? 'WEEK' : 'MONTH');
 
 export default function DashboardPage() {
+  const [period, setPeriod] = useState<Period>(() => currentPeriod());
+
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
-  const [overviewLoading, setOverviewLoading] = useState<boolean>(true);
+  const [overviewError, setOverviewError] = useState(false);
+
+  const [recent, setRecent] = useState<Transaction[] | null>(null);
+  const [recentError, setRecentError] = useState(false);
+
+  const [alerts, setAlerts] = useState<AlertsData | null>(null);
+  const [alertsError, setAlertsError] = useState(false);
 
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState<boolean>(true);
-  const [aiError, setAiError] = useState<boolean>(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(false);
 
-  const [timeUnit, setTimeUnit] = useState<string>('WEEK'); 
-  const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth() + 1);
-  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
-
-  useEffect(() => {
-    fetchOverview();
-  }, [timeUnit, currentMonth, currentYear]);
-
-  const getDateRange = () => {
-    let firstDay, lastDay;
-    if (timeUnit === 'WEEK') {
-      firstDay = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-      const lastDate = new Date(currentYear, currentMonth, 0).getDate();
-      lastDay = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${lastDate}`;
-    } else {
-      firstDay = `${currentYear}-01-01`;
-      lastDay = `${currentYear}-12-31`;
-    }
-    return { firstDay, lastDay };
-  };
-
-  const fetchOverview = async () => {
-    setOverviewLoading(true);
+  const loadOverview = useCallback(async () => {
+    setOverview(null);
+    setOverviewError(false);
     try {
-      const { firstDay, lastDay } = getDateRange();
-      const overviewData = await reportService.getOverview(firstDay, lastDay, timeUnit);
-      setOverview(overviewData);
-
-      if (overviewData.totalIncome > 0 || overviewData.totalExpense > 0) {
-        fetchAiAdvice();
-      } else {
-        setAiAdvice(null);
-        setAiLoading(false);
-      }
-    } catch (error) {
-      console.error("Lỗi tải overview:", error);
-    } finally {
-      setOverviewLoading(false);
+      const { startDate, endDate } = periodRange(period);
+      setOverview(await reportService.getOverview(startDate, endDate, timeUnitFor(period)));
+    } catch {
+      setOverviewError(true);
     }
-  };
+  }, [period]);
 
-  const fetchAiAdvice = async () => {
+  const loadRecent = useCallback(async () => {
+    setRecent(null);
+    setRecentError(false);
+    try {
+      const page = await transactionService.getTransactions({ page: 0, size: 6 });
+      setRecent(page.content);
+    } catch {
+      setRecentError(true);
+    }
+  }, []);
+
+  // Alerts are always about "now" (this month's budgets, upcoming goals), independent of the period being browsed.
+  const loadAlerts = useCallback(async () => {
+    setAlerts(null);
+    setAlertsError(false);
+    try {
+      const { startDate, endDate } = periodRange(currentPeriod('MONTH'));
+      const [budgets, goals, month] = await Promise.all([
+        budgetService.getBudgets({ page: 0, size: 200 }),
+        savingGoalService.getSavingGoals({ page: 0, size: 200 }),
+        reportService.getOverview(startDate, endDate, 'WEEK'),
+      ]);
+      setAlerts({ budgets: budgets.content, goals: goals.content, monthExpenses: month.expenseByCategory });
+    } catch {
+      setAlertsError(true);
+    }
+  }, []);
+
+  useEffect(() => { loadOverview(); setAiAdvice(null); setAiError(false); }, [loadOverview]);
+  useEffect(() => { loadRecent(); loadAlerts(); }, [loadRecent, loadAlerts]);
+
+  const requestAi = async () => {
     setAiLoading(true);
     setAiError(false);
     try {
-      const { firstDay, lastDay } = getDateRange();
-      const res = await aiService.analyzeReport(firstDay, lastDay);
-      setAiAdvice(res.reply);
-    } catch (error) {
-      console.error("Lỗi AI:", error);
+      const { startDate, endDate } = periodRange(period);
+      setAiAdvice((await aiService.analyzeReport(startDate, endDate)).reply);
+    } catch {
+      setAiAdvice(null);
       setAiError(true);
     } finally {
       setAiLoading(false);
     }
   };
-  
-  const handleExportExcel = async () => {
+
+  const exportFile = async (kind: 'excel' | 'pdf') => {
+    const { startDate, endDate } = periodRange(period);
     try {
-      const { firstDay, lastDay } = getDateRange();
-      await reportService.downloadExcel(firstDay, lastDay);
-    } catch (error) {
-      alert("Lỗi khi tải báo cáo Excel!");
+      await (kind === 'excel' ? reportService.downloadExcel(startDate, endDate) : reportService.downloadPdf(startDate, endDate));
+    } catch {
+      alert('Không tạo được file báo cáo. Thử lại sau ít phút.');
     }
   };
 
-  const handleExportPdf = async () => {
-    try {
-      const { firstDay, lastDay } = getDateRange();
-      await reportService.downloadPdf(firstDay, lastDay);
-    } catch (error) {
-      alert("Lỗi khi tải báo cáo PDF!");
-    }
-  };
-
-  if (overviewLoading && !overview) return <MySpinner />;
-  const hasData = overview && (overview.totalIncome > 0 || overview.totalExpense > 0);
+  const label = periodLabel(period);
 
   return (
-    <div className="p-4 flex-grow-1" style={{ backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
-        <h4 className="fw-bold mb-3 mb-md-0 text-dark">Tổng quan tài chính</h4>
-        
-        <div className="d-flex gap-2">
-          <Form.Select 
-            className="border-0 shadow-sm rounded-3 fw-medium"
-            value={currentYear}
-            onChange={(e) => setCurrentYear(Number(e.target.value))}
-            style={{ minWidth: '110px' }}
-          >
-            {[2024, 2025, 2026, 2027, 2028].map(year => (
-              <option key={year} value={year}>Năm {year}</option>
-            ))}
-          </Form.Select>
-
-          {timeUnit === 'WEEK' && (
-            <Form.Select 
-              className="border-0 shadow-sm rounded-3 fw-medium"
-              value={currentMonth}
-              onChange={(e) => setCurrentMonth(Number(e.target.value))}
-              style={{ minWidth: '120px' }}
-            >
-              {Array.from({length: 12}, (_, i) => i + 1).map(month => (
-                <option key={month} value={month}>Tháng {month}</option>
-              ))}
-            </Form.Select>
-          )}
-
-          <Form.Select 
-            className="border-0 shadow-sm rounded-3 fw-bold text-primary"
-            style={{ backgroundColor: '#e0e7ff', minWidth: '130px' }}
-            value={timeUnit}
-            onChange={(e) => setTimeUnit(e.target.value)}
-          >
-            <option value="WEEK">Theo Tuần</option>
-            <option value="MONTH">Theo Tháng</option>
-          </Form.Select>
-        </div>
+    <div className="page">
+      <div className="page-toolbar">
+        <PeriodPicker value={period} onChange={setPeriod} />
+        <Dropdown align="end">
+          <Dropdown.Toggle variant="outline-secondary" size="sm" className="d-inline-flex align-items-center gap-1">
+            <Download size={16} aria-hidden /> Xuất báo cáo
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            <Dropdown.Item onClick={() => exportFile('excel')}>Excel (.xlsx) · {label}</Dropdown.Item>
+            <Dropdown.Item onClick={() => exportFile('pdf')}>PDF (.pdf) · {label}</Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
       </div>
 
-      {overviewLoading ? (
-        <MySpinner />
+      {overviewError ? (
+        <div className="panel mb-3"><ErrorState onRetry={loadOverview} /></div>
       ) : !overview ? (
-        <p className="text-center mt-5 text-muted">Không có dữ liệu hiển thị.</p>
+        <div className="panel mb-3"><LoadingState /></div>
       ) : (
         <>
-          {hasData && (
-            <AiAdviceCard
-              aiAdvice={aiAdvice}
-              aiLoading={aiLoading}
-              aiError={aiError}
-              onRetryAi={fetchAiAdvice}
-              overview={overview}
-              onExportExcel={handleExportExcel}
-              onExportPdf={handleExportPdf}  
-            />
-          )}
-
-          <SummaryCards overview={overview} />
-          
-          <Row className="g-4 mt-1">
-            <Col lg={5}>
-              <ExpenseCategoryChart data={overview.expenseByCategory} />
-            </Col>
-            <Col lg={7}>
-              <TrendChart data={overview.trendData} />
-            </Col>
+          <SummaryCards overview={overview} periodLabel={label} />
+          <Row className="g-3 mb-3">
+            <Col lg={7}><TrendChart data={overview.trendData} /></Col>
+            <Col lg={5}><ExpenseCategoryChart data={overview.expenseByCategory} /></Col>
           </Row>
         </>
       )}
+
+      <Row className="g-3 mb-3">
+        <Col lg={7}><RecentTransactions items={recent} error={recentError} onRetry={loadRecent} /></Col>
+        <Col lg={5}><DashboardAlerts data={alerts} error={alertsError} onRetry={loadAlerts} /></Col>
+      </Row>
+
+      <AiAdviceCard aiAdvice={aiAdvice} aiLoading={aiLoading} aiError={aiError} onRequest={requestAi} periodLabel={label} />
     </div>
   );
 }

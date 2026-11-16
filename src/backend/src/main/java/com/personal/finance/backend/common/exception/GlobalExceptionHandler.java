@@ -28,6 +28,27 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    // Framework exceptions carry SQL / parser internals in getMessage(); return a fixed message instead.
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", Map.of(
+                        "code", "CONFLICT",
+                        "message", "Dữ liệu đang được sử dụng hoặc bị trùng, không thể thực hiện thao tác này."
+                )
+        ));
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", Map.of(
+                        "code", "VALIDATION_ERROR",
+                        "message", "Dữ liệu gửi lên không đúng định dạng."
+                )
+        ));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntime(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(

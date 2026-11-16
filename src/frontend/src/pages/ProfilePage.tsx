@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Image, Spinner, Badge } from 'react-bootstrap';
+import { Row, Col, Card, Form, Button, Alert, Image, Spinner, Badge } from 'react-bootstrap';
 import { User, ShieldCheck, Mail, ShieldAlert, KeyRound, Save, Download, Upload, Database, ImagePlus } from 'lucide-react';
 
 import userService from '../services/userService';
-import authService from '../services/authService';
+
 import { useAuth } from '../context/AuthContext';
-import MySpinner from '../components/MySpinner';
+import { LoadingState } from '../components/ui/PageState';
 import { Link } from 'react-router-dom';
 import { backupService } from '../services/backupService';
 
@@ -21,9 +21,6 @@ export default function ProfilePage() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState({ type: '', text: '' });
 
-  const [passData, setPassData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
-  const [passSaving, setPassSaving] = useState(false);
-  const [passMsg, setPassMsg] = useState({ type: '', text: '' });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -81,30 +78,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPassMsg({ type: '', text: '' });
-
-    if (passData.newPassword !== passData.confirmPassword) {
-      setPassMsg({ type: 'danger', text: 'Mật khẩu xác nhận không trùng khớp!' });
-      return;
-    }
-
-    setPassSaving(true);
-    try {
-      await authService.changePassword({
-        oldPassword: passData.oldPassword,
-        newPassword: passData.newPassword
-      });
-      setPassMsg({ type: 'success', text: 'Đổi mật khẩu thành công! Hãy ghi nhớ mật khẩu mới nhé.' });
-      setPassData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (error: any) {
-      setPassMsg({ type: 'danger', text: error.response?.data?.error?.message || 'Đổi mật khẩu thất bại!' });
-    } finally {
-      setPassSaving(false);
-    }
-  };
-
   const handleExport = async () => {
     try {
       await backupService.exportData();
@@ -135,11 +108,10 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) return <MySpinner />;
+  if (loading) return <div className="page"><div className="panel"><LoadingState /></div></div>;
 
   return (
-    <div className="p-4 flex-grow-1" style={{ backgroundColor: '#e2e8f0' }}>
-      <h3 className="fw-bold text-dark mb-4">Quản lý Tài khoản</h3>
+    <div className="page">
 
       <Row className="g-4">
         
@@ -268,7 +240,7 @@ export default function ProfilePage() {
                     <small className="text-muted">Cập nhật mật khẩu để bảo vệ tài khoản</small>
                   </div>
                 </div>
-                <Link to="/change-password" className="btn btn-danger fw-bold rounded-pill px-4">
+                <Link to="/change-password" className="btn btn-outline-secondary">
                   Đổi mật khẩu
                 </Link>
               </Card.Body>

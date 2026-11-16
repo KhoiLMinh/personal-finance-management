@@ -1,116 +1,100 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Spinner, Modal, Form, Badge } from 'react-bootstrap';
-import { Settings, Edit } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Button, Spinner, Modal, Form, Alert } from 'react-bootstrap';
+import { Pencil } from 'lucide-react';
 import settingService from '../../services/settingService';
-import MySpinner from '../../components/MySpinner';
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/PageState';
+
+interface Setting { key: string; value: string; description: string }
+
+// BudgetServiceImpl parses this as a number and silently falls back to 80 when it cannot, so validate here.
+const isPercent = (key: string) => key.endsWith('_PERCENT');
 
 export default function AdminConfigsPage() {
-  const [settings, setSettings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [showModal, setShowModal] = useState(false);
-  const [editData, setEditData] = useState<{ key: string, value: string, description: string } | null>(null);
+  const [settings, setSettings] = useState<Setting[] | null>(null);
+  const [error, setError] = useState(false);
+  const [editData, setEditData] = useState<Setting | null>(null);
+  const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchSettings = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    setError(false);
     try {
-      const data = await settingService.getAllSettings();
-      setSettings(data);
-    } catch (error) {
-      console.error("Lỗi lấy cấu hình:", error);
-    } finally {
-      setLoading(false);
+      setSettings(await settingService.getAllSettings());
+    } catch {
+      setError(true);
     }
-  };
-
-  useEffect(() => {
-    fetchSettings();
   }, []);
 
-  const handleOpenEdit = (setting: any) => {
-    setEditData({ key: setting.key, value: setting.value, description: setting.description });
-    setShowModal(true);
-  };
+  useEffect(() => { load(); }, [load]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editData) return;
     setIsSubmitting(true);
+    setFormError('');
     try {
-      await settingService.updateSetting(editData.key, editData.value);
-      setShowModal(false);
-      fetchSettings();
-    } catch (error: any) {
-      alert(error.response?.data?.error?.message || "Lỗi cập nhật cấu hình!");
+      await settingService.updateSetting(editData.key, editData.value.trim());
+      setEditData(null);
+      load();
+    } catch (err: any) {
+      setFormError(err.response?.data?.error?.message || 'Không lưu được cấu hình. Thử lại sau.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) return <MySpinner />;
-
   return (
-    <div className="p-4 flex-grow-1" style={{ backgroundColor: '#e2e8f0' }}>
-      <Card className="border-0 rounded-4 mb-4 shadow-sm" style={{ backgroundColor: '#b0bec5' }}>
-        <Card.Body className="p-4 d-flex align-items-center gap-3">
-          <div className="bg-white p-2 rounded-circle shadow-sm">
-            <Settings size={32} color="var(--color-primary)" />
-          </div>
-          <div>
-            <h3 className="fw-bold text-dark mb-1">Cấu hình Hệ thống</h3>
-            <p className="text-dark mb-0 opacity-75">Quản lý các tham số hoạt động chung của toàn hệ thống</p>
-          </div>
-        </Card.Body>
-      </Card>
-
-      <Card className="border-0 rounded-4 shadow-sm overflow-hidden">
-        <Table hover responsive className="mb-0 align-middle">
-          <thead className="bg-light">
-            <tr>
-              <th className="py-3 px-4 text-muted small fw-bold">MÃ CẤU HÌNH (KEY)</th>
-              <th className="py-3 text-muted small fw-bold">MÔ TẢ</th>
-              <th className="py-3 text-muted small fw-bold">GIÁ TRỊ HIỆN TẠI</th>
-              <th className="py-3 px-4 text-end text-muted small fw-bold">THAO TÁC</th>
-            </tr>
-          </thead>
-          <tbody>
+    <div className="page">
+      <p className="small text-secondary" style={{ maxWidth: '65ch' }}>Tham số áp dụng cho toàn hệ thống. Thay đổi có hiệu lực với các thao tác diễn ra sau khi lưu.</p>
+      <section className="panel">
+        {error ? (
+          <ErrorState onRetry={load} />
+        ) : settings === null ? (
+          <LoadingState />
+        ) : settings.length === 0 ? (
+          <EmptyState title="Chưa có tham số cấu hình nào" />
+        ) : (
+          <ul className="list-unstyled mb-0">
             {settings.map((s) => (
-              <tr key={s.key}>
-                <td className="px-4 fw-bold text-dark">
-                  <Badge bg="secondary" className="fw-normal font-monospace">{s.key}</Badge>
-                </td>
-                <td className="text-muted">{s.description}</td>
-                <td className="fw-bold text-primary fs-5">{s.value}</td>
-                <td className="px-4 text-end">
-                  <Button variant="outline-primary" size="sm" className="rounded-pill px-3 fw-medium d-inline-flex align-items-center" onClick={() => handleOpenEdit(s)}>
-                    <Edit size={16} className="me-2" /> Chỉnh sửa
-                  </Button>
-                </td>
-              </tr>
+              <li key={s.key} className="d-flex align-items-center gap-3 px-3 py-3 border-bottom">
+                <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                  <div className="fw-medium">{s.description}</div>
+                  <code className="small text-secondary">{s.key}</code>
+                </div>
+                <span className="num fs-5 fw-semibold">{s.value}{isPercent(s.key) && '%'}</span>
+                <Button variant="outline-secondary" size="sm" className="d-inline-flex align-items-center gap-1" onClick={() => { setFormError(''); setEditData({ ...s }); }}>
+                  <Pencil size={14} aria-hidden /> Sửa
+                </Button>
+              </li>
             ))}
-          </tbody>
-        </Table>
-      </Card>
+          </ul>
+        )}
+      </section>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
-          <Modal.Title className="fw-bold fs-5">Chỉnh sửa tham số</Modal.Title>
+      <Modal show={editData !== null} onHide={() => setEditData(null)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title as="h2" className="h5 mb-0">Sửa tham số</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="px-4 pb-4 pt-3">
-          <Form onSubmit={handleUpdate}>
-            <div className="mb-3 p-3 bg-light rounded-3 text-muted small">
-              <strong>Mô tả: </strong> {editData?.description}
-            </div>
-            <Form.Group className="mb-4">
-              <Form.Label className="text-muted fw-bold small">Giá trị mới cho [{editData?.key}]</Form.Label>
-              <Form.Control size="lg" type="text" className="bg-light border-0 fw-bold text-primary" required value={editData?.value || ''} onChange={(e) => setEditData(prev => prev ? {...prev, value: e.target.value} : null)} />
+        <Form onSubmit={handleUpdate}>
+          <Modal.Body>
+            {formError && <Alert variant="danger" className="py-2 small">{formError}</Alert>}
+            <p className="small mb-1">{editData?.description}</p>
+            <code className="small text-secondary d-block mb-3">{editData?.key}</code>
+            <Form.Group controlId="setting-value">
+              <Form.Label className="small text-secondary">Giá trị{editData && isPercent(editData.key) ? ' (%)' : ''}</Form.Label>
+              {editData && isPercent(editData.key) ? (
+                <Form.Control type="number" min={1} max={100} step="any" required className="num" value={editData.value}
+                  onChange={(e) => setEditData({ ...editData, value: e.target.value })} />
+              ) : (
+                <Form.Control required value={editData?.value ?? ''} onChange={(e) => setEditData((p) => (p ? { ...p, value: e.target.value } : p))} />
+              )}
             </Form.Group>
-            <Button type="submit" className="w-100 py-3 fs-6 fw-bold rounded-pill border-0" disabled={isSubmitting} style={{ backgroundColor: 'var(--color-primary)' }}>
-              {isSubmitting ? <Spinner size="sm" className="me-2"/> : null} Lưu cấu hình
-            </Button>
-          </Form>
-        </Modal.Body>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={() => setEditData(null)}>Hủy</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Spinner size="sm" className="me-2" />}Lưu</Button>
+          </Modal.Footer>
+        </Form>
       </Modal>
     </div>
   );

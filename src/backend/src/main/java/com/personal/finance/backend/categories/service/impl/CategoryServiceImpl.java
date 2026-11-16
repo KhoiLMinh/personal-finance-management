@@ -173,12 +173,18 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public void deleteCategory(Long id, Long userId) {
         Category category = getOwnedCategory(id, userId);
-        if (!category.getTransactions().isEmpty() || !category.getBudgets().isEmpty()) {
+        // children are cascade-deleted with the parent, so they must be unused too
+        if (isInUse(category)) {
             throw new RuntimeException(
                     "Danh mục đã có giao dịch hoặc ngân sách liên quan, không thể xoá. Hãy ẩn danh mục thay vì xoá!");
         }
 
         categoryRepository.delete(category);
+    }
+
+    private boolean isInUse(Category category) {
+        return !category.getTransactions().isEmpty() || !category.getBudgets().isEmpty()
+                || category.getChildren().stream().anyMatch(this::isInUse);
     }
 
     @Override
